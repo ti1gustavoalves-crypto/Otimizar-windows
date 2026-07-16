@@ -18,7 +18,7 @@ $localManifest = Join-Path $PSScriptRoot 'update-manifest.json'
 $channel = Join-Path $PSScriptRoot 'release-channel.json'
 $sources = @(
     'PerformanceOptimizer.cs', 'PerformanceOptimizerV2.cs', 'MainForm.Diagnostics.cs', 'MainForm.Control.cs', 'OptimizerModels.cs', 'OptimizerEngine.cs',
-    'AdvancedFeatures.cs', 'BenchmarkHistory.cs', 'QualityInfrastructure.cs', 'OptionalSensors.cs', 'SystemCommand.cs'
+    'AdvancedFeatures.cs', 'BenchmarkHistory.cs', 'QualityInfrastructure.cs', 'OptionalSensors.cs', 'WindowsMaintenance.cs', 'SystemCommand.cs'
 ) | ForEach-Object { Join-Path $PSScriptRoot $_ }
 $references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Management.dll','System.Web.Extensions.dll') | ForEach-Object { '/reference:' + $_ }
 $manifestPath = Join-Path $PSScriptRoot 'app.manifest'

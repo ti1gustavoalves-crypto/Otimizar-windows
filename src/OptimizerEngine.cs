@@ -65,7 +65,7 @@ namespace CodexPerformanceOptimizer
             token.ThrowIfCancellationRequested();
             var sb = new StringBuilder();
             SystemMetrics m = ReadMetrics();
-            sb.AppendLine("AUDITORIA 3.1");
+            sb.AppendLine("AUDITORIA 3.2");
             sb.AppendLine(new string('=', 72));
             sb.AppendLine("Data: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             sb.AppendLine("Administrador: " + (Optimizer.IsAdministrator() ? "sim" : "não"));
@@ -405,7 +405,7 @@ namespace CodexPerformanceOptimizer
             EnsureSnapshot();
             SystemMetrics before = ReadMetrics();
             var log = new StringBuilder();
-            log.AppendLine("APLICAÇÃO DE PERFIL 3.1");
+            log.AppendLine("APLICAÇÃO DE PERFIL 3.2");
             log.AppendLine(new string('=', 72));
             log.AppendLine("Perfil: " + ProfileName(options.Profile));
             if (options.CreateRestorePoint)
@@ -413,7 +413,7 @@ namespace CodexPerformanceOptimizer
                 progress.Report("Criando ponto de restauração...");
                 if (Optimizer.IsAdministrator())
                 {
-                    string result = Run("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'Antes do Otimizador 3.1' -RestorePointType MODIFY_SETTINGS\"", 120000);
+                    string result = Run("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'Antes do Otimizador 3.2' -RestorePointType MODIFY_SETTINGS\"", 120000);
                     log.AppendLine(result.IndexOf("erro", StringComparison.OrdinalIgnoreCase) >= 0 || result.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ? "! O Windows não criou o ponto de restauração: " + OneLine(result) : "✓ Ponto de restauração solicitado.");
                 }
                 else log.AppendLine("! Ponto de restauração ignorado: reabra como administrador.");
@@ -458,13 +458,11 @@ namespace CodexPerformanceOptimizer
                 if (Optimizer.IsAdministrator()) freed += DeleteOldFiles(@"C:\Windows\Temp", DateTime.Now.AddDays(-7), token);
                 log.AppendLine("✓ Temporários antigos removidos: " + FormatBytes(freed));
             }
-            progress.Report("Otimizando SSD...");
-            if (Optimizer.IsAdministrator())
-            {
-                CommandExecution trimResult = Execute("defrag.exe", "C: /L /O", 120000);
-                log.AppendLine(trimResult.ExitCode == 0 ? "✓ TRIM/otimização do SSD concluída." : "! O Windows não concluiu o TRIM: " + OneLine(trimResult.Output));
-            }
-            else log.AppendLine("! TRIM não executado: use 'Executar como admin'. O recurso TRIM permanece habilitado no Windows.");
+            progress.Report("Otimizando unidade do sistema...");
+            string volumeOptimization = WindowsMaintenance.OptimizeVolume("C:", token, progress);
+            log.AppendLine(volumeOptimization.IndexOf("Resultado: concluído", StringComparison.OrdinalIgnoreCase) >= 0
+                ? "✓ Otimização correta para o tipo de unidade concluída."
+                : "! " + OneLine(volumeOptimization));
             SystemMetrics after = ReadMetrics();
             AdvancedEngine.SaveComparison(before, after, "Perfil " + ProfileName(options.Profile));
             log.AppendLine();
@@ -783,15 +781,8 @@ namespace CodexPerformanceOptimizer
             progress.Report("Limpando temporários antigos...");
             long freed = DeleteOldFiles(Path.GetTempPath(), DateTime.Now.AddDays(-14), token);
             if (Optimizer.IsAdministrator()) freed += DeleteOldFiles(@"C:\Windows\Temp", DateTime.Now.AddDays(-14), token);
-            progress.Report("Executando TRIM...");
-            string trim;
-            if (Optimizer.IsAdministrator())
-            {
-                CommandExecution trimResult = Execute("defrag.exe", "C: /L /O", 120000);
-                trim = trimResult.ExitCode == 0 ? "concluído" : OneLine(trimResult.Output);
-            }
-            else trim = "não executado — reabra como administrador";
-            return "MANUTENÇÃO SEGURA\r\n" + new string('=', 72) + "\r\nData: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + "\r\nTemporários removidos: " + FormatBytes(freed) + "\r\nTRIM: " + trim;
+            string optimization = WindowsMaintenance.OptimizeVolume("C:", token, progress);
+            return "MANUTENÇÃO SEGURA\r\n" + new string('=', 72) + "\r\nData: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + "\r\nTemporários removidos: " + FormatBytes(freed) + "\r\n\r\n" + optimization;
         }
 
         public static string SaveReport(string content)
@@ -860,6 +851,9 @@ namespace CodexPerformanceOptimizer
             if (upper.Contains("ARMAZENAMENTO")) return "Análise de armazenamento";
             if (upper.Contains("DUPLICADOS")) return "Arquivos duplicados";
             if (upper.Contains("MANUTENÇÃO")) return "Manutenção";
+            if (upper.Contains("OTIMIZAÇÃO INTELIGENTE")) return "Otimização da unidade";
+            if (upper.Contains("COMPONENTES DO WINDOWS")) return "Componentes do Windows";
+            if (upper.Contains("DIAGNÓSTICO DE ENERGIA")) return "Diagnóstico de energia";
             if (upper.Contains("LIMPEZA")) return "Limpeza";
             if (upper.Contains("INICIALIZAÇÃO")) return "Inicialização";
             if (upper.Contains("RESTAURAÇÃO")) return "Restauração";
@@ -875,6 +869,9 @@ namespace CodexPerformanceOptimizer
             else if (upper.Contains("APLICAÇÃO DE PERFIL")) preferredPrefixes.AddRange(new[] { "Perfil:", "Disco livre:" });
             else if (upper.Contains("HARDWARE")) preferredPrefixes.AddRange(new[] { "PROCESSADOR:", "MEMÓRIA:" });
             else if (upper.Contains("MANUTENÇÃO")) preferredPrefixes.AddRange(new[] { "Temporários removidos:", "TRIM:" });
+            else if (upper.Contains("OTIMIZAÇÃO INTELIGENTE")) preferredPrefixes.AddRange(new[] { "Unidade:", "Resultado:" });
+            else if (upper.Contains("COMPONENTES DO WINDOWS")) preferredPrefixes.AddRange(new[] { "Resultado:", "Variação de espaço livre:" });
+            else if (upper.Contains("DIAGNÓSTICO DE ENERGIA")) preferredPrefixes.AddRange(new[] { "Resultado:", "Arquivo:" });
             else if (upper.Contains("LIMPEZA")) preferredPrefixes.AddRange(new[] { "Liberado:", "✓" });
             else if (upper.Contains("EFICIÊNCIA")) preferredPrefixes.AddRange(new[] { "✓ Widgets", "! Controle" });
             else preferredPrefixes.Add("✓");

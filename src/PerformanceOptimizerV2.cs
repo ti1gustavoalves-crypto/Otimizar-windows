@@ -86,7 +86,7 @@ namespace CodexPerformanceOptimizer
 
         public MainFormV2()
         {
-            Text = "Otimizador de Desempenho e Tema 3.1";
+            Text = "Otimizador de Desempenho e Tema 3.2";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1080, 720);
             Size = new Size(1120, 780);
@@ -94,7 +94,7 @@ namespace CodexPerformanceOptimizer
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Otimizador de Desempenho e Tema 3.1";
+            AccessibleName = "Otimizador de Desempenho e Tema 3.2";
             _advancedSettings = AdvancedEngine.ReadSettings();
             _processHistory = new ProcessHistoryTracker();
 
@@ -353,11 +353,12 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Armazenamento");
             _storageSummary = new Label { Text = "Discos e volumes", AutoSize = false, Size = new Size(520, 30), Location = new Point(20, 20), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 10.5f) };
-            var scan = ButtonFactory("Pastas", 470, 12, 95, Theme.Primary);
-            var largeFiles = ButtonFactory("Arquivos grandes", 575, 12, 130, Theme.Secondary);
-            var clean = ButtonFactory("Limpeza", 715, 12, 95, Theme.Warning);
-            var duplicates = ButtonFactory("Duplicados", 820, 12, 100, Theme.Secondary);
-            var export = ButtonFactory("Exportar", 930, 12, 80, Theme.Secondary);
+            var scan = ButtonFactory("Pastas", 430, 12, 84, Theme.Primary);
+            var largeFiles = ButtonFactory("Grandes", 524, 12, 92, Theme.Secondary);
+            var clean = ButtonFactory("Limpar", 626, 12, 84, Theme.Warning);
+            var duplicates = ButtonFactory("Duplicados", 720, 12, 92, Theme.Secondary);
+            var optimize = ButtonFactory("Otimizar", 822, 12, 92, Theme.Success);
+            var export = ButtonFactory("Exportar", 924, 12, 80, Theme.Secondary);
 
             _volumeGrid = Grid(20, 58, 1000, 145);
             _volumeGrid.Columns.Add("Drive", "Disco");
@@ -396,6 +397,7 @@ namespace CodexPerformanceOptimizer
             largeFiles.Click += async delegate { await ScanLargeFiles(); };
             clean.Click += async delegate { await OpenSafeCleanup(); };
             duplicates.Click += async delegate { await ScanDuplicates(); };
+            optimize.Click += async delegate { await OptimizeSelectedVolume(); };
             export.Click += delegate { ExportGrid(_storageGrid, "armazenamento.csv"); };
             page.Controls.Add(_storageSummary);
             page.Controls.Add(_volumeGrid);
@@ -405,28 +407,30 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(largeFiles);
             page.Controls.Add(clean);
             page.Controls.Add(duplicates);
+            page.Controls.Add(optimize);
             page.Controls.Add(export);
             _volumeGrid.Anchor = AnchorStyles.None;
             _storageGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutStorageTab(page, scan, largeFiles, clean, duplicates, export); };
-            LayoutStorageTab(page, scan, largeFiles, clean, duplicates, export);
+            page.Resize += delegate { LayoutStorageTab(page, scan, largeFiles, clean, duplicates, optimize, export); };
+            LayoutStorageTab(page, scan, largeFiles, clean, duplicates, optimize, export);
             page.Enter += delegate { LoadVolumes(); };
             return page;
         }
 
-        private void LayoutStorageTab(TabPage page, Button scan, Button largeFiles, Button clean, Button duplicates, Button export)
+        private void LayoutStorageTab(TabPage page, Button scan, Button largeFiles, Button clean, Button duplicates, Button optimize, Button export)
         {
             int width = Math.Max(600, page.ClientSize.Width - 40);
             _volumeGrid.Location = new Point(20, 58);
             _volumeGrid.Size = new Size(width, 145);
             _storageGrid.Location = new Point(20, 246);
             _storageGrid.Size = new Size(width, Math.Max(210, page.ClientSize.Height - _storageGrid.Top - 20));
-            int actionsLeft = Math.Max(390, page.ClientSize.Width - 620);
+            int actionsLeft = Math.Max(410, page.ClientSize.Width - 640);
             scan.Location = new Point(actionsLeft, 12);
-            largeFiles.Location = new Point(actionsLeft + 105, 12);
-            clean.Location = new Point(actionsLeft + 245, 12);
-            duplicates.Location = new Point(actionsLeft + 350, 12);
-            export.Location = new Point(actionsLeft + 460, 12);
+            largeFiles.Location = new Point(actionsLeft + 94, 12);
+            clean.Location = new Point(actionsLeft + 196, 12);
+            duplicates.Location = new Point(actionsLeft + 290, 12);
+            optimize.Location = new Point(actionsLeft + 392, 12);
+            export.Location = new Point(actionsLeft + 494, 12);
             _storageSummary.Size = new Size(Math.Max(320, actionsLeft - 40), 30);
         }
 
@@ -444,14 +448,36 @@ namespace CodexPerformanceOptimizer
             run.Click += async delegate { await RunWork("Executando manutenção...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.MaintenanceReport(t, p); }); };
             var advanced = ButtonFactory("Limpeza avançada...", 254, 165, 190, Theme.Warning);
             advanced.Click += async delegate { await AdvancedCleanup(); };
-            var info = DashboardCard(22, 230, 770, 220);
+            var components = ButtonFactory("Componentes do Windows", 456, 165, 200, Theme.Secondary);
+            components.Click += async delegate
+            {
+                if (MessageBox.Show(this, "Remover componentes substituídos do Windows? O modo agressivo ResetBase não será usado.", "Componentes do Windows", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                await RunWork("Limpando componentes do Windows...", delegate(CancellationToken t, IProgress<string> p) { return WindowsMaintenance.CleanupComponentStore(t, p); });
+            };
+            var energy = ButtonFactory("Diagnóstico de energia", 668, 165, 200, Theme.Secondary);
+            energy.Click += async delegate
+            {
+                string result = await RunWork("Gerando diagnóstico de energia...", delegate(CancellationToken t, IProgress<string> p) { return WindowsMaintenance.GenerateEnergyReport(t, p); });
+                if (!string.IsNullOrWhiteSpace(WindowsMaintenance.LatestEnergyReportPath) && result.IndexOf("relatório criado", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    MessageBox.Show(this, "Relatório criado. Abrir agora?", "Diagnóstico de energia", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    WindowsMaintenance.OpenLatestEnergyReport();
+            };
+            var storageSense = ButtonFactory("Limpeza automática", 880, 165, 160, Theme.Secondary);
+            storageSense.AccessibleName = "Abrir Sensor de Armazenamento";
+            storageSense.Click += delegate { WindowsMaintenance.OpenStorageSenseSettings(); };
+            var info = DashboardCard(22, 230, 1018, 220);
             info.Controls.Add(new Label { Text = "Protegido automaticamente", Location = new Point(20, 18), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11.5f) });
             info.Controls.Add(new Label { Text = "OneDrive e arquivos pessoais\r\nVeeam, Defender e Intune\r\nPolíticas corporativas", Location = new Point(22, 55), Size = new Size(330, 90), ForeColor = Theme.Text, Font = new Font("Segoe UI", 10f) });
-            info.Controls.Add(new Label { Text = "Lixeira e Windows.old sempre pedem confirmação.", Location = new Point(22, 171), AutoSize = true, ForeColor = Theme.Warning });
+            info.Controls.Add(new Label { Text = "Novas ações", Location = new Point(510, 18), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11.5f) });
+            info.Controls.Add(new Label { Text = "Otimização adequada para SSD ou HDD\r\nLimpeza do WinSxS sem ResetBase\r\nRelatório energético de 15 segundos", Location = new Point(512, 55), Size = new Size(450, 90), ForeColor = Theme.Text, Font = new Font("Segoe UI", 10f) });
+            info.Controls.Add(new Label { Text = "Lixeira, Windows.old e componentes do Windows sempre pedem confirmação.", Location = new Point(22, 171), AutoSize = true, ForeColor = Theme.Warning });
             page.Controls.Add(_schedule);
             page.Controls.Add(configure);
             page.Controls.Add(run);
             page.Controls.Add(advanced);
+            page.Controls.Add(components);
+            page.Controls.Add(energy);
+            page.Controls.Add(storageSense);
             page.Controls.Add(info);
             return page;
         }
@@ -863,6 +889,15 @@ namespace CodexPerformanceOptimizer
                 BeginInvoke((Action)delegate { _folderSummary.Text = rows.Count + " pastas • " + V2Engine.FormatBytes(rows.Sum(delegate(StorageEntry e) { return e.AllocatedBytes; })); });
                 return V2Engine.StorageReport(rows);
             });
+        }
+
+        private async Task OptimizeSelectedVolume()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedDrive)) { LoadVolumes(); if (string.IsNullOrWhiteSpace(_selectedDrive)) return; }
+            string drive = _selectedDrive;
+            if (MessageBox.Show(this, "O Windows escolherá automaticamente TRIM, desfragmentação ou otimização em camadas para " + drive + ". Continuar?", "Otimizar unidade", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            await RunWork("Otimizando " + drive + "...", delegate(CancellationToken t, IProgress<string> p) { return WindowsMaintenance.OptimizeVolume(drive, t, p); });
+            LoadVolumes();
         }
 
         private async Task OpenSafeCleanup()

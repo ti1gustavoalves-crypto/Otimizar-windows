@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CodexPerformanceOptimizer
@@ -16,6 +17,11 @@ namespace CodexPerformanceOptimizer
     internal static class SystemCommand
     {
         public static CommandExecution Execute(string fileName, string arguments, int timeoutMilliseconds)
+        {
+            return Execute(fileName, arguments, timeoutMilliseconds, CancellationToken.None);
+        }
+
+        public static CommandExecution Execute(string fileName, string arguments, int timeoutMilliseconds, CancellationToken token)
         {
             try
             {
@@ -34,10 +40,19 @@ namespace CodexPerformanceOptimizer
                     if (process == null) return new CommandExecution { ExitCode = -1, Output = "processo não iniciado" };
                     Task<string> output = process.StandardOutput.ReadToEndAsync();
                     Task<string> error = process.StandardError.ReadToEndAsync();
-                    if (!process.WaitForExit(timeoutMilliseconds))
+                    var elapsed = Stopwatch.StartNew();
+                    while (!process.WaitForExit(200))
                     {
-                        try { process.Kill(); } catch { }
-                        return new CommandExecution { ExitCode = -1, Output = "tempo limite excedido", TimedOut = true };
+                        if (token.IsCancellationRequested)
+                        {
+                            try { process.Kill(); } catch { }
+                            token.ThrowIfCancellationRequested();
+                        }
+                        if (elapsed.ElapsedMilliseconds >= timeoutMilliseconds)
+                        {
+                            try { process.Kill(); } catch { }
+                            return new CommandExecution { ExitCode = -1, Output = "tempo limite excedido", TimedOut = true };
+                        }
                     }
                     try { Task.WaitAll(new Task[] { output, error }, 5000); } catch { }
                     string stdout = output.IsCompleted ? output.Result : string.Empty;
@@ -49,6 +64,7 @@ namespace CodexPerformanceOptimizer
                     };
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex) { return new CommandExecution { ExitCode = -1, Output = ex.Message }; }
         }
 

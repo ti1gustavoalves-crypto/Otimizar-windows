@@ -1,4 +1,11 @@
-OTIMIZADOR DE DESEMPENHO 3.1
+OTIMIZADOR DE DESEMPENHO 3.2
+
+- Otimização inteligente da unidade selecionada conforme SSD, HDD ou armazenamento em camadas.
+- Limpeza do repositório de componentes do Windows sem usar o modo agressivo ResetBase.
+- Diagnóstico de energia e atividade com relatório HTML gerado pelo próprio Windows.
+- Acesso direto à configuração do Sensor de Armazenamento.
+- Comandos longos agora respondem ao botão Cancelar e encerram o processo associado.
+- Validação confinada da letra de unidade antes de executar qualquer otimização.
 
 - Gráficos em tempo real para CPU, memória e armazenamento.
 - Processos agrupados com histórico de cinco minutos.

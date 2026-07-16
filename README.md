@@ -9,6 +9,9 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 - Benchmark antes e depois, concluído após reiniciar o Windows.
 - Diagnóstico de discos, estabilidade, inicialização e recomendações.
 - Limpeza selecionável de arquivos temporários e análise por volume.
+- Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
+- Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
+- Acesso direto ao Sensor de Armazenamento para manutenção automática de espaço.
 - Perfis de energia, tema escuro, efeitos visuais e aplicativos em segundo plano.
 - Backup das configurações alteradas e restauração por seção.
 - Quarentena reversível para arquivos duplicados.
@@ -62,3 +65,4 @@ Sem esses parâmetros, a compilação continua funcional, mas os executáveis fi
 
 Antes de distribuir publicamente, assine os executáveis com um certificado confiável e publique o manifesto somente em uma origem HTTPS controlada.
 
+As decisões técnicas e fontes oficiais usadas nas otimizações estão em [`docs/performance-research.md`](docs/performance-research.md).

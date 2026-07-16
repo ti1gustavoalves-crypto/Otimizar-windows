@@ -9,7 +9,7 @@ namespace CodexPerformanceOptimizer
         {
             try
             {
-                Console.WriteLine("SELF-TEST 3.1");
+                Console.WriteLine("SELF-TEST 3.2");
                 SystemMetrics metrics = V2Engine.ReadMetrics();
                 if (metrics.TotalRamGb <= 0) throw new InvalidOperationException("Memória total não detectada.");
                 if (metrics.TotalDiskGb <= 0) throw new InvalidOperationException("Disco C: não detectado.");
@@ -51,7 +51,7 @@ namespace CodexPerformanceOptimizer
                 });
                 if (benchmark.IndexOf("BENCHMARK CONCLUÍDO", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Comparativo pós-reinicialização falhou.");
                 string safety = SafetyTestSuite.Run(CancellationToken.None, new Progress<string>());
-                if (safety.IndexOf("8 de 8 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
+                if (safety.IndexOf("10 de 10 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
                 TrendSummary trend = PersistentMetricStore.Read(1);
                 if (trend == null || trend.Points == null || trend.Processes == null) throw new InvalidOperationException("Histórico persistente falhou.");
 
@@ -64,12 +64,12 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Medições de inicialização: " + diagnostics.Startup.Count);
                 Console.WriteLine("Estabilidade e atualizações: OK");
                 Console.WriteLine("Benchmark e histórico persistente: OK");
-                Console.WriteLine("Testes de segurança isolados: 8/8");
+                Console.WriteLine("Testes de segurança isolados: 10/10");
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
                 Console.WriteLine("Inicialização: " + V2Engine.ReadStartupEntries().Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);
                 Console.WriteLine("Histórico: " + V2Engine.ReadReportHistory(5).Count);
-                Console.WriteLine("SELF-TEST 3.1 OK");
+                Console.WriteLine("SELF-TEST 3.2 OK");
                 return 0;
             }
             catch (Exception ex)

@@ -155,6 +155,21 @@ namespace CodexPerformanceOptimizer
                 CommandExecution command = SystemCommand.Execute("cmd.exe", "/d /c exit 0", 5000);
                 results.Add(Result("Comando com limite", command.ExitCode == 0 && !command.TimedOut, "Código de retorno e tempo limite verificados."));
 
+                progress.Report("Testando cancelamento de comandos...");
+                bool cancellationWorked = false;
+                using (var commandCancellation = new CancellationTokenSource(150))
+                {
+                    try { SystemCommand.Execute("cmd.exe", "/d /c ping 127.0.0.1 -n 10 >nul", 5000, commandCancellation.Token); }
+                    catch (OperationCanceledException) { cancellationWorked = true; }
+                }
+                results.Add(Result("Cancelamento de comando", cancellationWorked, "O processo isolado foi interrompido ao cancelar a operação."));
+
+                progress.Report("Testando validação de unidades...");
+                bool safeDrive = WindowsMaintenance.NormalizeDriveForTesting("c:\\") == "C:" &&
+                    string.IsNullOrEmpty(WindowsMaintenance.NormalizeDriveForTesting(@"\\servidor\pasta")) &&
+                    string.IsNullOrEmpty(WindowsMaintenance.NormalizeDriveForTesting("C:\\Windows"));
+                results.Add(Result("Unidade confinada", safeDrive, "Somente uma letra de unidade local foi aceita para otimização."));
+
                 progress.Report("Testando proteção do atualizador...");
                 string update = AdvancedEngine.DownloadVerifiedUpdate(new UpdateManifest { Version = "99.0", InstallerUrl = "http://example.invalid/update.exe", Sha256 = "00" });
                 results.Add(Result("Atualização segura", update.IndexOf("HTTPS", StringComparison.OrdinalIgnoreCase) >= 0, "Downloads sem HTTPS foram rejeitados antes da rede."));
