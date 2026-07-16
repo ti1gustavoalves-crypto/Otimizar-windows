@@ -1,0 +1,21 @@
+OTIMIZADOR DE DESEMPENHO 3.1
+
+- Gráficos em tempo real para CPU, memória e armazenamento.
+- Processos agrupados com histórico de cinco minutos.
+- Comparativo antes e depois das otimizações.
+- Central de recomendações baseada nas medições do computador.
+- Temperaturas, frequência, possíveis limitações e saúde dos discos.
+- Inicialização medida e diagnóstico de estabilidade dos últimos 30 dias.
+- Mapa dos maiores arquivos e quarentena reversível de duplicados.
+- Perfis temporários para jogos e trabalho, além da troca automática na bateria.
+- Monitoramento opcional na bandeja do Windows.
+- Restauração individual de energia, tema, efeitos, segundo plano e inicialização.
+- Atualizações por HTTPS com validação SHA-256.
+- Benchmark real concluído após uma reinicialização do Windows.
+- Histórico persistente diário, semanal e mensal com retenção de 30 dias.
+- Testes de segurança executados em arquivos e Registro isolados.
+- Logs de falhas com remoção automática de nomes e caminhos pessoais.
+- Instalador com atualização, reparo, troca atômica e rollback.
+- Pipeline de publicação com assinatura opcional e manifesto público.
+
+As leituras de temperatura e vida útil dependem dos sensores expostos pelo fabricante.

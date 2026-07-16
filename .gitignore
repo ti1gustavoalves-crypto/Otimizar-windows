@@ -1,0 +1,23 @@
+# Artefatos de compilação
+/outputs/
+*.exe
+*.dll
+*.pdb
+*.zip
+
+# Configuração local de publicação
+/src/release-config.json
+
+# Visual Studio e .NET
+.vs/
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+
+# Arquivos locais do sistema
+Thumbs.db
+Desktop.ini
+*.log
+
