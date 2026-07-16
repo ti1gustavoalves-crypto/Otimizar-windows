@@ -4,6 +4,8 @@
 *.dll
 *.pdb
 *.zip
+!/releases/
+!/releases/InstalarOtimizadorDeDesempenho.exe
 
 # Configuração local de publicação
 /src/release-config.json
