@@ -56,6 +56,8 @@ namespace CodexPerformanceOptimizer
                 if (safety.IndexOf("10 de 10 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
                 if (!DriverManager.IsValidUpdateIdForTesting("11111111-2222-3333-4444-555555555555") || DriverManager.IsValidUpdateIdForTesting("driver-inválido")) throw new InvalidOperationException("Validação segura de drivers falhou.");
                 if (DriverManager.CountInstalledDrivers() <= 0) throw new InvalidOperationException("Inventário de drivers falhou.");
+                var driverInventory = DriverManager.ReadInstalledDrivers();
+                if (driverInventory == null || driverInventory.Count == 0 || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Versões dos drivers importantes não foram lidas.");
                 var startupEntries = V2Engine.ReadStartupEntries();
                 if (startupEntries == null || startupEntries.Any(item => string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.Source))) throw new InvalidOperationException("Inventário de inicialização falhou.");
                 TrendSummary trend = PersistentMetricStore.Read(1);
@@ -74,7 +76,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
                 Console.WriteLine("Inicialização: " + startupEntries.Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);
-                Console.WriteLine("Gerenciamento de drivers: OK");
+                Console.WriteLine("Drivers importantes: " + driverInventory.Count);
                 Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }

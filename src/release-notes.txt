@@ -1,4 +1,8 @@
-OTIMIZADOR DE DESEMPENHO 3.5
+OTIMIZADOR DE DESEMPENHO 3.6
+
+- A área Drivers agora exibe versões instaladas, fornecedor, data e pacote INF.
+- Inventário organizado para vídeo, BIOS/UEFI, firmware, chipset, áudio, rede, armazenamento, Bluetooth e USB.
+- Versões instaladas e atualizações disponíveis aparecem em listas separadas para evitar comparações incorretas.
 
 - Inicialização agora reúne usuário, computador, aplicativos 32 bits, pastas, políticas e aplicativos da Microsoft Store.
 - Entradas protegidas indicam quando exigem administrador ou são controladas pelo Windows.

@@ -63,6 +63,41 @@ namespace CodexPerformanceOptimizer
             catch { return 0; }
         }
 
+        public static List<DriverInventoryItem> ReadInstalledDrivers()
+        {
+            var items = new List<DriverInventoryItem>();
+            AddBios(items);
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT DeviceName, Manufacturer, DriverVersion, DriverDate, DeviceClass, InfName FROM Win32_PnPSignedDriver WHERE DeviceName IS NOT NULL AND DriverVersion IS NOT NULL"))
+                using (ManagementObjectCollection results = searcher.Get())
+                foreach (ManagementObject driver in results)
+                {
+                    string deviceClass = Convert.ToString(driver["DeviceClass"]);
+                    string device = Convert.ToString(driver["DeviceName"]);
+                    string provider = Convert.ToString(driver["Manufacturer"]);
+                    string category = DriverCategory(deviceClass, device, provider);
+                    if (string.IsNullOrEmpty(category)) continue;
+                    items.Add(new DriverInventoryItem
+                    {
+                        Category = category,
+                        Device = device,
+                        Provider = string.IsNullOrWhiteSpace(provider) ? "Não informado" : provider,
+                        Version = Convert.ToString(driver["DriverVersion"]),
+                        Date = FormatDriverDate(Convert.ToString(driver["DriverDate"])),
+                        InfName = Convert.ToString(driver["InfName"])
+                    });
+                }
+            }
+            catch { }
+            return items
+                .GroupBy(delegate(DriverInventoryItem item) { return item.Category + "|" + item.Device + "|" + item.Version; }, StringComparer.OrdinalIgnoreCase)
+                .Select(delegate(IGrouping<string, DriverInventoryItem> group) { return group.First(); })
+                .OrderBy(delegate(DriverInventoryItem item) { return CategoryOrder(item.Category); })
+                .ThenBy(delegate(DriverInventoryItem item) { return item.Device; }, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+        }
+
         public static string BuildSearchReport(ICollection<DriverUpdate> updates)
         {
             var report = new StringBuilder("VERIFICAÇÃO DE DRIVERS\r\n" + new string('=', 72) + "\r\n");
@@ -106,6 +141,75 @@ namespace CodexPerformanceOptimizer
         {
             try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)); }
             catch { return string.Empty; }
+        }
+
+        private static void AddBios(ICollection<DriverInventoryItem> items)
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT Manufacturer, SMBIOSBIOSVersion, ReleaseDate FROM Win32_BIOS"))
+                using (ManagementObjectCollection results = searcher.Get())
+                foreach (ManagementObject bios in results)
+                {
+                    string version = Convert.ToString(bios["SMBIOSBIOSVersion"]);
+                    if (string.IsNullOrWhiteSpace(version)) continue;
+                    items.Add(new DriverInventoryItem { Category = "BIOS", Device = "BIOS / UEFI do sistema", Provider = Convert.ToString(bios["Manufacturer"]), Version = version, Date = FormatDriverDate(Convert.ToString(bios["ReleaseDate"])), InfName = "Firmware da placa-mãe" });
+                }
+            }
+            catch { }
+        }
+
+        private static string DriverCategory(string deviceClass, string device, string provider)
+        {
+            string kind = (deviceClass ?? string.Empty).ToUpperInvariant();
+            string name = device ?? string.Empty;
+            string maker = provider ?? string.Empty;
+            if (kind == "DISPLAY") return "Vídeo";
+            if (kind == "FIRMWARE") return "Firmware";
+            if (kind == "MEDIA") return "Áudio";
+            if (kind == "SCSIADAPTER" || kind == "HDC") return "Armazenamento";
+            if (kind == "BLUETOOTH") return "Bluetooth";
+            if (kind == "NET")
+            {
+                if (ContainsAny(name, "WAN Miniport", "Virtual", "Kernel Debug", "Bluetooth Device")) return string.Empty;
+                return "Rede";
+            }
+            if (kind == "USB")
+            {
+                if (maker.IndexOf("Microsoft", StringComparison.OrdinalIgnoreCase) >= 0) return string.Empty;
+                return "USB";
+            }
+            if (kind == "SYSTEM" && ContainsAny(name, "Chipset", "SMBus", "PCI Express", "PCIe", "LPC", "Management Engine", "Serial IO", "GPIO", "Dynamic Tuning", "Platform", "Host Bridge", "Root Port", "Thermal")) return "Chipset / sistema";
+            return string.Empty;
+        }
+
+        private static bool ContainsAny(string value, params string[] terms)
+        {
+            foreach (string term in terms) if ((value ?? string.Empty).IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+            return false;
+        }
+
+        private static int CategoryOrder(string category)
+        {
+            string[] order = { "Vídeo", "BIOS", "Firmware", "Chipset / sistema", "Áudio", "Rede", "Armazenamento", "Bluetooth", "USB" };
+            int index = Array.IndexOf(order, category);
+            return index < 0 ? order.Length : index;
+        }
+
+        private static string FormatDriverDate(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "Não informada";
+            try { return DisplayDriverDate(ManagementDateTimeConverter.ToDateTime(value)); }
+            catch
+            {
+                DateTime parsed;
+                return DateTime.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.None, out parsed) ? DisplayDriverDate(parsed) : "Não informada";
+            }
+        }
+
+        private static string DisplayDriverDate(DateTime value)
+        {
+            return value.Year < 2010 ? "Data padrão" : value.ToString("dd/MM/yyyy", CultureInfo.CurrentCulture);
         }
     }
 }

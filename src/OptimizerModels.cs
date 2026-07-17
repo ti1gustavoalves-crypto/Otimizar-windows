@@ -352,6 +352,16 @@ namespace CodexPerformanceOptimizer
         public bool RebootRequired { get; set; }
     }
 
+    internal sealed class DriverInventoryItem
+    {
+        public string Category { get; set; }
+        public string Device { get; set; }
+        public string Provider { get; set; }
+        public string Version { get; set; }
+        public string Date { get; set; }
+        public string InfName { get; set; }
+    }
+
     internal sealed class PackagedStartupTask
     {
         public string PackageFamilyName { get; set; }
