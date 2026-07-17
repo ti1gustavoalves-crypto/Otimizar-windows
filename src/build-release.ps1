@@ -14,16 +14,20 @@ $output = [IO.Path]::GetFullPath($OutputDirectory)
 [IO.Directory]::CreateDirectory($output) | Out-Null
 $app = Join-Path $output 'OtimizadorDeDesempenho.exe'
 $installer = Join-Path $output 'InstalarOtimizadorDeDesempenho.exe'
+$legacyApp = Join-Path $output 'Otimizar desempenho.exe'
+if (Test-Path -LiteralPath $legacyApp) { Remove-Item -LiteralPath $legacyApp -Force }
 $notes = Join-Path $PSScriptRoot 'release-notes.txt'
 $localManifest = Join-Path $PSScriptRoot 'update-manifest.json'
 $channel = Join-Path $PSScriptRoot 'release-channel.json'
 $iconIco = Join-Path $PSScriptRoot 'assets\optimizer-icon.ico'
 $iconPng = Join-Path $PSScriptRoot 'assets\optimizer-icon.png'
 if (-not (Test-Path -LiteralPath $iconIco) -or -not (Test-Path -LiteralPath $iconPng)) { throw 'Arquivos do icone do aplicativo nao encontrados.' }
-$sources = @(
-    'PerformanceOptimizer.cs', 'PerformanceOptimizerV2.cs', 'MainForm.Diagnostics.cs', 'MainForm.Control.cs', 'OptimizerModels.cs', 'OptimizerEngine.cs',
-    'AdvancedFeatures.cs', 'BenchmarkHistory.cs', 'QualityInfrastructure.cs', 'OptionalSensors.cs', 'WindowsMaintenance.cs', 'SystemCommand.cs'
-) | ForEach-Object { Join-Path $PSScriptRoot $_ }
+$excludedSources = @('Installer.cs', 'V2SelfTest.cs')
+$sources = Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.cs' -File |
+    Where-Object { $excludedSources -notcontains $_.Name } |
+    Sort-Object Name |
+    Select-Object -ExpandProperty FullName
+if ($sources.Count -eq 0) { throw 'Nenhum arquivo-fonte do aplicativo foi encontrado.' }
 $references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Management.dll','System.Web.Extensions.dll') | ForEach-Object { '/reference:' + $_ }
 $manifestPath = Join-Path $PSScriptRoot 'app.manifest'
 

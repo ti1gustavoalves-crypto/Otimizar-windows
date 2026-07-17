@@ -2,7 +2,7 @@
 
 Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador, aplicar perfis reversíveis de desempenho e executar manutenção controlada.
 
-A versão 3.4 apresenta identidade visual própria, navegação lateral simplificada e uma interface mais consistente para uso diário.
+A interface apresenta identidade visual própria, navegação lateral simplificada e organização consistente para uso diário.
 
 ## Recursos principais
 

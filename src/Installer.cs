@@ -9,12 +9,12 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-[assembly: AssemblyTitle("Instalador do Otimizador 3.4")]
-[assembly: AssemblyDescription("Instala o Otimizador de Desempenho 3.4 para o usuário atual.")]
+[assembly: AssemblyTitle("Instalador do Otimizador")]
+[assembly: AssemblyDescription("Instala ou atualiza o Otimizador de Desempenho para o usuário atual.")]
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
-[assembly: AssemblyVersion("3.4.0.0")]
-[assembly: AssemblyFileVersion("3.4.0.0")]
+[assembly: AssemblyVersion("3.4.1.0")]
+[assembly: AssemblyFileVersion("3.4.1.0")]
 
 namespace CodexPerformanceOptimizerInstaller
 {
@@ -25,6 +25,7 @@ namespace CodexPerformanceOptimizerInstaller
         private static readonly string RollbackPath = Path.Combine(InstallDir, "OtimizadorDeDesempenho.rollback.exe");
         private static readonly string UninstallPath = Path.Combine(InstallDir, "Desinstalar.exe");
         private const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\CodexPerformanceOptimizer";
+        private const string ShortcutPrefix = "Otimizador de Desempenho ";
 
         [STAThread]
         private static void Main(string[] args)
@@ -66,18 +67,7 @@ namespace CodexPerformanceOptimizerInstaller
                 RunHidden("schtasks.exe", "/Delete /TN \"Codex Otimizador - Manutencao\" /F");
                 using (RegistryKey runOnce = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\RunOnce", true))
                     if (runOnce != null) runOnce.DeleteValue("CodexPerformanceOptimizerBenchmark", false);
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 2.0.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 2.0.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.0.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.0.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.1.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.1.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.2.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.2.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.3.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.3.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.4.lnk"));
-                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.4.lnk"));
+                DeleteProductShortcuts();
                 Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
                 if (Directory.Exists(actual)) Directory.Delete(actual, true);
                 MessageBox.Show("Otimizador removido. Os relatórios e o backup foram preservados em AppData\\Local\\Codex.", "Desinstalação concluída", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -92,10 +82,11 @@ namespace CodexPerformanceOptimizerInstaller
         {
             Directory.CreateDirectory(InstallDir);
             string stagedApp = AppPath + ".new";
+            Version stagedVersion = null;
             try
             {
                 ExtractRequiredResource("OptimizerBinary", stagedApp);
-                Version stagedVersion = AssemblyName.GetAssemblyName(stagedApp).Version;
+                stagedVersion = AssemblyName.GetAssemblyName(stagedApp).Version;
                 if (stagedVersion == null || stagedVersion.Major < 3) throw new InvalidOperationException("A versão incorporada não é válida.");
                 if (File.Exists(AppPath))
                 {
@@ -120,22 +111,14 @@ namespace CodexPerformanceOptimizerInstaller
                 RestoreRollback();
                 throw;
             }
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 2.0.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 2.0.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.0.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.0.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.1.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.1.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.2.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.2.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.3.lnk"));
-            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.3.lnk"));
-            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.4.lnk"), AppPath);
-            if (desktopShortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.4.lnk"), AppPath);
+            DeleteProductShortcuts();
+            string shortcutName = ShortcutName(DisplayVersion(stagedVersion));
+            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", shortcutName), AppPath);
+            if (desktopShortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcutName), AppPath);
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(UninstallKey))
             {
-                key.SetValue("DisplayName", "Otimizador de Desempenho 3.4");
-                key.SetValue("DisplayVersion", "3.4.0");
+                key.SetValue("DisplayName", "Otimizador de Desempenho " + DisplayVersion(stagedVersion));
+                key.SetValue("DisplayVersion", stagedVersion.ToString(3));
                 key.SetValue("Publisher", "Codex");
                 key.SetValue("InstallLocation", InstallDir);
                 key.SetValue("DisplayIcon", AppPath);
@@ -238,7 +221,7 @@ namespace CodexPerformanceOptimizerInstaller
                 Type shortcutType = shortcut.GetType();
                 shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
                 shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
-                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Otimizador de Desempenho 3.4" });
+                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Otimizador de Desempenho" });
                 shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
             }
             finally
@@ -251,6 +234,40 @@ namespace CodexPerformanceOptimizerInstaller
         private static void DeleteShortcut(string path)
         {
             try { if (File.Exists(path)) File.Delete(path); } catch { }
+        }
+
+        private static void DeleteProductShortcuts()
+        {
+            string[] folders =
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs"),
+                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
+            };
+            foreach (string folder in folders)
+            {
+                try
+                {
+                    if (!Directory.Exists(folder)) continue;
+                    foreach (string path in Directory.GetFiles(folder, ShortcutPrefix + "*.lnk", SearchOption.TopDirectoryOnly))
+                    {
+                        string name = Path.GetFileNameWithoutExtension(path);
+                        Version parsed;
+                        if (name.StartsWith(ShortcutPrefix, StringComparison.OrdinalIgnoreCase) &&
+                            Version.TryParse(name.Substring(ShortcutPrefix.Length), out parsed)) DeleteShortcut(path);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private static string ShortcutName(string version)
+        {
+            return ShortcutPrefix + version + ".lnk";
+        }
+
+        internal static string DisplayVersion(Version version)
+        {
+            return version == null ? string.Empty : version.Major + "." + version.Minor;
         }
 
         private static void RunHidden(string file, string args)
@@ -272,7 +289,9 @@ namespace CodexPerformanceOptimizerInstaller
 
         public InstallerForm()
         {
-            Text = "Instalar Otimizador 3.4";
+            Version package = Assembly.GetExecutingAssembly().GetName().Version;
+            string displayVersion = InstallerProgram.DisplayVersion(package);
+            Text = "Instalar Otimizador " + displayVersion;
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -281,16 +300,15 @@ namespace CodexPerformanceOptimizerInstaller
             ForeColor = Color.FromArgb(241, 245, 249);
             Font = new Font("Segoe UI", 9.5f);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Instalador do Otimizador 3.4";
+            AccessibleName = "Instalador do Otimizador " + displayVersion;
             try
             {
                 Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
                 if (Icon != null) Controls.Add(new PictureBox { Image = Icon.ToBitmap(), Location = new Point(30, 22), Size = new Size(48, 48), SizeMode = PictureBoxSizeMode.Zoom, AccessibleName = "Ícone do Otimizador" });
             }
             catch { }
-            Controls.Add(new Label { Text = "Otimizador 3.4", Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(94, 26) });
+            Controls.Add(new Label { Text = "Otimizador " + displayVersion, Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(94, 26) });
             Version installed = InstallerProgram.InstalledVersion();
-            Version package = Assembly.GetExecutingAssembly().GetName().Version;
             string operation = installed == null ? "Instalação por usuário — não requer privilégios administrativos" : installed == package ? "Reparar a versão " + installed + " sem perder configurações" : "Atualizar da versão " + installed + " para " + package;
             Controls.Add(new Label { Text = operation, AutoSize = true, Location = new Point(34, 78), ForeColor = Color.FromArgb(148, 163, 184) });
             Controls.Add(new Label { Text = "Destino\r\n" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "OtimizadorDeDesempenho") + "\r\n\r\nAtalhos, atualização e desinstalação serão configurados automaticamente.", Location = new Point(34, 120), Size = new Size(550, 82), ForeColor = Color.FromArgb(203, 213, 225) });

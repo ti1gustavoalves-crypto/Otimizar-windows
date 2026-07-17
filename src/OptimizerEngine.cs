@@ -18,6 +18,15 @@ namespace CodexPerformanceOptimizer
 {
     internal static class V2Engine
     {
+        private static string ProductVersion
+        {
+            get
+            {
+                Version version = typeof(V2Engine).Assembly.GetName().Version;
+                return version.Major + "." + version.Minor;
+            }
+        }
+
         private const string AppKey = @"Software\Codex\PerformanceOptimizerV2";
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string DisabledKey = AppKey + @"\DisabledStartup";
@@ -65,7 +74,7 @@ namespace CodexPerformanceOptimizer
             token.ThrowIfCancellationRequested();
             var sb = new StringBuilder();
             SystemMetrics m = ReadMetrics();
-            sb.AppendLine("AUDITORIA 3.4");
+            sb.AppendLine("AUDITORIA " + ProductVersion);
             sb.AppendLine(new string('=', 72));
             sb.AppendLine("Data: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             sb.AppendLine("Administrador: " + (Optimizer.IsAdministrator() ? "sim" : "não"));
@@ -405,7 +414,7 @@ namespace CodexPerformanceOptimizer
             EnsureSnapshot();
             SystemMetrics before = ReadMetrics();
             var log = new StringBuilder();
-            log.AppendLine("APLICAÇÃO DE PERFIL 3.4");
+            log.AppendLine("APLICAÇÃO DE PERFIL " + ProductVersion);
             log.AppendLine(new string('=', 72));
             log.AppendLine("Perfil: " + ProfileName(options.Profile));
             if (options.CreateRestorePoint)
@@ -413,7 +422,7 @@ namespace CodexPerformanceOptimizer
                 progress.Report("Criando ponto de restauração...");
                 if (Optimizer.IsAdministrator())
                 {
-                    string result = Run("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'Antes do Otimizador 3.4' -RestorePointType MODIFY_SETTINGS\"", 120000);
+                    string result = Run("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'Antes do Otimizador " + ProductVersion + "' -RestorePointType MODIFY_SETTINGS\"", 120000);
                     log.AppendLine(result.IndexOf("erro", StringComparison.OrdinalIgnoreCase) >= 0 || result.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ? "! O Windows não criou o ponto de restauração: " + OneLine(result) : "✓ Ponto de restauração solicitado.");
                 }
                 else log.AppendLine("! Ponto de restauração ignorado: reabra como administrador.");
@@ -906,7 +915,7 @@ namespace CodexPerformanceOptimizer
         public static void OpenReportsFolder()
         {
             Directory.CreateDirectory(ReportsFolder);
-            Process.Start("explorer.exe", ReportsFolder);
+            Process.Start(new ProcessStartInfo("explorer.exe", "\"" + ReportsFolder + "\"") { UseShellExecute = true });
         }
 
         public static string DetectManagedEnvironmentShort()

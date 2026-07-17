@@ -1,4 +1,10 @@
-OTIMIZADOR DE DESEMPENHO 3.4
+OTIMIZADOR DE DESEMPENHO 3.4.1
+
+- Revisão integral de dependências, telas, ações e caminhos de execução.
+- Componentes visuais separados do formulário principal para facilitar manutenção.
+- Proteção contra duas instâncias abertas simultaneamente.
+- Atalhos antigos agora são identificados e removidos sem listas duplicadas por versão.
+- Parâmetros internos sem uso e configuração de release obsoleta foram removidos.
 
 - Ícone próprio aplicado ao aplicativo, instalador, atalhos e bandeja do Windows.
 - Navegação lateral mais simples, com as oito áreas organizadas em uma única coluna.

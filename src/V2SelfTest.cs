@@ -9,7 +9,8 @@ namespace CodexPerformanceOptimizer
         {
             try
             {
-                Console.WriteLine("SELF-TEST 3.4");
+                string version = typeof(V2SelfTest).Assembly.GetName().Version.ToString(3);
+                Console.WriteLine("SELF-TEST " + version);
                 SystemMetrics metrics = V2Engine.ReadMetrics();
                 if (metrics.TotalRamGb <= 0) throw new InvalidOperationException("Memória total não detectada.");
                 if (metrics.TotalDiskGb <= 0) throw new InvalidOperationException("Disco C: não detectado.");
@@ -69,7 +70,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Inicialização: " + V2Engine.ReadStartupEntries().Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);
                 Console.WriteLine("Histórico: " + V2Engine.ReadReportHistory(5).Count);
-                Console.WriteLine("SELF-TEST 3.4 OK");
+                Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }
             catch (Exception ex)

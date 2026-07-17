@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Otimizador de Desempenho")]
@@ -12,38 +13,38 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("3.4.0.0")]
-[assembly: AssemblyFileVersion("3.4.0.0")]
+[assembly: AssemblyVersion("3.4.1.0")]
+[assembly: AssemblyFileVersion("3.4.1.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer
 {
     internal static class Program
     {
+        private const string SingleInstanceName = @"Local\CodexPerformanceOptimizer";
+
         [STAThread]
         private static void Main(string[] args)
         {
             CrashLogger.Initialize();
-            if (HasArgument(args, "--audit"))
-            {
-                Console.WriteLine(V2Engine.BuildFullAudit());
-                return;
-            }
             if (HasArgument(args, "--maintenance"))
             {
                 V2Engine.RunMaintenance();
                 return;
             }
-            if (HasArgument(args, "--efficiency"))
-            {
-                string report = V2Engine.ApplyBackgroundEfficiency(System.Threading.CancellationToken.None, new Progress<string>());
-                V2Engine.SaveReport(report);
-                return;
-            }
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainFormV2());
+            bool firstInstance;
+            using (var instance = new Mutex(false, SingleInstanceName, out firstInstance))
+            {
+                if (!firstInstance)
+                {
+                    MessageBox.Show("O Otimizador já está aberto.", "Otimizador de Desempenho", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                Application.Run(new MainFormV2());
+            }
         }
 
         private static bool HasArgument(string[] args, string expected)
