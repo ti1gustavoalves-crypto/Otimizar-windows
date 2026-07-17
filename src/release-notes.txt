@@ -1,4 +1,9 @@
-OTIMIZADOR DE DESEMPENHO 3.6
+OTIMIZADOR DE DESEMPENHO 3.7
+
+- Cada atualização de driver agora oferece um link para o suporte oficial do fabricante.
+- Intel, NVIDIA, AMD e fabricantes de computadores abrem seus portais próprios de drivers.
+- Atualizações sem portal específico abrem uma busca exata no Microsoft Update Catalog.
+- Links externos são limitados a uma lista interna de domínios oficiais HTTPS.
 
 - A área Drivers agora exibe versões instaladas, fornecedor, data e pacote INF.
 - Inventário organizado para vídeo, BIOS/UEFI, firmware, chipset, áudio, rede, armazenamento, Bluetooth e USB.

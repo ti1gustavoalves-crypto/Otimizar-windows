@@ -612,9 +612,20 @@ namespace CodexPerformanceOptimizer
             _driverGrid.Columns.Add("Restart", "Reinício");
             _driverGrid.Columns[4].Width = 90;
             _driverGrid.Columns[4].ReadOnly = true;
+            _driverGrid.Columns.Add(new DataGridViewLinkColumn { Name = "OfficialSite", HeaderText = "Site oficial", Width = 120, TrackVisitedState = false, LinkColor = Theme.Primary, ActiveLinkColor = Theme.Text, VisitedLinkColor = Theme.Primary });
             _driverGrid.Columns.Add("UpdateId", "ID");
-            _driverGrid.Columns[5].Visible = false;
-            _driverGrid.Columns[5].ReadOnly = true;
+            _driverGrid.Columns[6].Visible = false;
+            _driverGrid.Columns[6].ReadOnly = true;
+            _driverGrid.Columns.Add("SupportUrl", "Endereço oficial");
+            _driverGrid.Columns[7].Visible = false;
+            _driverGrid.Columns[7].ReadOnly = true;
+            _driverGrid.CellContentClick += delegate(object sender, DataGridViewCellEventArgs e)
+            {
+                if (e.RowIndex < 0 || _driverGrid.Columns[e.ColumnIndex].Name != "OfficialSite") return;
+                string url = Convert.ToString(_driverGrid.Rows[e.RowIndex].Cells["SupportUrl"].Value);
+                try { DriverManager.OpenOfficialSupport(url); }
+                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Site oficial", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+            };
 
             var search = ButtonFactory("Buscar atualizações", 20, 554, 175, Theme.Primary);
             var selectAll = ButtonFactory("Selecionar todos", 207, 554, 155, Theme.Secondary);
@@ -678,7 +689,7 @@ namespace CodexPerformanceOptimizer
             }
             _driverGrid.Rows.Clear();
             foreach (DriverUpdate update in found)
-                _driverGrid.Rows.Add(update.Selected, update.Title, string.IsNullOrWhiteSpace(update.Provider) ? "Windows Update" : update.Provider, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.UpdateId);
+                _driverGrid.Rows.Add(update.Selected, update.Title, string.IsNullOrWhiteSpace(update.Provider) ? "Windows Update" : update.Provider, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.SupportName, update.UpdateId, update.SupportUrl);
             _driverSummary.Text = found.Count == 0 ? "Seus drivers estão atualizados" : found.Count + (found.Count == 1 ? " atualização encontrada" : " atualizações encontradas");
         }
 

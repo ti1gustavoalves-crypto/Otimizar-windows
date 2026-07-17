@@ -13,6 +13,11 @@ namespace CodexPerformanceOptimizer
     {
         private const int SearchTimeout = 10 * 60 * 1000;
         private const int InstallTimeout = 60 * 60 * 1000;
+        private static readonly string[] OfficialSupportDomains =
+        {
+            "intel.com", "nvidia.com", "amd.com", "dell.com", "hp.com", "lenovo.com", "asus.com", "acer.com",
+            "msi.com", "gigabyte.com", "realtek.com", "samsung.com", "qualcomm.com", "broadcom.com", "catalog.update.microsoft.com"
+        };
 
         public static List<DriverUpdate> SearchUpdates(CancellationToken token)
         {
@@ -32,7 +37,11 @@ namespace CodexPerformanceOptimizer
                 long bytes;
                 bool reboot;
                 if (fields.Length != 5 || !long.TryParse(fields[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out bytes) || !bool.TryParse(fields[4], out reboot) || !IsValidUpdateId(fields[2])) continue;
-                updates.Add(new DriverUpdate { Selected = true, Title = DecodeField(fields[0]), Provider = DecodeField(fields[1]), UpdateId = fields[2], DownloadBytes = bytes, RebootRequired = reboot });
+                string title = DecodeField(fields[0]);
+                string provider = DecodeField(fields[1]);
+                string supportName;
+                string supportUrl = ResolveOfficialSupport(provider, title, out supportName);
+                updates.Add(new DriverUpdate { Selected = true, Title = title, Provider = provider, UpdateId = fields[2], DownloadBytes = bytes, RebootRequired = reboot, SupportName = supportName, SupportUrl = supportUrl });
             }
             return updates.OrderBy(delegate(DriverUpdate item) { return item.Title; }).ToList();
         }
@@ -112,9 +121,26 @@ namespace CodexPerformanceOptimizer
             Process.Start(new ProcessStartInfo("ms-settings:windowsupdate-optionalupdates") { UseShellExecute = true });
         }
 
+        public static void OpenOfficialSupport(string url)
+        {
+            if (!IsOfficialSupportUrl(url)) throw new InvalidOperationException("O endereço de suporte não pertence a um fabricante autorizado.");
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+
         internal static bool IsValidUpdateIdForTesting(string value)
         {
             return IsValidUpdateId(value);
+        }
+
+        internal static string ResolveOfficialSupportForTesting(string provider, string title)
+        {
+            string name;
+            return ResolveOfficialSupport(provider, title, out name);
+        }
+
+        internal static bool IsOfficialSupportUrlForTesting(string value)
+        {
+            return IsOfficialSupportUrl(value);
         }
 
         private static bool IsValidUpdateId(string value)
@@ -141,6 +167,34 @@ namespace CodexPerformanceOptimizer
         {
             try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)); }
             catch { return string.Empty; }
+        }
+
+        private static string ResolveOfficialSupport(string provider, string title, out string supportName)
+        {
+            string value = (provider ?? string.Empty) + " " + (title ?? string.Empty);
+            if (ContainsAny(value, "Intel")) { supportName = "Intel"; return "https://www.intel.com/content/www/us/en/support/detect.html"; }
+            if (ContainsAny(value, "NVIDIA")) { supportName = "NVIDIA"; return "https://www.nvidia.com/en-us/drivers/"; }
+            if (ContainsAny(value, "AMD Radeon", "AMD Software", "Advanced Micro Devices", "ATI Technologies", "Radeon")) { supportName = "AMD"; return "https://www.amd.com/en/support/download/drivers.html"; }
+            if (ContainsAny(value, "Dell")) { supportName = "Dell"; return "https://www.dell.com/support/home/en-us?app=drivers"; }
+            if (ContainsAny(value, "Hewlett-Packard", "Hewlett Packard", "HP Inc", " HP ")) { supportName = "HP"; return "https://support.hp.com/us-en/drivers"; }
+            if (ContainsAny(value, "Lenovo")) { supportName = "Lenovo"; return "https://pcsupport.lenovo.com/us/en/"; }
+            if (ContainsAny(value, "ASUS", "ASUSTeK")) { supportName = "ASUS"; return "https://www.asus.com/support/download-center/"; }
+            if (ContainsAny(value, "Acer")) { supportName = "Acer"; return "https://www.acer.com/us-en/support/drivers-and-manuals"; }
+            if (ContainsAny(value, "Micro-Star", "MSI")) { supportName = "MSI"; return "https://www.msi.com/support/download"; }
+            if (ContainsAny(value, "Gigabyte")) { supportName = "Gigabyte"; return "https://www.gigabyte.com/Support"; }
+            if (ContainsAny(value, "Realtek")) { supportName = "Realtek"; return "https://www.realtek.com/Download/Index"; }
+            if (ContainsAny(value, "Samsung")) { supportName = "Samsung"; return "https://www.samsung.com/us/support/downloads/"; }
+            if (ContainsAny(value, "Qualcomm")) { supportName = "Qualcomm"; return "https://www.qualcomm.com/support"; }
+            if (ContainsAny(value, "Broadcom")) { supportName = "Broadcom"; return "https://www.broadcom.com/support/download-search"; }
+            supportName = "Catálogo Microsoft";
+            return "https://www.catalog.update.microsoft.com/Search.aspx?q=" + Uri.EscapeDataString(title ?? string.Empty);
+        }
+
+        private static bool IsOfficialSupportUrl(string value)
+        {
+            Uri uri;
+            if (!Uri.TryCreate(value, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps || string.IsNullOrWhiteSpace(uri.Host)) return false;
+            return OfficialSupportDomains.Any(delegate(string domain) { return uri.Host.Equals(domain, StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase); });
         }
 
         private static void AddBios(ICollection<DriverInventoryItem> items)

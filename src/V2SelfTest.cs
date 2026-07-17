@@ -55,6 +55,10 @@ namespace CodexPerformanceOptimizer
                 string safety = SafetyTestSuite.Run(CancellationToken.None, new Progress<string>());
                 if (safety.IndexOf("10 de 10 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
                 if (!DriverManager.IsValidUpdateIdForTesting("11111111-2222-3333-4444-555555555555") || DriverManager.IsValidUpdateIdForTesting("driver-inválido")) throw new InvalidOperationException("Validação segura de drivers falhou.");
+                string intelSupport = DriverManager.ResolveOfficialSupportForTesting("Intel Corporation", "Display Driver");
+                string microsoftSupport = DriverManager.ResolveOfficialSupportForTesting("Microsoft Corporation", "AudioProcessingObject Driver Update");
+                string amdSupport = DriverManager.ResolveOfficialSupportForTesting("Advanced Micro Devices, Inc.", "Radeon Display Driver");
+                if (!DriverManager.IsOfficialSupportUrlForTesting(intelSupport) || microsoftSupport.IndexOf("catalog.update.microsoft.com", StringComparison.OrdinalIgnoreCase) < 0 || amdSupport.IndexOf("amd.com", StringComparison.OrdinalIgnoreCase) < 0 || DriverManager.IsOfficialSupportUrlForTesting("https://intel.com.exemplo.invalid/driver")) throw new InvalidOperationException("Validação dos links oficiais falhou.");
                 if (DriverManager.CountInstalledDrivers() <= 0) throw new InvalidOperationException("Inventário de drivers falhou.");
                 var driverInventory = DriverManager.ReadInstalledDrivers();
                 if (driverInventory == null || driverInventory.Count == 0 || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Versões dos drivers importantes não foram lidas.");

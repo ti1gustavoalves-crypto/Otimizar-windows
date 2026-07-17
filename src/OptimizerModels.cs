@@ -350,6 +350,8 @@ namespace CodexPerformanceOptimizer
         public string UpdateId { get; set; }
         public long DownloadBytes { get; set; }
         public bool RebootRequired { get; set; }
+        public string SupportName { get; set; }
+        public string SupportUrl { get; set; }
     }
 
     internal sealed class DriverInventoryItem
