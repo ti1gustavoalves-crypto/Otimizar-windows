@@ -17,6 +17,9 @@ $installer = Join-Path $output 'InstalarOtimizadorDeDesempenho.exe'
 $notes = Join-Path $PSScriptRoot 'release-notes.txt'
 $localManifest = Join-Path $PSScriptRoot 'update-manifest.json'
 $channel = Join-Path $PSScriptRoot 'release-channel.json'
+$iconIco = Join-Path $PSScriptRoot 'assets\optimizer-icon.ico'
+$iconPng = Join-Path $PSScriptRoot 'assets\optimizer-icon.png'
+if (-not (Test-Path -LiteralPath $iconIco) -or -not (Test-Path -LiteralPath $iconPng)) { throw 'Arquivos do icone do aplicativo nao encontrados.' }
 $sources = @(
     'PerformanceOptimizer.cs', 'PerformanceOptimizerV2.cs', 'MainForm.Diagnostics.cs', 'MainForm.Control.cs', 'OptimizerModels.cs', 'OptimizerEngine.cs',
     'AdvancedFeatures.cs', 'BenchmarkHistory.cs', 'QualityInfrastructure.cs', 'OptionalSensors.cs', 'WindowsMaintenance.cs', 'SystemCommand.cs'
@@ -35,7 +38,7 @@ finally {
     if (Test-Path -LiteralPath $testExecutable) { Remove-Item -LiteralPath $testExecutable -Force }
 }
 
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" @references "/out:$app" @sources
+& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" "/win32icon:$iconIco" "/resource:$iconPng,OptimizerIconPng" @references "/out:$app" @sources
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o aplicativo.' }
 
 function Find-SignTool {
@@ -70,7 +73,7 @@ Copy-Item -LiteralPath $notes -Destination (Join-Path $output 'release-notes.txt
 Copy-Item -LiteralPath $localManifest -Destination (Join-Path $output 'update-manifest.json') -Force
 Copy-Item -LiteralPath $channel -Destination (Join-Path $output 'release-channel.json') -Force
 
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll "/resource:$app,OptimizerBinary" "/resource:$notes,ReleaseNotes" "/resource:$localManifest,UpdateManifest" "/resource:$channel,ReleaseChannel" "/out:$installer" (Join-Path $PSScriptRoot 'Installer.cs')
+& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" "/win32icon:$iconIco" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll "/resource:$app,OptimizerBinary" "/resource:$notes,ReleaseNotes" "/resource:$localManifest,UpdateManifest" "/resource:$channel,ReleaseChannel" "/out:$installer" (Join-Path $PSScriptRoot 'Installer.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o instalador.' }
 $installerSigned = Sign-Artifact $installer
 

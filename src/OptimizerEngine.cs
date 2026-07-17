@@ -65,7 +65,7 @@ namespace CodexPerformanceOptimizer
             token.ThrowIfCancellationRequested();
             var sb = new StringBuilder();
             SystemMetrics m = ReadMetrics();
-            sb.AppendLine("AUDITORIA 3.3");
+            sb.AppendLine("AUDITORIA 3.4");
             sb.AppendLine(new string('=', 72));
             sb.AppendLine("Data: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             sb.AppendLine("Administrador: " + (Optimizer.IsAdministrator() ? "sim" : "não"));
@@ -405,7 +405,7 @@ namespace CodexPerformanceOptimizer
             EnsureSnapshot();
             SystemMetrics before = ReadMetrics();
             var log = new StringBuilder();
-            log.AppendLine("APLICAÇÃO DE PERFIL 3.3");
+            log.AppendLine("APLICAÇÃO DE PERFIL 3.4");
             log.AppendLine(new string('=', 72));
             log.AppendLine("Perfil: " + ProfileName(options.Profile));
             if (options.CreateRestorePoint)
@@ -413,7 +413,7 @@ namespace CodexPerformanceOptimizer
                 progress.Report("Criando ponto de restauração...");
                 if (Optimizer.IsAdministrator())
                 {
-                    string result = Run("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'Antes do Otimizador 3.3' -RestorePointType MODIFY_SETTINGS\"", 120000);
+                    string result = Run("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"Checkpoint-Computer -Description 'Antes do Otimizador 3.4' -RestorePointType MODIFY_SETTINGS\"", 120000);
                     log.AppendLine(result.IndexOf("erro", StringComparison.OrdinalIgnoreCase) >= 0 || result.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ? "! O Windows não criou o ponto de restauração: " + OneLine(result) : "✓ Ponto de restauração solicitado.");
                 }
                 else log.AppendLine("! Ponto de restauração ignorado: reabra como administrador.");

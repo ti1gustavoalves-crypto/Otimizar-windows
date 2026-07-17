@@ -1,4 +1,9 @@
-OTIMIZADOR DE DESEMPENHO 3.3
+OTIMIZADOR DE DESEMPENHO 3.4
+
+- Ícone próprio aplicado ao aplicativo, instalador, atalhos e bandeja do Windows.
+- Navegação lateral mais simples, com as oito áreas organizadas em uma única coluna.
+- Interface redesenhada com melhor contraste, espaçamento consistente e menos elementos pesados.
+- Cards, botões, gráficos e tabelas receberam acabamento visual mais limpo e profissional.
 
 - Canal de atualizações ativado diretamente pelo repositório oficial no GitHub.
 - Verificação automática de novas versões ao iniciar o aplicativo.

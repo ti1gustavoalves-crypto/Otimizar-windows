@@ -7,13 +7,13 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Otimizador de Desempenho e Tema")]
+[assembly: AssemblyTitle("Otimizador de Desempenho")]
 [assembly: AssemblyDescription("Aplica otimizações seguras de desempenho, modo escuro e limpeza controlada no Windows.")]
 [assembly: AssemblyCompany("Codex")]
-[assembly: AssemblyProduct("Otimizador de Desempenho e Tema")]
+[assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("3.3.0.0")]
-[assembly: AssemblyFileVersion("3.3.0.0")]
+[assembly: AssemblyVersion("3.4.0.0")]
+[assembly: AssemblyFileVersion("3.4.0.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer

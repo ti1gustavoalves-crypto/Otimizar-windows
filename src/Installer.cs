@@ -9,12 +9,12 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-[assembly: AssemblyTitle("Instalador do Otimizador 3.3")]
-[assembly: AssemblyDescription("Instala o Otimizador de Desempenho e Tema 3.3 para o usuário atual.")]
+[assembly: AssemblyTitle("Instalador do Otimizador 3.4")]
+[assembly: AssemblyDescription("Instala o Otimizador de Desempenho 3.4 para o usuário atual.")]
 [assembly: AssemblyCompany("Codex")]
-[assembly: AssemblyProduct("Otimizador de Desempenho e Tema")]
-[assembly: AssemblyVersion("3.3.0.0")]
-[assembly: AssemblyFileVersion("3.3.0.0")]
+[assembly: AssemblyProduct("Otimizador de Desempenho")]
+[assembly: AssemblyVersion("3.4.0.0")]
+[assembly: AssemblyFileVersion("3.4.0.0")]
 
 namespace CodexPerformanceOptimizerInstaller
 {
@@ -74,6 +74,10 @@ namespace CodexPerformanceOptimizerInstaller
                 DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.1.lnk"));
                 DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.2.lnk"));
                 DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.2.lnk"));
+                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.3.lnk"));
+                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.3.lnk"));
+                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.4.lnk"));
+                DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.4.lnk"));
                 Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
                 if (Directory.Exists(actual)) Directory.Delete(actual, true);
                 MessageBox.Show("Otimizador removido. Os relatórios e o backup foram preservados em AppData\\Local\\Codex.", "Desinstalação concluída", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -124,12 +128,14 @@ namespace CodexPerformanceOptimizerInstaller
             DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.1.lnk"));
             DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.2.lnk"));
             DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.2.lnk"));
-            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.3.lnk"), AppPath);
-            if (desktopShortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.3.lnk"), AppPath);
+            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.3.lnk"));
+            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.3.lnk"));
+            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.4.lnk"), AppPath);
+            if (desktopShortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.4.lnk"), AppPath);
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(UninstallKey))
             {
-                key.SetValue("DisplayName", "Otimizador de Desempenho e Tema 3.3");
-                key.SetValue("DisplayVersion", "3.3.0");
+                key.SetValue("DisplayName", "Otimizador de Desempenho 3.4");
+                key.SetValue("DisplayVersion", "3.4.0");
                 key.SetValue("Publisher", "Codex");
                 key.SetValue("InstallLocation", InstallDir);
                 key.SetValue("DisplayIcon", AppPath);
@@ -232,7 +238,7 @@ namespace CodexPerformanceOptimizerInstaller
                 Type shortcutType = shortcut.GetType();
                 shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
                 shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
-                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Otimizador de Desempenho e Tema 3.3" });
+                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Otimizador de Desempenho 3.4" });
                 shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
             }
             finally
@@ -266,27 +272,33 @@ namespace CodexPerformanceOptimizerInstaller
 
         public InstallerForm()
         {
-            Text = "Instalar Otimizador 3.3";
+            Text = "Instalar Otimizador 3.4";
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            ClientSize = new Size(620, 360);
-            BackColor = Color.FromArgb(28, 30, 34);
-            ForeColor = Color.WhiteSmoke;
+            ClientSize = new Size(620, 340);
+            BackColor = Color.FromArgb(14, 18, 24);
+            ForeColor = Color.FromArgb(241, 245, 249);
             Font = new Font("Segoe UI", 9.5f);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Instalador do Otimizador 3.3";
-            Controls.Add(new Label { Text = "Otimizador 3.3", Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(30, 26) });
+            AccessibleName = "Instalador do Otimizador 3.4";
+            try
+            {
+                Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                if (Icon != null) Controls.Add(new PictureBox { Image = Icon.ToBitmap(), Location = new Point(30, 22), Size = new Size(48, 48), SizeMode = PictureBoxSizeMode.Zoom, AccessibleName = "Ícone do Otimizador" });
+            }
+            catch { }
+            Controls.Add(new Label { Text = "Otimizador 3.4", Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(94, 26) });
             Version installed = InstallerProgram.InstalledVersion();
             Version package = Assembly.GetExecutingAssembly().GetName().Version;
             string operation = installed == null ? "Instalação por usuário — não requer privilégios administrativos" : installed == package ? "Reparar a versão " + installed + " sem perder configurações" : "Atualizar da versão " + installed + " para " + package;
-            Controls.Add(new Label { Text = operation, AutoSize = true, Location = new Point(34, 74), ForeColor = Color.Gainsboro });
-            Controls.Add(new Label { Text = "Será instalado em:\r\n" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "OtimizadorDeDesempenho") + "\r\n\r\nO instalador adiciona um atalho no Menu Iniciar e uma entrada de desinstalação. Backups e relatórios ficam separados em AppData\\Local\\Codex.", Location = new Point(34, 115), Size = new Size(550, 110), ForeColor = Color.Gainsboro });
-            _desktop = new CheckBox { Text = "Criar atalho na Área de Trabalho", AutoSize = true, Checked = true, Location = new Point(34, 236) };
-            _install = new Button { Text = "Instalar", Location = new Point(34, 280), Size = new Size(150, 42), BackColor = Color.FromArgb(0, 120, 212), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            Controls.Add(new Label { Text = operation, AutoSize = true, Location = new Point(34, 78), ForeColor = Color.FromArgb(148, 163, 184) });
+            Controls.Add(new Label { Text = "Destino\r\n" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "OtimizadorDeDesempenho") + "\r\n\r\nAtalhos, atualização e desinstalação serão configurados automaticamente.", Location = new Point(34, 120), Size = new Size(550, 82), ForeColor = Color.FromArgb(203, 213, 225) });
+            _desktop = new CheckBox { Text = "Criar atalho na Área de Trabalho", AutoSize = true, Checked = true, Location = new Point(34, 218), FlatStyle = FlatStyle.Flat };
+            _install = new Button { Text = "Instalar", Location = new Point(34, 264), Size = new Size(150, 42), BackColor = Color.FromArgb(18, 137, 190), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
             if (installed != null) _install.Text = installed == package ? "Reparar" : "Atualizar";
             _install.FlatAppearance.BorderSize = 0;
-            _status = new Label { Text = "Pronto", AutoSize = true, Location = new Point(204, 293), ForeColor = Color.Gainsboro };
+            _status = new Label { Text = "Pronto", AutoSize = true, Location = new Point(204, 277), ForeColor = Color.FromArgb(148, 163, 184) };
             _install.Click += InstallClicked;
             Controls.Add(_desktop);
             Controls.Add(_install);

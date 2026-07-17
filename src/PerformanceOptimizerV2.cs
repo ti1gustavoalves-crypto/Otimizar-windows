@@ -16,6 +16,8 @@ namespace CodexPerformanceOptimizer
     internal sealed partial class MainFormV2 : Form
     {
         private TabControl _tabs;
+        private Button[] _navigationButtons;
+        private Image _brandImage;
         private ComboBox _profile;
         private CheckBox _dark;
         private CheckBox _visuals;
@@ -86,21 +88,20 @@ namespace CodexPerformanceOptimizer
 
         public MainFormV2()
         {
-            Text = "Otimizador de Desempenho e Tema 3.3";
+            Text = "Otimizador de Desempenho 3.4";
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(1080, 720);
-            Size = new Size(1120, 780);
+            MinimumSize = new Size(1260, 760);
+            Size = new Size(1320, 820);
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Otimizador de Desempenho e Tema 3.3";
+            AccessibleName = "Otimizador de Desempenho 3.4";
+            try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             _advancedSettings = AdvancedEngine.ReadSettings();
             _processHistory = new ProcessHistoryTracker();
 
-            _tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(16, 6), DrawMode = TabDrawMode.OwnerDrawFixed, SizeMode = TabSizeMode.Fixed, ItemSize = new Size(150, 36) };
-            _tabs.DrawItem += DrawTab;
-            _tabs.Resize += delegate { ResizeTabs(); };
+            _tabs = new TabControl { Location = new Point(-4, -28), SizeMode = TabSizeMode.Fixed, ItemSize = new Size(1, 24), Appearance = TabAppearance.FlatButtons };
             _tabs.TabPages.Add(BuildDashboard());
             _tabs.TabPages.Add(BuildHardwareTab());
             _tabs.TabPages.Add(BuildStartupTab());
@@ -109,6 +110,19 @@ namespace CodexPerformanceOptimizer
             _tabs.TabPages.Add(BuildMaintenanceTab());
             _tabs.TabPages.Add(BuildControlTab());
             _tabs.TabPages.Add(BuildReportTab());
+            _tabs.SelectedIndexChanged += delegate { UpdateNavigationState(); };
+
+            var content = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Background };
+            content.Controls.Add(_tabs);
+            content.Resize += delegate
+            {
+                _tabs.Location = new Point(-4, -28);
+                _tabs.Size = new Size(content.ClientSize.Width + 8, content.ClientSize.Height + 32);
+            };
+
+            var body = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Background };
+            body.Controls.Add(content);
+            body.Controls.Add(BuildNavigation());
 
             var footer = new Panel { Dock = DockStyle.Bottom, Height = 44, BackColor = Theme.Header };
             _progress = new ProgressBar { Location = new Point(20, 17), Size = new Size(155, 10), Style = ProgressBarStyle.Continuous, Visible = false };
@@ -124,7 +138,7 @@ namespace CodexPerformanceOptimizer
             footer.Controls.Add(_status);
             footer.Controls.Add(cancelArea);
 
-            Controls.Add(_tabs);
+            Controls.Add(body);
             Controls.Add(footer);
             _activitySampler = new SystemActivitySampler();
             _processSampler = new ProcessActivitySampler();
@@ -147,14 +161,83 @@ namespace CodexPerformanceOptimizer
                 _liveMetricsTimer.Dispose();
                 _trayIcon.Visible = false;
                 _trayIcon.Dispose();
+                if (_brandImage != null) _brandImage.Dispose();
             };
+        }
+
+        private Panel BuildNavigation()
+        {
+            var navigation = new Panel { Dock = DockStyle.Left, Width = 184, BackColor = Theme.Navigation, Padding = new Padding(14, 18, 14, 14) };
+            _brandImage = LoadBrandImage();
+            if (_brandImage != null)
+            {
+                navigation.Controls.Add(new PictureBox { Image = _brandImage, Location = new Point(18, 18), Size = new Size(42, 42), SizeMode = PictureBoxSizeMode.Zoom, AccessibleName = "Ícone do Otimizador" });
+            }
+            navigation.Controls.Add(new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true });
+            navigation.Controls.Add(new Label { Text = "Versão 3.4", Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+
+            string[] labels = { "Início", "Hardware", "Inicialização", "Armazenamento", "Diagnóstico", "Manutenção", "Ajustes", "Histórico" };
+            _navigationButtons = new Button[labels.Length];
+            for (int i = 0; i < labels.Length; i++)
+            {
+                int tabIndex = i;
+                var button = new Button
+                {
+                    Text = labels[i],
+                    Location = new Point(12, 86 + (i * 48)),
+                    Size = new Size(160, 40),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(16, 0, 0, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Theme.Navigation,
+                    ForeColor = Theme.Muted,
+                    Font = new Font("Segoe UI Semibold", 9.5f),
+                    Cursor = Cursors.Hand,
+                    AccessibleName = "Abrir " + labels[i]
+                };
+                button.FlatAppearance.BorderSize = 0;
+                button.FlatAppearance.MouseOverBackColor = Theme.SurfaceAlt;
+                button.Click += delegate { _tabs.SelectedIndex = tabIndex; };
+                _navigationButtons[i] = button;
+                navigation.Controls.Add(button);
+            }
+
+            navigation.Controls.Add(new Label { Text = "Seguro e reversível", Dock = DockStyle.Bottom, Height = 28, TextAlign = ContentAlignment.MiddleCenter, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+            UpdateNavigationState();
+            return navigation;
+        }
+
+        private Image LoadBrandImage()
+        {
+            try
+            {
+                using (Stream stream = GetType().Assembly.GetManifestResourceStream("OptimizerIconPng"))
+                {
+                    if (stream == null) return null;
+                    using (Image image = Image.FromStream(stream)) return new Bitmap(image);
+                }
+            }
+            catch { return null; }
+        }
+
+        private void UpdateNavigationState()
+        {
+            if (_navigationButtons == null) return;
+            for (int i = 0; i < _navigationButtons.Length; i++)
+            {
+                bool selected = i == _tabs.SelectedIndex;
+                _navigationButtons[i].BackColor = selected ? Theme.SurfaceAlt : Theme.Navigation;
+                _navigationButtons[i].ForeColor = selected ? Theme.Text : Theme.Muted;
+                _navigationButtons[i].FlatAppearance.BorderColor = selected ? Theme.Primary : Theme.Navigation;
+                _navigationButtons[i].FlatAppearance.BorderSize = selected ? 1 : 0;
+            }
         }
 
         private TabPage BuildDashboard()
         {
             var page = NewPage("Visão geral");
             var healthCard = DashboardCard(20, 18, 640, 142);
-            healthCard.Controls.Add(new Label { Text = "ESTADO DO PC", Location = new Point(20, 15), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
+            healthCard.Controls.Add(new Label { Text = "Estado do PC", Location = new Point(20, 15), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
             _overviewStatus = new Label { Text = "Analisando...", Location = new Point(18, 39), Size = new Size(590, 38), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 20f) };
             _overviewNote = new Label { Text = "Lendo os indicadores principais", Location = new Point(21, 79), Size = new Size(590, 22), AutoEllipsis = true, ForeColor = Theme.Muted };
             _environmentBadge = new Label { Text = "Preparando ambiente", Location = new Point(20, 107), Size = new Size(374, 23), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, Padding = new Padding(8, 3, 8, 3), AutoEllipsis = true };
@@ -167,7 +250,7 @@ namespace CodexPerformanceOptimizer
             healthCard.Controls.Add(analyze);
 
             var profileCard = DashboardCard(676, 18, 360, 142);
-            profileCard.Controls.Add(new Label { Text = "PERFIL DE DESEMPENHO", Location = new Point(20, 15), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
+            profileCard.Controls.Add(new Label { Text = "Perfil de desempenho", Location = new Point(20, 15), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
             _profile = new ComboBox { Location = new Point(20, 39), Width = 320, DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
             _profile.Items.AddRange(new object[] { "Máximo desempenho", "Equilibrado", "Notebook / eficiência" });
             _profile.SelectedIndex = 0;
@@ -214,7 +297,7 @@ namespace CodexPerformanceOptimizer
             toolsCard.Controls.Add(history);
 
             var activityCard = DashboardCard(20, 498, 1016, 142);
-            activityCard.Controls.Add(new Label { Text = "PROCESSOS EM DESTAQUE", Location = new Point(18, 14), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
+            activityCard.Controls.Add(new Label { Text = "Processos em destaque", Location = new Point(18, 14), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
             _liveAlert = new Label { Text = "Monitorando em tempo real", Location = new Point(664, 12), Size = new Size(330, 23), TextAlign = ContentAlignment.MiddleRight, AutoEllipsis = true, ForeColor = Theme.Success, Font = new Font("Segoe UI Semibold", 8.5f) };
             activityCard.Controls.Add(_liveAlert);
 
@@ -1071,7 +1154,7 @@ namespace CodexPerformanceOptimizer
             menu.Items.Add(maintenance);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(exit);
-            _trayIcon = new NotifyIcon { Icon = SystemIcons.Application, Text = "Otimizador de Desempenho", ContextMenuStrip = menu, Visible = false };
+            _trayIcon = new NotifyIcon { Icon = Icon ?? SystemIcons.Application, Text = "Otimizador de Desempenho", ContextMenuStrip = menu, Visible = false };
             _trayIcon.DoubleClick += delegate { RestoreFromTray(); };
             Resize += delegate
             {
@@ -1150,18 +1233,18 @@ namespace CodexPerformanceOptimizer
 
         private TabPage NewPage(string text)
         {
-            return new TabPage(text) { BackColor = Theme.Background, ForeColor = Theme.Text, AccessibleName = "Aba " + text };
+            return new TabPage(text) { BackColor = Theme.Background, ForeColor = Theme.Text, AccessibleName = "Aba " + text, AutoScroll = true };
         }
 
         private DashboardPanel DashboardCard(int x, int y, int width, int height)
         {
-            return new DashboardPanel { Location = new Point(x, y), Size = new Size(width, height), BackColor = Theme.Surface, BorderColor = Theme.Border, Radius = 10 };
+            return new DashboardPanel { Location = new Point(x, y), Size = new Size(width, height), BackColor = Theme.Surface, BorderColor = Theme.Border, Radius = 14 };
         }
 
         private DashboardPanel MetricCard(string title, int x, int y, out Label value, out Label detail, out ModernProgressBar gauge, out SparklineChart chart)
         {
             var card = DashboardCard(x, y, 324, 112);
-            card.Controls.Add(new Label { Text = title.ToUpperInvariant(), Location = new Point(18, 9), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.3f) });
+            card.Controls.Add(new Label { Text = title, Location = new Point(18, 9), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.3f) });
             value = new Label { Text = "--", Location = new Point(17, 29), Size = new Size(140, 30), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 16f) };
             detail = new Label { Text = "Calculando...", Location = new Point(151, 25), Size = new Size(155, 38), TextAlign = ContentAlignment.MiddleRight, AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) };
             chart = new SparklineChart { Location = new Point(18, 64), Size = new Size(288, 28), LineColor = Theme.Primary, AccessibleName = "Histórico de 60 segundos de " + title };
@@ -1201,7 +1284,11 @@ namespace CodexPerformanceOptimizer
                 BackgroundColor = Theme.SurfaceDark,
                 ForeColor = Theme.Text,
                 GridColor = Color.FromArgb(62, 67, 76),
-                BorderStyle = BorderStyle.FixedSingle,
+                BorderStyle = BorderStyle.None,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+                ColumnHeadersHeight = 38,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 RowHeadersVisible = false,
@@ -1210,39 +1297,65 @@ namespace CodexPerformanceOptimizer
                 EnableHeadersVisualStyles = false,
                 AccessibleName = "Tabela de dados"
             };
+            grid.RowTemplate.Height = 34;
             grid.ColumnHeadersDefaultCellStyle.BackColor = Theme.Surface;
             grid.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Text;
+            grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Theme.Surface;
             grid.DefaultCellStyle.BackColor = Theme.SurfaceDark;
             grid.DefaultCellStyle.ForeColor = Theme.Text;
-            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 90, 158);
+            grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(23, 83, 112);
+            grid.DefaultCellStyle.SelectionForeColor = Theme.Text;
             return grid;
         }
 
         private static Button ButtonFactory(string text, int x, int y, int width, Color color)
         {
-            var button = new Button { Text = text, Location = new Point(x, y), Size = new Size(width, 38), BackColor = color, ForeColor = Theme.ButtonText, FlatStyle = FlatStyle.Flat, AccessibleName = text };
+            var button = new ModernButton { Text = text, Location = new Point(x, y), Size = new Size(width, 38), BackColor = color, BaseColor = color, ForeColor = Theme.ButtonText, FlatStyle = FlatStyle.Flat, AccessibleName = text, Cursor = Cursors.Hand };
             button.FlatAppearance.BorderSize = 0;
             return button;
         }
+    }
 
-        private void DrawTab(object sender, DrawItemEventArgs e)
+    internal sealed class ModernButton : Button
+    {
+        public Color BaseColor { get; set; }
+        public int Radius { get; set; }
+
+        public ModernButton()
         {
-            bool selected = e.Index == _tabs.SelectedIndex;
-            Rectangle rect = e.Bounds;
-            Color background = selected ? Theme.Surface : Theme.Header;
-            using (var brush = new SolidBrush(background)) e.Graphics.FillRectangle(brush, rect);
-            TextRenderer.DrawText(e.Graphics, _tabs.TabPages[e.Index].Text, Font, rect, selected ? Theme.Text : Theme.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-            if (selected)
+            Radius = 8;
+            UseVisualStyleBackColor = false;
+            Font = new Font("Segoe UI Semibold", 9f);
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            if (Width <= 1 || Height <= 1) return;
+            int diameter = Math.Max(2, Radius * 2);
+            using (var path = new GraphicsPath())
             {
-                using (var accent = new SolidBrush(Theme.Primary)) e.Graphics.FillRectangle(accent, rect.Left + 16, rect.Bottom - 3, rect.Width - 32, 3);
+                path.AddArc(0, 0, diameter, diameter, 180, 90);
+                path.AddArc(Width - diameter, 0, diameter, diameter, 270, 90);
+                path.AddArc(Width - diameter, Height - diameter, diameter, diameter, 0, 90);
+                path.AddArc(0, Height - diameter, diameter, diameter, 90, 90);
+                path.CloseFigure();
+                Region oldRegion = Region;
+                Region = new Region(path);
+                if (oldRegion != null) oldRegion.Dispose();
             }
         }
 
-        private void ResizeTabs()
+        protected override void OnMouseEnter(EventArgs e)
         {
-            if (_tabs.TabCount == 0 || _tabs.ClientSize.Width < 100) return;
-            int width = Math.Max(110, (_tabs.ClientSize.Width - 4) / _tabs.TabCount);
-            if (_tabs.ItemSize.Width != width || _tabs.ItemSize.Height != 36) _tabs.ItemSize = new Size(width, 36);
+            base.OnMouseEnter(e);
+            if (Enabled) BackColor = ControlPaint.Light(BaseColor, 0.08f);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            BackColor = BaseColor;
         }
     }
 
@@ -1463,19 +1576,20 @@ namespace CodexPerformanceOptimizer
     internal static class Theme
     {
         private static readonly bool HighContrast = SystemInformation.HighContrast;
-        public static readonly Color Background = HighContrast ? SystemColors.Window : Color.FromArgb(18, 20, 24);
-        public static readonly Color Header = HighContrast ? SystemColors.Control : Color.FromArgb(13, 15, 18);
-        public static readonly Color Surface = HighContrast ? SystemColors.Control : Color.FromArgb(29, 33, 39);
-        public static readonly Color SurfaceAlt = HighContrast ? SystemColors.ControlDark : Color.FromArgb(39, 44, 52);
-        public static readonly Color SurfaceDark = HighContrast ? SystemColors.Window : Color.FromArgb(15, 17, 20);
-        public static readonly Color Border = HighContrast ? SystemColors.WindowText : Color.FromArgb(50, 56, 66);
-        public static readonly Color Text = HighContrast ? SystemColors.WindowText : Color.FromArgb(239, 242, 247);
-        public static readonly Color Muted = HighContrast ? SystemColors.GrayText : Color.FromArgb(157, 166, 181);
-        public static readonly Color Primary = HighContrast ? SystemColors.Highlight : Color.FromArgb(48, 139, 255);
-        public static readonly Color Secondary = HighContrast ? SystemColors.ControlDark : Color.FromArgb(49, 55, 65);
-        public static readonly Color Success = HighContrast ? SystemColors.Highlight : Color.FromArgb(62, 199, 132);
-        public static readonly Color Warning = HighContrast ? SystemColors.HotTrack : Color.FromArgb(224, 145, 56);
-        public static readonly Color Danger = HighContrast ? SystemColors.HotTrack : Color.FromArgb(232, 92, 92);
+        public static readonly Color Background = HighContrast ? SystemColors.Window : Color.FromArgb(14, 18, 24);
+        public static readonly Color Header = HighContrast ? SystemColors.Control : Color.FromArgb(10, 14, 20);
+        public static readonly Color Navigation = HighContrast ? SystemColors.Control : Color.FromArgb(10, 14, 20);
+        public static readonly Color Surface = HighContrast ? SystemColors.Control : Color.FromArgb(23, 29, 38);
+        public static readonly Color SurfaceAlt = HighContrast ? SystemColors.ControlDark : Color.FromArgb(32, 41, 53);
+        public static readonly Color SurfaceDark = HighContrast ? SystemColors.Window : Color.FromArgb(12, 16, 22);
+        public static readonly Color Border = HighContrast ? SystemColors.WindowText : Color.FromArgb(41, 51, 65);
+        public static readonly Color Text = HighContrast ? SystemColors.WindowText : Color.FromArgb(241, 245, 249);
+        public static readonly Color Muted = HighContrast ? SystemColors.GrayText : Color.FromArgb(148, 163, 184);
+        public static readonly Color Primary = HighContrast ? SystemColors.Highlight : Color.FromArgb(18, 137, 190);
+        public static readonly Color Secondary = HighContrast ? SystemColors.ControlDark : Color.FromArgb(39, 49, 63);
+        public static readonly Color Success = HighContrast ? SystemColors.Highlight : Color.FromArgb(47, 203, 145);
+        public static readonly Color Warning = HighContrast ? SystemColors.HotTrack : Color.FromArgb(224, 151, 55);
+        public static readonly Color Danger = HighContrast ? SystemColors.HotTrack : Color.FromArgb(226, 84, 96);
         public static readonly Color ButtonText = HighContrast ? SystemColors.HighlightText : Color.White;
     }
 }
