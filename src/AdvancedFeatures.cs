@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Net;
+using System.Net.Cache;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -185,6 +186,32 @@ namespace CodexPerformanceOptimizer
 
     internal static class AdvancedEngine
     {
+        private sealed class UpdateWebClient : WebClient
+        {
+            private readonly int _timeoutMilliseconds;
+
+            public UpdateWebClient(int timeoutMilliseconds)
+            {
+                _timeoutMilliseconds = timeoutMilliseconds;
+                Encoding = Encoding.UTF8;
+            }
+
+            protected override WebRequest GetWebRequest(Uri address)
+            {
+                WebRequest request = base.GetWebRequest(address);
+                request.Timeout = _timeoutMilliseconds;
+                request.CachePolicy = new RequestCachePolicy(RequestCacheLevel.NoCacheNoStore);
+                var http = request as HttpWebRequest;
+                if (http != null)
+                {
+                    http.ReadWriteTimeout = _timeoutMilliseconds;
+                    http.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+                    http.UserAgent = "OtimizadorDeDesempenho/" + typeof(AdvancedEngine).Assembly.GetName().Version;
+                }
+                return request;
+            }
+        }
+
         private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Codex", "PerformanceOptimizer");
         private static readonly string ComparisonPath = Path.Combine(AppFolder, "comparison-v2.json");
         private static readonly string SettingsPath = Path.Combine(AppFolder, "advanced-settings.json");
@@ -547,7 +574,8 @@ namespace CodexPerformanceOptimizer
                 {
                     var uri = new Uri(source);
                     if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return new UpdateCheckResult { Message = "O canal de atualização deve usar HTTPS." };
-                    using (var client = new WebClient()) { client.Encoding = Encoding.UTF8; json = client.DownloadString(uri); }
+                    ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+                    using (var client = new UpdateWebClient(20000)) json = client.DownloadString(uri);
                 }
                 else
                 {
@@ -559,6 +587,11 @@ namespace CodexPerformanceOptimizer
                 Version current = typeof(AdvancedEngine).Assembly.GetName().Version;
                 if (manifest == null || !Version.TryParse(manifest.Version, out remote)) return new UpdateCheckResult { Message = "Manifesto de atualização inválido." };
                 bool available = remote > current;
+                Uri installerUri;
+                if (available && (!Uri.TryCreate(manifest.InstallerUrl, UriKind.Absolute, out installerUri) ||
+                    !installerUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                    !Regex.IsMatch(manifest.Sha256 ?? string.Empty, "^[0-9a-fA-F]{64}$")))
+                    return new UpdateCheckResult { Message = "A atualização publicada está incompleta ou não passou na validação de segurança." };
                 return new UpdateCheckResult { Available = available, Manifest = manifest, Message = available ? "Versão " + remote + " disponível." : "Você já está na versão mais recente (" + current + ")." };
             }
             catch (Exception ex) { return new UpdateCheckResult { Message = "Não foi possível verificar: " + ex.Message }; }
@@ -569,18 +602,29 @@ namespace CodexPerformanceOptimizer
             if (manifest == null || string.IsNullOrWhiteSpace(manifest.InstallerUrl) || !Uri.IsWellFormedUriString(manifest.InstallerUrl, UriKind.Absolute)) return "O manifesto não contém um instalador válido.";
             var uri = new Uri(manifest.InstallerUrl);
             if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return "O instalador precisa ser fornecido por HTTPS.";
+            if (!Regex.IsMatch(manifest.Sha256 ?? string.Empty, "^[0-9a-fA-F]{64}$")) return "O manifesto não contém um SHA-256 válido.";
             string destination = Path.Combine(Path.GetTempPath(), "InstalarOtimizador-" + manifest.Version + ".exe");
-            using (var client = new WebClient()) client.DownloadFile(uri, destination);
-            string actual;
-            using (SHA256 sha = SHA256.Create())
-            using (FileStream stream = File.OpenRead(destination)) actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty);
-            if (string.IsNullOrWhiteSpace(manifest.Sha256) || !actual.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                File.Delete(destination);
-                return "A atualização foi rejeitada porque a verificação SHA-256 falhou.";
+                if (File.Exists(destination)) File.Delete(destination);
+                ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+                using (var client = new UpdateWebClient(120000)) client.DownloadFile(uri, destination);
+                string actual;
+                using (SHA256 sha = SHA256.Create())
+                using (FileStream stream = File.OpenRead(destination)) actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty);
+                if (!actual.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(destination);
+                    return "A atualização foi rejeitada porque a verificação SHA-256 falhou.";
+                }
+                Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
+                return "Instalador verificado e iniciado.";
             }
-            Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
-            return "Instalador verificado e iniciado.";
+            catch (Exception ex)
+            {
+                try { if (File.Exists(destination)) File.Delete(destination); } catch { }
+                return "Não foi possível baixar a atualização: " + ex.Message;
+            }
         }
 
         public static string ReadReleaseNotes()

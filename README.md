@@ -16,7 +16,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 - Backup das configurações alteradas e restauração por seção.
 - Quarentena reversível para arquivos duplicados.
 - Testes de segurança executados em arquivos e Registro isolados.
-- Instalador com atualização, reparo, troca atômica e rollback.
+- Instalador com atualização pelo GitHub, reparo, troca atômica e rollback.
 
 ## Requisitos
 
@@ -25,6 +25,12 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 - .NET Framework disponível no Windows.
 
 Algumas operações exigem privilégios de administrador. As leituras de temperatura dependem dos sensores expostos pelo fabricante; o adaptador para `LibreHardwareMonitorLib.dll` é opcional e a biblioteca não é distribuída neste repositório.
+
+## Download
+
+[Baixar a versão mais recente do instalador](https://raw.githubusercontent.com/ti1gustavoalves-crypto/Otimizar-windows/main/releases/InstalarOtimizadorDeDesempenho.exe)
+
+O executável ainda não possui assinatura digital comercial, portanto o Windows SmartScreen pode solicitar confirmação na primeira execução.
 
 ## Compilar e testar
 
@@ -44,7 +50,7 @@ Os artefatos gerados não são versionados.
 
 ## Publicação assinada
 
-O pipeline aceita um certificado de assinatura de código instalado no usuário atual e um endereço HTTPS para o canal de atualização:
+Por padrão, o pipeline publica um manifesto compatível com o canal oficial hospedado em `releases/` neste repositório. O endereço pode ser substituído, e um certificado de assinatura instalado no usuário atual pode ser informado:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\src\build-release.ps1 `
@@ -53,7 +59,7 @@ powershell -ExecutionPolicy Bypass -File .\src\build-release.ps1 `
   -CertificateThumbprint "SEU_THUMBPRINT"
 ```
 
-Sem esses parâmetros, a compilação continua funcional, mas os executáveis ficam sem assinatura e o canal público de atualização permanece desativado.
+Sem o certificado, a compilação continua funcional e o canal do GitHub permanece ativo, mas os executáveis ficam sem assinatura digital.
 
 ## Privacidade e segurança
 

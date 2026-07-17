@@ -1,4 +1,9 @@
-OTIMIZADOR DE DESEMPENHO 3.2
+OTIMIZADOR DE DESEMPENHO 3.3
+
+- Canal de atualizações ativado diretamente pelo repositório oficial no GitHub.
+- Verificação automática de novas versões ao iniciar o aplicativo.
+- Instaladores baixados somente por HTTPS e validados por SHA-256 antes da execução.
+- Manifesto público versionado junto do instalador para manter as próximas versões atualizáveis.
 
 - Otimização inteligente da unidade selecionada conforme SSD, HDD ou armazenamento em camadas.
 - Limpeza do repositório de componentes do Windows sem usar o modo agressivo ResetBase.

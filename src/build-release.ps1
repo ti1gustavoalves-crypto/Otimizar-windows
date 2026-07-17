@@ -1,11 +1,12 @@
 param(
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\outputs'),
-    [string]$UpdateBaseUrl = '',
+    [string]$UpdateBaseUrl = 'https://raw.githubusercontent.com/ti1gustavoalves-crypto/Otimizar-windows/main/releases',
     [string]$CertificateThumbprint = '',
     [string]$TimestampUrl = 'http://timestamp.digicert.com'
 )
 
 $ErrorActionPreference = 'Stop'
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path -LiteralPath $csc)) { throw 'Compilador .NET Framework x64 não encontrado.' }
 
@@ -62,8 +63,8 @@ function Sign-Artifact([string]$Path) {
 $appSigned = Sign-Artifact $app
 $version = [Reflection.AssemblyName]::GetAssemblyName($app).Version.ToString()
 $channelObject = @{ ManifestUrl = if ([string]::IsNullOrWhiteSpace($UpdateBaseUrl)) { '' } else { $UpdateBaseUrl.TrimEnd('/') + '/update-manifest.public.json' } }
-$channelObject | ConvertTo-Json -Compress | Set-Content -LiteralPath $channel -Encoding utf8
-@{ Version=$version; InstallerUrl=''; Sha256=''; Notes='Versão instalada. Consulte as notas no aplicativo.' } | ConvertTo-Json -Compress | Set-Content -LiteralPath $localManifest -Encoding utf8
+[IO.File]::WriteAllText($channel, ($channelObject | ConvertTo-Json -Compress), $utf8NoBom)
+[IO.File]::WriteAllText($localManifest, (@{ Version=$version; InstallerUrl=''; Sha256=''; Notes='Versao instalada. Consulte as notas no aplicativo.' } | ConvertTo-Json -Compress), $utf8NoBom)
 
 Copy-Item -LiteralPath $notes -Destination (Join-Path $output 'release-notes.txt') -Force
 Copy-Item -LiteralPath $localManifest -Destination (Join-Path $output 'update-manifest.json') -Force
@@ -75,21 +76,23 @@ $installerSigned = Sign-Artifact $installer
 
 $appHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $app).Hash
 $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash
-$publicManifest = @{
+$publicManifest = [ordered]@{
     Version = $version
     InstallerUrl = if ([string]::IsNullOrWhiteSpace($UpdateBaseUrl)) { '' } else { $UpdateBaseUrl.TrimEnd('/') + '/InstalarOtimizadorDeDesempenho.exe' }
     Sha256 = $installerHash
-    Notes = 'Atualização verificada do Otimizador de Desempenho.'
+    Notes = 'Nova versao disponivel no GitHub. Download protegido por HTTPS e SHA-256.'
 }
-$publicManifest | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $output 'update-manifest.public.json') -Encoding utf8
+$publicManifestPath = Join-Path $output 'update-manifest.public.json'
+[IO.File]::WriteAllText($publicManifestPath, ($publicManifest | ConvertTo-Json -Compress), $utf8NoBom)
 
-@(
-    "Versão: $version"
+$summary = @(
+    "Versao: $version"
     "Aplicativo assinado: $appSigned"
     "Instalador assinado: $installerSigned"
     "SHA-256 do aplicativo: $appHash"
     "SHA-256 do instalador: $installerHash"
     "Canal: $($channelObject.ManifestUrl)"
-) | Set-Content -LiteralPath (Join-Path $output 'release-summary.txt') -Encoding utf8
+) -join [Environment]::NewLine
+[IO.File]::WriteAllText((Join-Path $output 'release-summary.txt'), $summary + [Environment]::NewLine, $utf8NoBom)
 
 Write-Output "Release $version criada em $output"

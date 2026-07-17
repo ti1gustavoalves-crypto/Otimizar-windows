@@ -86,7 +86,7 @@ namespace CodexPerformanceOptimizer
 
         public MainFormV2()
         {
-            Text = "Otimizador de Desempenho e Tema 3.2";
+            Text = "Otimizador de Desempenho e Tema 3.3";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1080, 720);
             Size = new Size(1120, 780);
@@ -94,7 +94,7 @@ namespace CodexPerformanceOptimizer
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Otimizador de Desempenho e Tema 3.2";
+            AccessibleName = "Otimizador de Desempenho e Tema 3.3";
             _advancedSettings = AdvancedEngine.ReadSettings();
             _processHistory = new ProcessHistoryTracker();
 

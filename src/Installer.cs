@@ -9,12 +9,12 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-[assembly: AssemblyTitle("Instalador do Otimizador 3.2")]
-[assembly: AssemblyDescription("Instala o Otimizador de Desempenho e Tema 3.2 para o usuário atual.")]
+[assembly: AssemblyTitle("Instalador do Otimizador 3.3")]
+[assembly: AssemblyDescription("Instala o Otimizador de Desempenho e Tema 3.3 para o usuário atual.")]
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho e Tema")]
-[assembly: AssemblyVersion("3.2.0.0")]
-[assembly: AssemblyFileVersion("3.2.0.0")]
+[assembly: AssemblyVersion("3.3.0.0")]
+[assembly: AssemblyFileVersion("3.3.0.0")]
 
 namespace CodexPerformanceOptimizerInstaller
 {
@@ -122,12 +122,14 @@ namespace CodexPerformanceOptimizerInstaller
             DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.0.lnk"));
             DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.1.lnk"));
             DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.1.lnk"));
-            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.2.lnk"), AppPath);
-            if (desktopShortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.2.lnk"), AppPath);
+            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.2.lnk"));
+            DeleteShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.2.lnk"));
+            CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "Otimizador de Desempenho 3.3.lnk"), AppPath);
+            if (desktopShortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Otimizador de Desempenho 3.3.lnk"), AppPath);
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(UninstallKey))
             {
-                key.SetValue("DisplayName", "Otimizador de Desempenho e Tema 3.2");
-                key.SetValue("DisplayVersion", "3.2.0");
+                key.SetValue("DisplayName", "Otimizador de Desempenho e Tema 3.3");
+                key.SetValue("DisplayVersion", "3.3.0");
                 key.SetValue("Publisher", "Codex");
                 key.SetValue("InstallLocation", InstallDir);
                 key.SetValue("DisplayIcon", AppPath);
@@ -230,7 +232,7 @@ namespace CodexPerformanceOptimizerInstaller
                 Type shortcutType = shortcut.GetType();
                 shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
                 shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
-                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Otimizador de Desempenho e Tema 3.2" });
+                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Otimizador de Desempenho e Tema 3.3" });
                 shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
             }
             finally
@@ -264,7 +266,7 @@ namespace CodexPerformanceOptimizerInstaller
 
         public InstallerForm()
         {
-            Text = "Instalar Otimizador 3.2";
+            Text = "Instalar Otimizador 3.3";
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -273,8 +275,8 @@ namespace CodexPerformanceOptimizerInstaller
             ForeColor = Color.WhiteSmoke;
             Font = new Font("Segoe UI", 9.5f);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Instalador do Otimizador 3.2";
-            Controls.Add(new Label { Text = "Otimizador 3.2", Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(30, 26) });
+            AccessibleName = "Instalador do Otimizador 3.3";
+            Controls.Add(new Label { Text = "Otimizador 3.3", Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(30, 26) });
             Version installed = InstallerProgram.InstalledVersion();
             Version package = Assembly.GetExecutingAssembly().GetName().Version;
             string operation = installed == null ? "Instalação por usuário — não requer privilégios administrativos" : installed == package ? "Reparar a versão " + installed + " sem perder configurações" : "Atualizar da versão " + installed + " para " + package;
