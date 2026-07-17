@@ -352,6 +352,16 @@ namespace CodexPerformanceOptimizer
         public bool RebootRequired { get; set; }
         public string SupportName { get; set; }
         public string SupportUrl { get; set; }
+        public string CatalogUrl { get; set; }
+        public string HardwareId { get; set; }
+        public string Model { get; set; }
+        public string AvailableVersion { get; set; }
+        public string AvailableDate { get; set; }
+        public string InstalledVersion { get; set; }
+        public string Comparison { get; set; }
+        public string Classification { get; set; }
+        public bool IsFirmware { get; set; }
+        public bool IsOlderRisk { get; set; }
     }
 
     internal sealed class DriverInventoryItem
@@ -362,6 +372,27 @@ namespace CodexPerformanceOptimizer
         public string Version { get; set; }
         public string Date { get; set; }
         public string InfName { get; set; }
+        public string DeviceId { get; set; }
+        public string HardwareId { get; set; }
+        public string Status { get; set; }
+        public int ProblemCode { get; set; }
+        public bool Signed { get; set; }
+        public bool HasProblem { get; set; }
+    }
+
+    internal sealed class DriverSafetyStatus
+    {
+        public bool IsAdministrator { get; set; }
+        public bool AcConnected { get; set; }
+        public bool HasBattery { get; set; }
+        public int BatteryPercent { get; set; }
+        public bool BitLockerProtectionOn { get; set; }
+        public bool BitLockerKnown { get; set; }
+        public bool PendingRestart { get; set; }
+        public string Manufacturer { get; set; }
+        public string Model { get; set; }
+        public string Summary { get; set; }
+        public bool FirmwareSafe { get; set; }
     }
 
     internal sealed class PackagedStartupTask

@@ -72,8 +72,13 @@ namespace CodexPerformanceOptimizer
         private ComboBox _schedule;
         private DataGridView _installedDriverGrid;
         private Label _driverInventorySummary;
+        private ComboBox _driverFilter;
+        private TextBox _driverSearch;
+        private CheckBox _driverProblemsOnly;
+        private List<DriverInventoryItem> _driverInventoryItems = new List<DriverInventoryItem>();
         private DataGridView _driverGrid;
         private Label _driverSummary;
+        private List<DriverUpdate> _driverUpdates = new List<DriverUpdate>();
         private bool _driverInventoryLoaded;
         private ProgressBar _progress;
         private Label _status;
@@ -581,67 +586,98 @@ namespace CodexPerformanceOptimizer
         private TabPage BuildDriversTab()
         {
             var page = NewPage("Drivers");
-            _driverInventorySummary = new Label { Text = "Versões instaladas • verificando hardware...", Location = new Point(20, 18), Size = new Size(760, 28), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
+            _driverInventorySummary = new Label { Text = "Versões instaladas • verificando hardware...", Location = new Point(20, 18), Size = new Size(440, 28), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
+            _driverFilter = new ComboBox { Location = new Point(470, 14), Size = new Size(155, 28), DropDownStyle = ComboBoxStyle.DropDownList };
+            _driverFilter.Items.AddRange(new object[] { "Todos", "Vídeo", "BIOS", "Firmware", "Chipset / sistema", "Áudio", "Rede", "Armazenamento", "Bluetooth", "USB", "Problema", "Sem assinatura" });
+            _driverFilter.SelectedIndex = 0;
+            _driverSearch = new TextBox { Location = new Point(637, 15), Size = new Size(190, 26), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle };
+            _driverProblemsOnly = new CheckBox { Text = "Somente problemas", Location = new Point(841, 16), AutoSize = true, ForeColor = Theme.Muted };
+            _driverFilter.SelectedIndexChanged += delegate { ApplyDriverInventoryFilter(); };
+            _driverSearch.TextChanged += delegate { ApplyDriverInventoryFilter(); };
+            _driverProblemsOnly.CheckedChanged += delegate { ApplyDriverInventoryFilter(); };
             _installedDriverGrid = Grid(20, 52, 1000, 217);
             _installedDriverGrid.Columns.Add("Category", "Componente");
-            _installedDriverGrid.Columns[0].Width = 145;
+            _installedDriverGrid.Columns[0].Width = 125;
             _installedDriverGrid.Columns.Add("Device", "Dispositivo");
             _installedDriverGrid.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             _installedDriverGrid.Columns.Add("Provider", "Fornecedor");
-            _installedDriverGrid.Columns[2].Width = 160;
+            _installedDriverGrid.Columns[2].Width = 135;
             _installedDriverGrid.Columns.Add("Version", "Versão instalada");
-            _installedDriverGrid.Columns[3].Width = 145;
+            _installedDriverGrid.Columns[3].Width = 125;
             _installedDriverGrid.Columns.Add("Date", "Data");
-            _installedDriverGrid.Columns[4].Width = 100;
+            _installedDriverGrid.Columns[4].Width = 90;
+            _installedDriverGrid.Columns.Add("Status", "Status");
+            _installedDriverGrid.Columns[5].Width = 115;
             _installedDriverGrid.Columns.Add("InfName", "Pacote");
-            _installedDriverGrid.Columns[5].Width = 110;
+            _installedDriverGrid.Columns[6].Width = 95;
             _installedDriverGrid.ReadOnly = true;
 
             _driverSummary = new Label { Text = "Atualizações disponíveis • busca ainda não executada", Location = new Point(20, 281), Size = new Size(760, 28), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
             _driverGrid = Grid(20, 311, 1000, 231);
-            _driverGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Instalar", Width = 70 });
-            _driverGrid.Columns.Add("Title", "Driver");
-            _driverGrid.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            _driverGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Instalar", Width = 60 });
+            _driverGrid.Columns.Add("Classification", "Tipo");
+            _driverGrid.Columns[1].Width = 125;
             _driverGrid.Columns[1].ReadOnly = true;
-            _driverGrid.Columns.Add("Provider", "Fornecedor");
-            _driverGrid.Columns[2].Width = 170;
+            _driverGrid.Columns.Add("Title", "Driver");
+            _driverGrid.Columns[2].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             _driverGrid.Columns[2].ReadOnly = true;
-            _driverGrid.Columns.Add("Size", "Download");
-            _driverGrid.Columns[3].Width = 110;
+            _driverGrid.Columns.Add("Comparison", "Instalada → disponível");
+            _driverGrid.Columns[3].Width = 165;
             _driverGrid.Columns[3].ReadOnly = true;
-            _driverGrid.Columns.Add("Restart", "Reinício");
+            _driverGrid.Columns.Add("Size", "Download");
             _driverGrid.Columns[4].Width = 90;
             _driverGrid.Columns[4].ReadOnly = true;
-            _driverGrid.Columns.Add(new DataGridViewLinkColumn { Name = "OfficialSite", HeaderText = "Site oficial", Width = 120, TrackVisitedState = false, LinkColor = Theme.Primary, ActiveLinkColor = Theme.Text, VisitedLinkColor = Theme.Primary });
+            _driverGrid.Columns.Add("Restart", "Reinício");
+            _driverGrid.Columns[5].Width = 75;
+            _driverGrid.Columns[5].ReadOnly = true;
+            _driverGrid.Columns.Add(new DataGridViewLinkColumn { Name = "OfficialSite", HeaderText = "Fabricante", Width = 100, TrackVisitedState = false, LinkColor = Theme.Primary, ActiveLinkColor = Theme.Text, VisitedLinkColor = Theme.Primary });
+            _driverGrid.Columns.Add(new DataGridViewLinkColumn { Name = "CatalogSite", HeaderText = "Hardware ID", Width = 100, TrackVisitedState = false, LinkColor = Theme.Primary, ActiveLinkColor = Theme.Text, VisitedLinkColor = Theme.Primary });
             _driverGrid.Columns.Add("UpdateId", "ID");
-            _driverGrid.Columns[6].Visible = false;
-            _driverGrid.Columns[6].ReadOnly = true;
+            _driverGrid.Columns[8].Visible = false;
             _driverGrid.Columns.Add("SupportUrl", "Endereço oficial");
-            _driverGrid.Columns[7].Visible = false;
-            _driverGrid.Columns[7].ReadOnly = true;
+            _driverGrid.Columns[9].Visible = false;
+            _driverGrid.Columns.Add("CatalogUrl", "Catálogo exato");
+            _driverGrid.Columns[10].Visible = false;
+            _driverGrid.Columns.Add("IsFirmware", "Firmware");
+            _driverGrid.Columns[11].Visible = false;
+            for (int i = 8; i < _driverGrid.Columns.Count; i++) _driverGrid.Columns[i].ReadOnly = true;
             _driverGrid.CellContentClick += delegate(object sender, DataGridViewCellEventArgs e)
             {
-                if (e.RowIndex < 0 || _driverGrid.Columns[e.ColumnIndex].Name != "OfficialSite") return;
-                string url = Convert.ToString(_driverGrid.Rows[e.RowIndex].Cells["SupportUrl"].Value);
+                if (e.RowIndex < 0) return;
+                string column = _driverGrid.Columns[e.ColumnIndex].Name;
+                if (column != "OfficialSite" && column != "CatalogSite") return;
+                string url = Convert.ToString(_driverGrid.Rows[e.RowIndex].Cells[column == "OfficialSite" ? "SupportUrl" : "CatalogUrl"].Value);
                 try { DriverManager.OpenOfficialSupport(url); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Site oficial", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
             };
 
-            var search = ButtonFactory("Buscar atualizações", 20, 554, 175, Theme.Primary);
-            var selectAll = ButtonFactory("Selecionar todos", 207, 554, 155, Theme.Secondary);
-            var install = ButtonFactory("Atualizar selecionados", 374, 554, 195, Theme.Success);
-            var windowsUpdate = ButtonFactory("Abrir Windows Update", 581, 554, 185, Theme.Secondary);
+            var search = ButtonFactory("Buscar updates", 20, 554, 140, Theme.Primary);
+            var selectAll = ButtonFactory("Selecionar", 170, 554, 105, Theme.Secondary);
+            var install = ButtonFactory("Atualizar", 285, 554, 125, Theme.Success);
+            var backup = ButtonFactory("Criar backup", 420, 554, 130, Theme.Secondary);
+            var restore = ButtonFactory("Restaurar", 560, 554, 120, Theme.Warning);
+            var backups = ButtonFactory("Backups", 690, 554, 105, Theme.Secondary);
+            var windowsUpdate = ButtonFactory("Windows Update", 805, 554, 145, Theme.Secondary);
             search.Click += async delegate { await SearchDriverUpdates(); };
             selectAll.Click += delegate { foreach (DataGridViewRow row in _driverGrid.Rows) if (!row.IsNewRow) row.Cells["Selected"].Value = true; };
             install.Click += async delegate { await InstallSelectedDrivers(); };
+            backup.Click += async delegate { await CreateDriverBackup(); };
+            restore.Click += async delegate { await RestoreDriverBackup(); };
+            backups.Click += delegate { DriverManager.OpenDriverBackups(); };
             windowsUpdate.Click += delegate { DriverManager.OpenWindowsUpdate(); };
             page.Controls.Add(_driverInventorySummary);
+            page.Controls.Add(_driverFilter);
+            page.Controls.Add(_driverSearch);
+            page.Controls.Add(_driverProblemsOnly);
             page.Controls.Add(_installedDriverGrid);
             page.Controls.Add(_driverSummary);
             page.Controls.Add(_driverGrid);
             page.Controls.Add(search);
             page.Controls.Add(selectAll);
             page.Controls.Add(install);
+            page.Controls.Add(backup);
+            page.Controls.Add(restore);
+            page.Controls.Add(backups);
             page.Controls.Add(windowsUpdate);
             page.Resize += delegate
             {
@@ -653,9 +689,12 @@ namespace CodexPerformanceOptimizer
                 _driverGrid.Location = new Point(20, _driverSummary.Bottom + 2);
                 _driverGrid.Size = new Size(width, Math.Max(145, y - _driverGrid.Top - 12));
                 search.Location = new Point(20, y);
-                selectAll.Location = new Point(207, y);
-                install.Location = new Point(374, y);
-                windowsUpdate.Location = new Point(581, y);
+                selectAll.Location = new Point(170, y);
+                install.Location = new Point(285, y);
+                backup.Location = new Point(420, y);
+                restore.Location = new Point(560, y);
+                backups.Location = new Point(690, y);
+                windowsUpdate.Location = new Point(805, y);
             };
             page.Enter += async delegate { await LoadDriverInventoryAsync(false); };
             return page;
@@ -668,10 +707,31 @@ namespace CodexPerformanceOptimizer
             _driverInventorySummary.Text = "Versões instaladas • lendo vídeo, BIOS, chipset e dispositivos...";
             List<DriverInventoryItem> items = await Task.Run(delegate { return DriverManager.ReadInstalledDrivers(); });
             if (IsDisposed) return;
-            _installedDriverGrid.Rows.Clear();
-            foreach (DriverInventoryItem item in items) _installedDriverGrid.Rows.Add(item.Category, item.Device, item.Provider, item.Version, item.Date, item.InfName);
+            _driverInventoryItems = items;
+            ApplyDriverInventoryFilter();
             int categories = items.Select(delegate(DriverInventoryItem item) { return item.Category; }).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-            _driverInventorySummary.Text = items.Count == 0 ? "Não foi possível ler as versões instaladas" : items.Count + " drivers importantes • " + categories + " categorias";
+            int problems = items.Count(delegate(DriverInventoryItem item) { return item.HasProblem; });
+            _driverInventorySummary.Text = items.Count == 0 ? "Não foi possível ler as versões instaladas" : items.Count + " drivers importantes • " + categories + " categorias" + (problems == 0 ? " • nenhum problema" : " • " + problems + " problemas");
+        }
+
+        private void ApplyDriverInventoryFilter()
+        {
+            if (_installedDriverGrid == null) return;
+            string category = _driverFilter == null || _driverFilter.SelectedIndex <= 0 ? string.Empty : Convert.ToString(_driverFilter.SelectedItem);
+            string search = _driverSearch == null ? string.Empty : _driverSearch.Text.Trim();
+            bool problemsOnly = _driverProblemsOnly != null && _driverProblemsOnly.Checked;
+            IEnumerable<DriverInventoryItem> visible = _driverInventoryItems.Where(delegate(DriverInventoryItem item)
+            {
+                if (!string.IsNullOrEmpty(category) && !string.Equals(item.Category, category, StringComparison.OrdinalIgnoreCase)) return false;
+                if (problemsOnly && !item.HasProblem) return false;
+                return string.IsNullOrEmpty(search) || (item.Category + " " + item.Device + " " + item.Provider + " " + item.Version + " " + item.InfName).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+            });
+            _installedDriverGrid.Rows.Clear();
+            foreach (DriverInventoryItem item in visible)
+            {
+                int index = _installedDriverGrid.Rows.Add(item.Category, item.Device, item.Provider, item.Version, item.Date, item.Status, item.InfName);
+                if (item.HasProblem) _installedDriverGrid.Rows[index].DefaultCellStyle.ForeColor = Theme.Warning;
+            }
         }
 
         private async Task SearchDriverUpdates()
@@ -687,10 +747,16 @@ namespace CodexPerformanceOptimizer
                 MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+            _driverUpdates = found;
             _driverGrid.Rows.Clear();
             foreach (DriverUpdate update in found)
-                _driverGrid.Rows.Add(update.Selected, update.Title, string.IsNullOrWhiteSpace(update.Provider) ? "Windows Update" : update.Provider, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.SupportName, update.UpdateId, update.SupportUrl);
-            _driverSummary.Text = found.Count == 0 ? "Seus drivers estão atualizados" : found.Count + (found.Count == 1 ? " atualização encontrada" : " atualizações encontradas");
+            {
+                int index = _driverGrid.Rows.Add(update.Selected, update.Classification, update.Title, update.Comparison, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.SupportName, "Catálogo", update.UpdateId, update.SupportUrl, update.CatalogUrl, update.IsFirmware);
+                if (update.IsOlderRisk) _driverGrid.Rows[index].DefaultCellStyle.ForeColor = Theme.Warning;
+            }
+            int recommended = found.Count(delegate(DriverUpdate item) { return item.Classification == "Recomendada" || item.Classification == "Obrigatória"; });
+            int firmware = found.Count(delegate(DriverUpdate item) { return item.IsFirmware; });
+            _driverSummary.Text = found.Count == 0 ? "Seus drivers estão atualizados" : found.Count + " atualizações • " + recommended + " recomendadas" + (firmware == 0 ? string.Empty : " • " + firmware + " firmware/BIOS");
         }
 
         private async Task InstallSelectedDrivers()
@@ -703,16 +769,52 @@ namespace CodexPerformanceOptimizer
                 MessageBox.Show(this, "Selecione ao menos um driver.", "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+            List<DriverUpdate> selected = _driverUpdates.Where(delegate(DriverUpdate item) { return ids.Contains(item.UpdateId, StringComparer.OrdinalIgnoreCase); }).ToList();
             if (!Optimizer.IsAdministrator())
             {
                 if (MessageBox.Show(this, "A instalação exige privilégios de administrador. Reabrir o Otimizador como administrador?", "Drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) RunAsAdmin(null, EventArgs.Empty);
                 return;
             }
-            if (MessageBox.Show(this, "O Windows Update baixará e instalará " + ids.Count + (ids.Count == 1 ? " driver selecionado. Continuar?" : " drivers selecionados. Continuar?"), "Atualizar drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            DriverSafetyStatus safety = await Task.Run(delegate { return DriverManager.ReadSafetyStatus(); });
+            string firmwareBlock = DriverManager.ValidateFirmwareSelection(selected, safety);
+            if (!string.IsNullOrEmpty(firmwareBlock))
+            {
+                MessageBox.Show(this, firmwareBlock, "Proteção de BIOS e firmware", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            bool older = selected.Any(delegate(DriverUpdate item) { return item.IsOlderRisk; });
+            string warning = older ? "\r\n\r\nA seleção contém um pacote possivelmente mais antigo." : string.Empty;
+            string firmwareInfo = selected.Any(delegate(DriverUpdate item) { return item.IsFirmware; }) ? "\r\n\r\nVerificação de firmware:\r\n" + safety.Summary : string.Empty;
+            string confirmation = "Será criado um backup dos drivers atuais antes da instalação.\r\n\r\nO Windows Update instalará " + ids.Count + (ids.Count == 1 ? " driver." : " drivers.") + warning + firmwareInfo + "\r\n\r\nContinuar?";
+            if (MessageBox.Show(this, confirmation, "Atualizar drivers", MessageBoxButtons.YesNo, older ? MessageBoxIcon.Warning : MessageBoxIcon.Question) != DialogResult.Yes) return;
             string result = await RunWork("Atualizando drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.InstallUpdates(ids, token, progress); });
             MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, result.IndexOf("Falha", StringComparison.OrdinalIgnoreCase) >= 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
             await LoadDriverInventoryAsync(true);
             await SearchDriverUpdates();
+        }
+
+        private async Task CreateDriverBackup()
+        {
+            if (!Optimizer.IsAdministrator())
+            {
+                if (MessageBox.Show(this, "O backup exige administrador. Reabrir agora?", "Backup de drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) RunAsAdmin(null, EventArgs.Empty);
+                return;
+            }
+            string result = await RunWork("Criando backup dos drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.CreateDriverBackup(token, progress); });
+            MessageBox.Show(this, result, "Backup de drivers", MessageBoxButtons.OK, result.StartsWith("Falha", StringComparison.OrdinalIgnoreCase) ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+        }
+
+        private async Task RestoreDriverBackup()
+        {
+            if (!Optimizer.IsAdministrator())
+            {
+                if (MessageBox.Show(this, "A restauração exige administrador. Reabrir agora?", "Restaurar drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) RunAsAdmin(null, EventArgs.Empty);
+                return;
+            }
+            if (MessageBox.Show(this, "Reaplicar o backup de drivers mais recente? O Windows manterá o pacote com melhor classificação para cada dispositivo.", "Restaurar drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            string result = await RunWork("Restaurando drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.RestoreLatestDriverBackup(token, progress); });
+            MessageBox.Show(this, result, "Restaurar drivers", MessageBoxButtons.OK, result.IndexOf("não concluído", StringComparison.OrdinalIgnoreCase) >= 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            await LoadDriverInventoryAsync(true);
         }
 
         private async Task RefreshAudit()

@@ -1,60 +1,11 @@
-OTIMIZADOR DE DESEMPENHO 3.7
+OTIMIZADOR DE DESEMPENHO 4.0
 
-- Cada atualização de driver agora oferece um link para o suporte oficial do fabricante.
-- Intel, NVIDIA, AMD e fabricantes de computadores abrem seus portais próprios de drivers.
-- Atualizações sem portal específico abrem uma busca exata no Microsoft Update Catalog.
-- Links externos são limitados a uma lista interna de domínios oficiais HTTPS.
-
-- A área Drivers agora exibe versões instaladas, fornecedor, data e pacote INF.
-- Inventário organizado para vídeo, BIOS/UEFI, firmware, chipset, áudio, rede, armazenamento, Bluetooth e USB.
-- Versões instaladas e atualizações disponíveis aparecem em listas separadas para evitar comparações incorretas.
-
-- Inicialização agora reúne usuário, computador, aplicativos 32 bits, pastas, políticas e aplicativos da Microsoft Store.
-- Entradas protegidas indicam quando exigem administrador ou são controladas pelo Windows.
-- Nova área Drivers busca e instala atualizações oficiais pelo Windows Update.
-- Instalação de drivers permite seleção, confirmação e criação de ponto de restauração quando disponível.
-- A área Histórico foi substituída por Drivers para simplificar a navegação.
-- A reabertura como administrador agora aguarda o fechamento seguro da instância atual.
-
-- Revisão integral de dependências, telas, ações e caminhos de execução.
-- Componentes visuais separados do formulário principal para facilitar manutenção.
-- Proteção contra duas instâncias abertas simultaneamente.
-- Atalhos antigos agora são identificados e removidos sem listas duplicadas por versão.
-- Parâmetros internos sem uso e configuração de release obsoleta foram removidos.
-
-- Ícone próprio aplicado ao aplicativo, instalador, atalhos e bandeja do Windows.
-- Navegação lateral mais simples, com as oito áreas organizadas em uma única coluna.
-- Interface redesenhada com melhor contraste, espaçamento consistente e menos elementos pesados.
-- Cards, botões, gráficos e tabelas receberam acabamento visual mais limpo e profissional.
-
-- Canal de atualizações ativado diretamente pelo repositório oficial no GitHub.
-- Verificação automática de novas versões ao iniciar o aplicativo.
-- Instaladores baixados somente por HTTPS e validados por SHA-256 antes da execução.
-- Manifesto público versionado junto do instalador para manter as próximas versões atualizáveis.
-
-- Otimização inteligente da unidade selecionada conforme SSD, HDD ou armazenamento em camadas.
-- Limpeza do repositório de componentes do Windows sem usar o modo agressivo ResetBase.
-- Diagnóstico de energia e atividade com relatório HTML gerado pelo próprio Windows.
-- Acesso direto à configuração do Sensor de Armazenamento.
-- Comandos longos agora respondem ao botão Cancelar e encerram o processo associado.
-- Validação confinada da letra de unidade antes de executar qualquer otimização.
-
-- Gráficos em tempo real para CPU, memória e armazenamento.
-- Processos agrupados com histórico de cinco minutos.
-- Comparativo antes e depois das otimizações.
-- Central de recomendações baseada nas medições do computador.
-- Temperaturas, frequência, possíveis limitações e saúde dos discos.
-- Inicialização medida e diagnóstico de estabilidade dos últimos 30 dias.
-- Mapa dos maiores arquivos e quarentena reversível de duplicados.
-- Perfis temporários para jogos e trabalho, além da troca automática na bateria.
-- Monitoramento opcional na bandeja do Windows.
-- Restauração individual de energia, tema, efeitos, segundo plano e inicialização.
-- Atualizações por HTTPS com validação SHA-256.
-- Benchmark real concluído após uma reinicialização do Windows.
-- Histórico persistente diário, semanal e mensal com retenção de 30 dias.
-- Testes de segurança executados em arquivos e Registro isolados.
-- Logs de falhas com remoção automática de nomes e caminhos pessoais.
-- Instalador com atualização, reparo, troca atômica e rollback.
-- Pipeline de publicação com assinatura opcional e manifesto público.
-
-As leituras de temperatura e vida útil dependem dos sensores expostos pelo fabricante.
+- Atualizações associadas ao Hardware ID e ao modelo informado pelo Windows Update.
+- Comparação instalada → disponível somente quando as versões são compatíveis.
+- Classificação em recomendada, opcional, obrigatória, firmware/BIOS, já instalada ou possivelmente antiga.
+- Busca exata no Microsoft Update Catalog pelo Hardware ID.
+- Diagnóstico de drivers ausentes, dispositivos desativados, erros e pacotes sem assinatura.
+- Filtros por categoria, pesquisa e modo somente problemas.
+- Backup automático dos drivers antes de atualizar e restauração pelo PnPUtil.
+- BIOS e firmware verificam energia, bateria, BitLocker, reinicialização pendente, administrador e fabricante.
+- Pacotes possivelmente antigos não ficam selecionados automaticamente.

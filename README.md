@@ -14,6 +14,8 @@ A interface apresenta identidade visual própria, navegação lateral simplifica
 - Inventário de versões de vídeo, BIOS, firmware, chipset e demais drivers importantes.
 - Busca e instalação de drivers oficiais pelo Windows Update.
 - Atalhos seguros para o suporte oficial do fabricante de cada atualização encontrada.
+- Correspondência por Hardware ID, classificação e comparação segura de versões.
+- Backup e restauração de drivers, diagnóstico de dispositivos e proteção especial para BIOS/firmware.
 - Limpeza selecionável de arquivos temporários e análise por volume.
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
