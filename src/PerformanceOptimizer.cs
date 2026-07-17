@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("3.4.1.0")]
-[assembly: AssemblyFileVersion("3.4.1.0")]
+[assembly: AssemblyVersion("3.5.0.0")]
+[assembly: AssemblyFileVersion("3.5.0.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer
@@ -36,14 +36,21 @@ namespace CodexPerformanceOptimizer
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             bool firstInstance;
-            using (var instance = new Mutex(false, SingleInstanceName, out firstInstance))
+            using (var instance = new Mutex(true, SingleInstanceName, out firstInstance))
             {
-                if (!firstInstance)
+                bool ownsInstance = firstInstance;
+                if (!ownsInstance && HasArgument(args, "--wait-for-instance"))
+                {
+                    try { ownsInstance = instance.WaitOne(TimeSpan.FromSeconds(15)); }
+                    catch (AbandonedMutexException) { ownsInstance = true; }
+                }
+                if (!ownsInstance)
                 {
                     MessageBox.Show("O Otimizador já está aberto.", "Otimizador de Desempenho", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                Application.Run(new MainFormV2());
+                try { Application.Run(new MainFormV2()); }
+                finally { instance.ReleaseMutex(); }
             }
         }
 

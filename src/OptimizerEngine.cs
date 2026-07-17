@@ -30,6 +30,10 @@ namespace CodexPerformanceOptimizer
         private const string AppKey = @"Software\Codex\PerformanceOptimizerV2";
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string DisabledKey = AppKey + @"\DisabledStartup";
+        private const string StartupApprovedRunKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+        private const string StartupApprovedRun32Key = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32";
+        private const string StartupApprovedFolderKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder";
+        private const string PackagedStartupKey = @"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\SystemAppData";
         private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
         private const string VisualKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects";
         private const string ExplorerKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
@@ -655,12 +659,26 @@ namespace CodexPerformanceOptimizer
         public static List<StartupEntry> ReadStartupEntries()
         {
             var rows = new Dictionary<string, StartupEntry>(StringComparer.OrdinalIgnoreCase);
-            using (RegistryKey run = Registry.CurrentUser.OpenSubKey(RunKey))
-            if (run != null) foreach (string name in run.GetValueNames()) rows[name] = new StartupEntry { Enabled = true, Name = name, Command = Convert.ToString(run.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames)), Impact = EstimateImpact(name) };
+            AddRegistryStartupEntries(rows, Registry.CurrentUser, "HKCU", RunKey, StartupApprovedRunKey, "Usuário", true);
+            AddRegistryStartupEntries(rows, Registry.LocalMachine, "HKLM", RunKey, StartupApprovedRunKey, "Computador", Optimizer.IsAdministrator());
+            AddRegistryStartupEntries(rows, Registry.LocalMachine, "HKLM", @"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run", StartupApprovedRun32Key, "Computador (32 bits)", Optimizer.IsAdministrator());
+            AddStartupFolderEntries(rows, Environment.GetFolderPath(Environment.SpecialFolder.Startup), Registry.CurrentUser, "HKCU", StartupApprovedFolderKey, "Pasta do usuário", true);
+            AddStartupFolderEntries(rows, Environment.GetFolderPath(Environment.SpecialFolder.CommonStartup), Registry.LocalMachine, "HKLM", StartupApprovedFolderKey, "Pasta compartilhada", Optimizer.IsAdministrator());
+            AddRegistryStartupEntries(rows, Registry.CurrentUser, "HKCU", @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run", string.Empty, "Política do usuário", false);
+            AddRegistryStartupEntries(rows, Registry.LocalMachine, "HKLM", @"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run", string.Empty, "Política do computador", false);
+            AddPackagedStartupEntries(rows);
             using (RegistryKey disabled = Registry.CurrentUser.OpenSubKey(DisabledKey))
-            if (disabled != null) foreach (string name in disabled.GetValueNames()) if (!rows.ContainsKey(name)) rows[name] = new StartupEntry { Enabled = false, Name = name, Command = Convert.ToString(disabled.GetValue(name)), Impact = EstimateImpact(name) };
+            if (disabled != null) foreach (string name in disabled.GetValueNames())
+            {
+                string key = "Legado|" + name;
+                if (!rows.ContainsKey(key)) rows[key] = CreateStartupEntry(false, name, Convert.ToString(disabled.GetValue(name)), "Desativado pelo Otimizador", true, "HKCU", RunKey, string.Empty, name, "Legacy");
+            }
             using (RegistryKey legacy = Registry.CurrentUser.OpenSubKey(@"Software\Codex\PerformanceBackup\Run"))
-            if (legacy != null) foreach (string name in legacy.GetValueNames()) if (!rows.ContainsKey(name)) rows[name] = new StartupEntry { Enabled = false, Name = name, Command = Convert.ToString(legacy.GetValue(name)), Impact = EstimateImpact(name) };
+            if (legacy != null) foreach (string name in legacy.GetValueNames())
+            {
+                string key = "Legado|" + name;
+                if (!rows.ContainsKey(key)) rows[key] = CreateStartupEntry(false, name, Convert.ToString(legacy.GetValue(name)), "Backup antigo", true, "HKCU", RunKey, string.Empty, name, "Legacy");
+            }
             return rows.Values.OrderByDescending(delegate(StartupEntry e) { return e.Enabled; }).ThenBy(delegate(StartupEntry e) { return e.Name; }).ToList();
         }
 
@@ -668,29 +686,156 @@ namespace CodexPerformanceOptimizer
         {
             EnsureSnapshot();
             var log = new StringBuilder("INICIALIZAÇÃO\r\n" + new string('=', 72) + "\r\n");
-            using (RegistryKey run = Registry.CurrentUser.CreateSubKey(RunKey))
-            using (RegistryKey disabled = Registry.CurrentUser.CreateSubKey(DisabledKey))
+            foreach (StartupEntry entry in entries.Where(delegate(StartupEntry item) { return item.CanChange && item.Enabled != item.OriginalEnabled; }))
             {
-                foreach (StartupEntry entry in entries)
+                token.ThrowIfCancellationRequested();
+                progress.Report("Atualizando " + entry.Name + "...");
+                try
                 {
-                    token.ThrowIfCancellationRequested();
-                    progress.Report("Atualizando " + entry.Name + "...");
-                    object current = run == null ? null : run.GetValue(entry.Name);
-                    if (entry.Enabled && current == null)
+                    if (entry.StateKind == "Packaged")
                     {
-                        run.SetValue(entry.Name, entry.Command, RegistryValueKind.String);
-                        disabled.DeleteValue(entry.Name, false);
-                        log.AppendLine("✓ Ativado: " + entry.Name);
+                        using (RegistryKey state = Registry.CurrentUser.CreateSubKey(entry.RegistryPath))
+                            state.SetValue("State", entry.Enabled ? 2 : 0, RegistryValueKind.DWord);
                     }
-                    else if (!entry.Enabled && current != null)
+                    else if (entry.StateKind == "Approved")
                     {
-                        disabled.SetValue(entry.Name, Convert.ToString(current), RegistryValueKind.String);
-                        run.DeleteValue(entry.Name, false);
-                        log.AppendLine("✓ Desativado: " + entry.Name);
+                        RegistryKey hive = entry.RegistryHive == "HKLM" ? Registry.LocalMachine : Registry.CurrentUser;
+                        WriteApprovedState(hive, entry.ApprovalPath, entry.ValueName, entry.Enabled);
+                    }
+                    else if (entry.StateKind == "Legacy") ApplyLegacyStartupState(entry);
+                    log.AppendLine((entry.Enabled ? "✓ Ativado: " : "✓ Desativado: ") + entry.Name);
+                }
+                catch (UnauthorizedAccessException) { log.AppendLine("! " + entry.Name + ": reabra como administrador."); }
+                catch (Exception ex) { log.AppendLine("! " + entry.Name + ": " + ex.Message); }
+            }
+            if (!entries.Any(delegate(StartupEntry item) { return item.CanChange && item.Enabled != item.OriginalEnabled; })) log.AppendLine("Nenhuma alteração selecionada.");
+            return log.ToString();
+        }
+
+        private static void AddRegistryStartupEntries(Dictionary<string, StartupEntry> rows, RegistryKey hive, string hiveName, string runPath, string approvalPath, string source, bool canChange)
+        {
+            try
+            {
+                using (RegistryKey run = hive.OpenSubKey(runPath))
+                {
+                    if (run == null) return;
+                    foreach (string name in run.GetValueNames())
+                    {
+                        bool enabled = string.IsNullOrEmpty(approvalPath) || ReadApprovedState(hive, approvalPath, name, true);
+                        string command = Convert.ToString(run.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames));
+                        rows[source + "|" + name] = CreateStartupEntry(enabled, name, command, source, canChange, hiveName, runPath, approvalPath, name, string.IsNullOrEmpty(approvalPath) ? "Policy" : "Approved");
                     }
                 }
             }
-            return log.ToString();
+            catch { }
+        }
+
+        private static void AddStartupFolderEntries(Dictionary<string, StartupEntry> rows, string folder, RegistryKey hive, string hiveName, string approvalPath, string source, bool canChange)
+        {
+            try
+            {
+                if (!Directory.Exists(folder)) return;
+                foreach (string path in Directory.GetFiles(folder, "*", SearchOption.TopDirectoryOnly))
+                {
+                    if (string.Equals(Path.GetFileName(path), "desktop.ini", StringComparison.OrdinalIgnoreCase)) continue;
+                    string valueName = Path.GetFileName(path);
+                    string name = Path.GetFileNameWithoutExtension(path);
+                    bool enabled = ReadApprovedState(hive, approvalPath, valueName, true);
+                    rows[source + "|" + valueName] = CreateStartupEntry(enabled, name, path, source, canChange, hiveName, string.Empty, approvalPath, valueName, "Approved");
+                }
+            }
+            catch { }
+        }
+
+        private static void AddPackagedStartupEntries(Dictionary<string, StartupEntry> rows)
+        {
+            const string script = @"$ProgressPreference='SilentlyContinue'; $b={param($v) [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$v))}; $lines=@(); Get-AppxPackage | ForEach-Object { try { $p=$_; $m=Get-AppxPackageManifest -Package $p; $m.Package.Applications.Application | ForEach-Object { $a=$_; @($a.Extensions.Extension) | Where-Object { $_.Category -match 'startupTask' } | ForEach-Object { $lines += ((&$b $p.PackageFamilyName)+'|'+(&$b $p.Name)+'|'+(&$b $a.Id)+'|'+(&$b $_.StartupTask.TaskId)+'|'+(&$b (Join-Path $p.InstallLocation $a.Executable))+'|'+([string]$_.StartupTask.Enabled -eq 'true')) } } } catch {} }; $lines -join ""`r`n""";
+            try
+            {
+                string encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+                CommandExecution result = SystemCommand.Execute("powershell.exe", "-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand " + encoded, 30000);
+                if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.Output)) return;
+                foreach (string line in result.Output.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string[] fields = line.Trim().Split('|');
+                    if (fields.Length != 6) continue;
+                    var task = new PackagedStartupTask { PackageFamilyName = DecodeStartupField(fields[0]), Package = DecodeStartupField(fields[1]), AppId = DecodeStartupField(fields[2]), TaskId = DecodeStartupField(fields[3]), Command = DecodeStartupField(fields[4]), DefaultEnabled = string.Equals(fields[5], "True", StringComparison.OrdinalIgnoreCase) };
+                    if (string.IsNullOrWhiteSpace(task.TaskId) || string.IsNullOrWhiteSpace(task.PackageFamilyName)) continue;
+                    string path = PackagedStartupKey + "\\" + task.PackageFamilyName + "\\" + task.TaskId;
+                    bool enabled = task.DefaultEnabled;
+                    using (RegistryKey state = Registry.CurrentUser.OpenSubKey(path))
+                        if (state != null && state.GetValue("State") != null) enabled = Convert.ToInt32(state.GetValue("State"), CultureInfo.InvariantCulture) == 2;
+                    string name = FriendlyPackagedStartupName(task);
+                    rows["Aplicativo|" + task.PackageFamilyName + "|" + task.TaskId] = CreateStartupEntry(enabled, name, task.Command, "Aplicativo", true, "HKCU", path, string.Empty, task.TaskId, "Packaged");
+                }
+            }
+            catch { }
+        }
+
+        private static string DecodeStartupField(string value)
+        {
+            try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)); }
+            catch { return string.Empty; }
+        }
+
+        private static StartupEntry CreateStartupEntry(bool enabled, string name, string command, string source, bool canChange, string hive, string registryPath, string approvalPath, string valueName, string stateKind)
+        {
+            return new StartupEntry { Enabled = enabled, OriginalEnabled = enabled, CanChange = canChange, Name = name, Command = command, Impact = EstimateImpact(name), Source = source, RegistryHive = hive, RegistryPath = registryPath, ApprovalPath = approvalPath, ValueName = valueName, StateKind = stateKind };
+        }
+
+        private static string FriendlyPackagedStartupName(PackagedStartupTask task)
+        {
+            string package = task.Package ?? task.TaskId;
+            if (package.IndexOf("WhatsApp", StringComparison.OrdinalIgnoreCase) >= 0) return "WhatsApp";
+            if (package.IndexOf("GamingApp", StringComparison.OrdinalIgnoreCase) >= 0) return "Xbox";
+            if (package.IndexOf("OfficeHub", StringComparison.OrdinalIgnoreCase) >= 0) return "Microsoft 365 Copilot";
+            if (package.IndexOf("WindowsTerminal", StringComparison.OrdinalIgnoreCase) >= 0) return "Terminal";
+            if (package.Equals("MSTeams", StringComparison.OrdinalIgnoreCase)) return "Microsoft Teams";
+            if (!string.IsNullOrWhiteSpace(task.AppId) && !string.Equals(task.AppId, "App", StringComparison.OrdinalIgnoreCase) && task.AppId.IndexOf("Microsoft.Xbox", StringComparison.OrdinalIgnoreCase) < 0) return task.AppId;
+            int separator = package.LastIndexOf('.');
+            return separator >= 0 && separator + 1 < package.Length ? package.Substring(separator + 1) : package;
+        }
+
+        private static bool ReadApprovedState(RegistryKey hive, string path, string name, bool defaultValue)
+        {
+            try
+            {
+                using (RegistryKey key = hive.OpenSubKey(path))
+                {
+                    byte[] value = key == null ? null : key.GetValue(name) as byte[];
+                    return value == null || value.Length == 0 ? defaultValue : value[0] % 2 == 0;
+                }
+            }
+            catch { return defaultValue; }
+        }
+
+        private static void WriteApprovedState(RegistryKey hive, string path, string name, bool enabled)
+        {
+            using (RegistryKey key = hive.CreateSubKey(path))
+            {
+                var state = new byte[12];
+                state[0] = enabled ? (byte)2 : (byte)3;
+                if (!enabled) Buffer.BlockCopy(BitConverter.GetBytes(DateTime.UtcNow.ToFileTimeUtc()), 0, state, 4, 8);
+                key.SetValue(name, state, RegistryValueKind.Binary);
+            }
+        }
+
+        private static void ApplyLegacyStartupState(StartupEntry entry)
+        {
+            using (RegistryKey run = Registry.CurrentUser.CreateSubKey(RunKey))
+            using (RegistryKey disabled = Registry.CurrentUser.CreateSubKey(DisabledKey))
+            {
+                if (entry.Enabled)
+                {
+                    run.SetValue(entry.Name, entry.Command, RegistryValueKind.String);
+                    disabled.DeleteValue(entry.Name, false);
+                }
+                else
+                {
+                    disabled.SetValue(entry.Name, entry.Command, RegistryValueKind.String);
+                    run.DeleteValue(entry.Name, false);
+                }
+            }
         }
 
         public static List<DuplicateEntry> FindDuplicates(string root, CancellationToken token, IProgress<string> progress)
@@ -804,118 +949,6 @@ namespace CodexPerformanceOptimizer
                 return path;
             }
             catch { return string.Empty; }
-        }
-
-        public static List<ReportSummary> ReadReportHistory(int maximumItems)
-        {
-            var reports = new List<ReportSummary>();
-            if (!Directory.Exists(ReportsFolder)) return reports;
-            IEnumerable<FileInfo> files;
-            try
-            {
-                files = new DirectoryInfo(ReportsFolder).GetFiles("relatorio-*.txt")
-                    .OrderByDescending(delegate(FileInfo file) { return file.LastWriteTime; })
-                    .Take(Math.Max(1, maximumItems))
-                    .ToArray();
-            }
-            catch { return reports; }
-
-            foreach (FileInfo file in files)
-            {
-                try
-                {
-                    string content = ReadReportPreview(file.FullName, 32768);
-                    string[] lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-                    reports.Add(new ReportSummary
-                    {
-                        Path = file.FullName,
-                        Created = file.LastWriteTime,
-                        Category = ReportCategory(lines),
-                        Summary = ReportDescription(lines)
-                    });
-                }
-                catch { }
-            }
-            return reports;
-        }
-
-        private static string ReadReportPreview(string path, int maximumCharacters)
-        {
-            using (var reader = new StreamReader(path, Encoding.UTF8, true))
-            {
-                var buffer = new char[maximumCharacters];
-                int read = reader.ReadBlock(buffer, 0, buffer.Length);
-                return new string(buffer, 0, read);
-            }
-        }
-
-        private static string ReportCategory(string[] lines)
-        {
-            string header = lines.FirstOrDefault(delegate(string line) { return !string.IsNullOrWhiteSpace(line); }) ?? "Atividade do sistema";
-            string upper = header.ToUpperInvariant();
-            if (upper.Contains("AUDITORIA")) return "Análise do sistema";
-            if (upper.Contains("APLICAÇÃO DE PERFIL")) return "Perfil aplicado";
-            if (upper.Contains("EFICIÊNCIA EM SEGUNDO PLANO")) return "Eficiência em segundo plano";
-            if (upper.Contains("HARDWARE")) return "Inventário de hardware";
-            if (upper.Contains("ARMAZENAMENTO")) return "Análise de armazenamento";
-            if (upper.Contains("DUPLICADOS")) return "Arquivos duplicados";
-            if (upper.Contains("MANUTENÇÃO")) return "Manutenção";
-            if (upper.Contains("OTIMIZAÇÃO INTELIGENTE")) return "Otimização da unidade";
-            if (upper.Contains("COMPONENTES DO WINDOWS")) return "Componentes do Windows";
-            if (upper.Contains("DIAGNÓSTICO DE ENERGIA")) return "Diagnóstico de energia";
-            if (upper.Contains("LIMPEZA")) return "Limpeza";
-            if (upper.Contains("INICIALIZAÇÃO")) return "Inicialização";
-            if (upper.Contains("RESTAURAÇÃO")) return "Restauração";
-            return ShortReportText(header);
-        }
-
-        private static string ReportDescription(string[] lines)
-        {
-            string header = lines.FirstOrDefault(delegate(string line) { return !string.IsNullOrWhiteSpace(line); }) ?? string.Empty;
-            string upper = header.ToUpperInvariant();
-            var preferredPrefixes = new List<string>();
-            if (upper.Contains("AUDITORIA")) preferredPrefixes.AddRange(new[] { "Processador:", "Memória:", "Disco C:" });
-            else if (upper.Contains("APLICAÇÃO DE PERFIL")) preferredPrefixes.AddRange(new[] { "Perfil:", "Disco livre:" });
-            else if (upper.Contains("HARDWARE")) preferredPrefixes.AddRange(new[] { "PROCESSADOR:", "MEMÓRIA:" });
-            else if (upper.Contains("MANUTENÇÃO")) preferredPrefixes.AddRange(new[] { "Temporários removidos:", "TRIM:" });
-            else if (upper.Contains("OTIMIZAÇÃO INTELIGENTE")) preferredPrefixes.AddRange(new[] { "Unidade:", "Resultado:" });
-            else if (upper.Contains("COMPONENTES DO WINDOWS")) preferredPrefixes.AddRange(new[] { "Resultado:", "Variação de espaço livre:" });
-            else if (upper.Contains("DIAGNÓSTICO DE ENERGIA")) preferredPrefixes.AddRange(new[] { "Resultado:", "Arquivo:" });
-            else if (upper.Contains("LIMPEZA")) preferredPrefixes.AddRange(new[] { "Liberado:", "✓" });
-            else if (upper.Contains("EFICIÊNCIA")) preferredPrefixes.AddRange(new[] { "✓ Widgets", "! Controle" });
-            else preferredPrefixes.Add("✓");
-
-            var matches = new List<string>();
-            foreach (string prefix in preferredPrefixes)
-            {
-                string match = lines.FirstOrDefault(delegate(string line) { return line.TrimStart().StartsWith(prefix, StringComparison.OrdinalIgnoreCase); });
-                if (!string.IsNullOrWhiteSpace(match) && !matches.Contains(match.Trim())) matches.Add(match.Trim());
-                if (matches.Count == 2) break;
-            }
-            if (matches.Count == 0)
-            {
-                foreach (string line in lines)
-                {
-                    string value = line.Trim();
-                    if (string.IsNullOrWhiteSpace(value) || value == header.Trim() || value.All(delegate(char c) { return c == '=' || c == '-'; })) continue;
-                    if (value.StartsWith("Data:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("Administrador:", StringComparison.OrdinalIgnoreCase) || value.StartsWith("Backup", StringComparison.OrdinalIgnoreCase)) continue;
-                    matches.Add(value);
-                    break;
-                }
-            }
-            return ShortReportText(matches.Count == 0 ? "Atividade concluída" : string.Join("  •  ", matches.ToArray()));
-        }
-
-        private static string ShortReportText(string text)
-        {
-            string value = Regex.Replace(text ?? string.Empty, @"\s+", " ").Trim();
-            return value.Length <= 180 ? value : value.Substring(0, 177) + "...";
-        }
-
-        public static void OpenReportsFolder()
-        {
-            Directory.CreateDirectory(ReportsFolder);
-            Process.Start(new ProcessStartInfo("explorer.exe", "\"" + ReportsFolder + "\"") { UseShellExecute = true });
         }
 
         public static string DetectManagedEnvironmentShort()

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 
 namespace CodexPerformanceOptimizer
@@ -53,6 +54,10 @@ namespace CodexPerformanceOptimizer
                 if (benchmark.IndexOf("BENCHMARK CONCLUÍDO", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Comparativo pós-reinicialização falhou.");
                 string safety = SafetyTestSuite.Run(CancellationToken.None, new Progress<string>());
                 if (safety.IndexOf("10 de 10 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
+                if (!DriverManager.IsValidUpdateIdForTesting("11111111-2222-3333-4444-555555555555") || DriverManager.IsValidUpdateIdForTesting("driver-inválido")) throw new InvalidOperationException("Validação segura de drivers falhou.");
+                if (DriverManager.CountInstalledDrivers() <= 0) throw new InvalidOperationException("Inventário de drivers falhou.");
+                var startupEntries = V2Engine.ReadStartupEntries();
+                if (startupEntries == null || startupEntries.Any(item => string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.Source))) throw new InvalidOperationException("Inventário de inicialização falhou.");
                 TrendSummary trend = PersistentMetricStore.Read(1);
                 if (trend == null || trend.Points == null || trend.Processes == null) throw new InvalidOperationException("Histórico persistente falhou.");
 
@@ -67,9 +72,9 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Benchmark e histórico persistente: OK");
                 Console.WriteLine("Testes de segurança isolados: 10/10");
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
-                Console.WriteLine("Inicialização: " + V2Engine.ReadStartupEntries().Count);
+                Console.WriteLine("Inicialização: " + startupEntries.Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);
-                Console.WriteLine("Histórico: " + V2Engine.ReadReportHistory(5).Count);
+                Console.WriteLine("Gerenciamento de drivers: OK");
                 Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }

@@ -329,9 +329,37 @@ namespace CodexPerformanceOptimizer
     internal sealed class StartupEntry
     {
         public bool Enabled { get; set; }
+        public bool OriginalEnabled { get; set; }
+        public bool CanChange { get; set; }
         public string Name { get; set; }
         public string Command { get; set; }
         public string Impact { get; set; }
+        public string Source { get; set; }
+        public string RegistryHive { get; set; }
+        public string RegistryPath { get; set; }
+        public string ApprovalPath { get; set; }
+        public string ValueName { get; set; }
+        public string StateKind { get; set; }
+    }
+
+    internal sealed class DriverUpdate
+    {
+        public bool Selected { get; set; }
+        public string Title { get; set; }
+        public string Provider { get; set; }
+        public string UpdateId { get; set; }
+        public long DownloadBytes { get; set; }
+        public bool RebootRequired { get; set; }
+    }
+
+    internal sealed class PackagedStartupTask
+    {
+        public string PackageFamilyName { get; set; }
+        public string Package { get; set; }
+        public string AppId { get; set; }
+        public string TaskId { get; set; }
+        public string Command { get; set; }
+        public bool DefaultEnabled { get; set; }
     }
 
     internal sealed class StorageEntry
@@ -380,11 +408,4 @@ namespace CodexPerformanceOptimizer
         public bool DefaultSelected { get; set; }
     }
 
-    internal sealed class ReportSummary
-    {
-        public string Path { get; set; }
-        public DateTime Created { get; set; }
-        public string Category { get; set; }
-        public string Summary { get; set; }
-    }
 }

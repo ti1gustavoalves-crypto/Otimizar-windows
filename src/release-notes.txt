@@ -1,4 +1,11 @@
-OTIMIZADOR DE DESEMPENHO 3.4.1
+OTIMIZADOR DE DESEMPENHO 3.5
+
+- Inicialização agora reúne usuário, computador, aplicativos 32 bits, pastas, políticas e aplicativos da Microsoft Store.
+- Entradas protegidas indicam quando exigem administrador ou são controladas pelo Windows.
+- Nova área Drivers busca e instala atualizações oficiais pelo Windows Update.
+- Instalação de drivers permite seleção, confirmação e criação de ponto de restauração quando disponível.
+- A área Histórico foi substituída por Drivers para simplificar a navegação.
+- A reabertura como administrador agora aguarda o fechamento seguro da instância atual.
 
 - Revisão integral de dependências, telas, ações e caminhos de execução.
 - Componentes visuais separados do formulário principal para facilitar manutenção.

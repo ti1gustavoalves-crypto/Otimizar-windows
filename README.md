@@ -10,6 +10,8 @@ A interface apresenta identidade visual própria, navegação lateral simplifica
 - Histórico diário, semanal e mensal com retenção local de 30 dias.
 - Benchmark antes e depois, concluído após reiniciar o Windows.
 - Diagnóstico de discos, estabilidade, inicialização e recomendações.
+- Inicialização completa com entradas do usuário, computador, pastas e aplicativos da Microsoft Store.
+- Busca e instalação de drivers oficiais pelo Windows Update.
 - Limpeza selecionável de arquivos temporários e análise por volume.
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.

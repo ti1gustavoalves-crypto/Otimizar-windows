@@ -59,6 +59,7 @@ namespace CodexPerformanceOptimizer
         private AdvancedSettings _advancedSettings;
         private PowerLineStatus? _lastPowerLineStatus;
         private DataGridView _startupGrid;
+        private bool _startupLoading;
         private DataGridView _storageGrid;
         private FlowLayoutPanel _hardwareCards;
         private Label _hardwareSummary;
@@ -69,9 +70,9 @@ namespace CodexPerformanceOptimizer
         private string _selectedDrive;
         private Label _storageSummary;
         private ComboBox _schedule;
-        private FlowLayoutPanel _reportCards;
-        private Label _reportEmpty;
-        private string _selectedReportPath;
+        private DataGridView _driverGrid;
+        private Label _driverSummary;
+        private bool _driverInventoryLoaded;
         private ProgressBar _progress;
         private Label _status;
         private Button _cancel;
@@ -108,10 +109,10 @@ namespace CodexPerformanceOptimizer
             _tabs.TabPages.Add(BuildHardwareTab());
             _tabs.TabPages.Add(BuildStartupTab());
             _tabs.TabPages.Add(BuildStorageTab());
+            _tabs.TabPages.Add(BuildDriversTab());
             _tabs.TabPages.Add(BuildDiagnosticsTab());
             _tabs.TabPages.Add(BuildMaintenanceTab());
             _tabs.TabPages.Add(BuildControlTab());
-            _tabs.TabPages.Add(BuildReportTab());
             _tabs.SelectedIndexChanged += delegate { UpdateNavigationState(); };
 
             var content = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Background };
@@ -178,7 +179,7 @@ namespace CodexPerformanceOptimizer
             navigation.Controls.Add(new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true });
             navigation.Controls.Add(new Label { Text = "Versão " + _displayVersion, Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
 
-            string[] labels = { "Início", "Hardware", "Inicialização", "Armazenamento", "Diagnóstico", "Manutenção", "Ajustes", "Histórico" };
+            string[] labels = { "Início", "Hardware", "Inicialização", "Armazenamento", "Drivers", "Diagnóstico", "Manutenção", "Ajustes" };
             _navigationButtons = new Button[labels.Length];
             for (int i = 0; i < labels.Length; i++)
             {
@@ -401,18 +402,26 @@ namespace CodexPerformanceOptimizer
             _startupGrid.Columns.Add("Name", "Programa");
             _startupGrid.Columns[1].Width = 230;
             _startupGrid.Columns[1].ReadOnly = true;
-            _startupGrid.Columns.Add("Impact", "Impacto estimado");
-            _startupGrid.Columns[2].Width = 145;
+            _startupGrid.Columns.Add("Source", "Origem");
+            _startupGrid.Columns[2].Width = 165;
             _startupGrid.Columns[2].ReadOnly = true;
-            _startupGrid.Columns.Add("Command", "Comando");
-            _startupGrid.Columns[3].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            _startupGrid.Columns.Add("Impact", "Impacto estimado");
+            _startupGrid.Columns[3].Width = 140;
             _startupGrid.Columns[3].ReadOnly = true;
-            _startupGrid.Columns.Add("Original", "Original");
-            _startupGrid.Columns[4].Visible = false;
+            _startupGrid.Columns.Add("Command", "Comando");
+            _startupGrid.Columns[4].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             _startupGrid.Columns[4].ReadOnly = true;
+            _startupGrid.Columns.Add("Original", "Original");
+            _startupGrid.Columns.Add("CanChange", "Editável");
+            _startupGrid.Columns.Add("RegistryHive", "Hive");
+            _startupGrid.Columns.Add("RegistryPath", "Registro");
+            _startupGrid.Columns.Add("ApprovalPath", "Aprovação");
+            _startupGrid.Columns.Add("ValueName", "Valor");
+            _startupGrid.Columns.Add("StateKind", "Tipo");
+            for (int i = 5; i < _startupGrid.Columns.Count; i++) { _startupGrid.Columns[i].Visible = false; _startupGrid.Columns[i].ReadOnly = true; }
             var refresh = ButtonFactory("Atualizar lista", 20, 545, 150, Theme.Secondary);
             var save = ButtonFactory("Aplicar alterações", 182, 545, 170, Theme.Primary);
-            refresh.Click += delegate { LoadStartup(); };
+            refresh.Click += async delegate { await LoadStartupAsync(); };
             save.Click += async delegate { await ApplyStartupGrid(); };
             page.Controls.Add(_startupGrid);
             page.Controls.Add(refresh);
@@ -420,7 +429,7 @@ namespace CodexPerformanceOptimizer
             _startupGrid.Anchor = AnchorStyles.None;
             page.Resize += delegate { LayoutStartupTab(page, refresh, save); };
             LayoutStartupTab(page, refresh, save);
-            page.Enter += delegate { LoadStartup(); };
+            page.Enter += async delegate { await LoadStartupAsync(); };
             return page;
         }
 
@@ -567,102 +576,101 @@ namespace CodexPerformanceOptimizer
             return page;
         }
 
-        private TabPage BuildReportTab()
+        private TabPage BuildDriversTab()
         {
-            var page = NewPage("Histórico");
-            page.Controls.Add(new Label { Text = "Atividades recentes", Location = new Point(20, 20), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 13f) });
-            var refresh = ButtonFactory("Atualizar", 605, 12, 110, Theme.Primary);
-            var export = ButtonFactory("Exportar selecionado", 725, 12, 165, Theme.Secondary);
-            var open = ButtonFactory("Abrir pasta", 900, 12, 110, Theme.Secondary);
-            refresh.Click += delegate { LoadReportHistory(); };
-            export.Click += ExportSelectedReport;
-            open.Click += delegate { V2Engine.OpenReportsFolder(); };
+            var page = NewPage("Drivers");
+            _driverSummary = new Label { Text = "Drivers instalados: verificando...", Location = new Point(20, 20), Size = new Size(480, 28), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
+            page.Controls.Add(new Label { Text = "Atualizações fornecidas pelo Windows Update", Location = new Point(20, 50), AutoSize = true, ForeColor = Theme.Muted });
 
-            _reportCards = new FlowLayoutPanel
+            _driverGrid = Grid(20, 82, 1000, 455);
+            _driverGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Instalar", Width = 70 });
+            _driverGrid.Columns.Add("Title", "Driver");
+            _driverGrid.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            _driverGrid.Columns[1].ReadOnly = true;
+            _driverGrid.Columns.Add("Provider", "Fornecedor");
+            _driverGrid.Columns[2].Width = 170;
+            _driverGrid.Columns[2].ReadOnly = true;
+            _driverGrid.Columns.Add("Size", "Download");
+            _driverGrid.Columns[3].Width = 110;
+            _driverGrid.Columns[3].ReadOnly = true;
+            _driverGrid.Columns.Add("Restart", "Reinício");
+            _driverGrid.Columns[4].Width = 90;
+            _driverGrid.Columns[4].ReadOnly = true;
+            _driverGrid.Columns.Add("UpdateId", "ID");
+            _driverGrid.Columns[5].Visible = false;
+            _driverGrid.Columns[5].ReadOnly = true;
+
+            var search = ButtonFactory("Buscar atualizações", 20, 554, 175, Theme.Primary);
+            var selectAll = ButtonFactory("Selecionar todos", 207, 554, 155, Theme.Secondary);
+            var install = ButtonFactory("Atualizar selecionados", 374, 554, 195, Theme.Success);
+            var windowsUpdate = ButtonFactory("Abrir Windows Update", 581, 554, 185, Theme.Secondary);
+            search.Click += async delegate { await SearchDriverUpdates(); };
+            selectAll.Click += delegate { foreach (DataGridViewRow row in _driverGrid.Rows) if (!row.IsNewRow) row.Cells["Selected"].Value = true; };
+            install.Click += async delegate { await InstallSelectedDrivers(); };
+            windowsUpdate.Click += delegate { DriverManager.OpenWindowsUpdate(); };
+            page.Controls.Add(_driverSummary);
+            page.Controls.Add(_driverGrid);
+            page.Controls.Add(search);
+            page.Controls.Add(selectAll);
+            page.Controls.Add(install);
+            page.Controls.Add(windowsUpdate);
+            page.Resize += delegate
             {
-                Location = new Point(20, 64),
-                Size = new Size(1000, 520),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
-                BackColor = Theme.SurfaceDark,
-                BorderStyle = BorderStyle.FixedSingle,
-                AutoScroll = true,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(10)
+                _driverGrid.Size = new Size(Math.Max(600, page.ClientSize.Width - 40), Math.Max(240, page.ClientSize.Height - 150));
+                int y = _driverGrid.Bottom + 12;
+                search.Location = new Point(20, y);
+                selectAll.Location = new Point(207, y);
+                install.Location = new Point(374, y);
+                windowsUpdate.Location = new Point(581, y);
             };
-            _reportEmpty = new Label { Text = "Nenhuma atividade registrada", AutoSize = true, ForeColor = Theme.Muted, Margin = new Padding(18, 24, 0, 0) };
-            page.Controls.Add(refresh);
-            page.Controls.Add(export);
-            page.Controls.Add(open);
-            page.Controls.Add(_reportCards);
-            page.Enter += delegate { LoadReportHistory(); };
+            page.Enter += async delegate
+            {
+                if (_driverInventoryLoaded) return;
+                _driverInventoryLoaded = true;
+                int count = await Task.Run(delegate { return DriverManager.CountInstalledDrivers(); });
+                _driverSummary.Text = count > 0 ? count + " drivers de dispositivos instalados • busca ainda não executada" : "Clique em Buscar atualizações";
+            };
             return page;
         }
 
-        private void LoadReportHistory()
+        private async Task SearchDriverUpdates()
         {
-            if (_reportCards == null) return;
-            List<ReportSummary> reports = V2Engine.ReadReportHistory(40);
-            _reportCards.SuspendLayout();
-            _reportCards.Controls.Clear();
-            if (reports.Count == 0)
+            List<DriverUpdate> found = null;
+            string result = await RunWork("Buscando drivers no Windows Update...", delegate(CancellationToken token, IProgress<string> progress)
             {
-                _reportCards.Controls.Add(_reportEmpty);
-                _selectedReportPath = null;
-            }
-            else
+                found = DriverManager.SearchUpdates(token, progress);
+                return DriverManager.BuildSearchReport(found);
+            }, false);
+            if (found == null)
             {
-                if (string.IsNullOrWhiteSpace(_selectedReportPath) || !reports.Any(delegate(ReportSummary item) { return string.Equals(item.Path, _selectedReportPath, StringComparison.OrdinalIgnoreCase); }))
-                    _selectedReportPath = reports[0].Path;
-                foreach (ReportSummary report in reports) _reportCards.Controls.Add(CreateReportCard(report));
-            }
-            _reportCards.ResumeLayout();
-        }
-
-        private DashboardPanel CreateReportCard(ReportSummary report)
-        {
-            bool selected = string.Equals(report.Path, _selectedReportPath, StringComparison.OrdinalIgnoreCase);
-            var card = new DashboardPanel
-            {
-                Size = new Size(950, 82),
-                Margin = new Padding(6),
-                Padding = new Padding(16),
-                BackColor = selected ? Theme.SurfaceAlt : Theme.Surface,
-                BorderColor = selected ? Theme.Primary : Theme.Border,
-                Radius = 9,
-                Tag = report.Path,
-                Cursor = Cursors.Hand
-            };
-            var title = new Label { Text = report.Category, Location = new Point(18, 13), Size = new Size(610, 24), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f), Cursor = Cursors.Hand };
-            var date = new Label { Text = report.Created.ToString("dd/MM/yyyy  HH:mm"), Location = new Point(720, 15), Size = new Size(205, 22), TextAlign = ContentAlignment.MiddleRight, ForeColor = Theme.Muted, Cursor = Cursors.Hand };
-            var summary = new Label { Text = report.Summary, Location = new Point(18, 45), Size = new Size(907, 22), AutoEllipsis = true, ForeColor = Theme.Muted, Cursor = Cursors.Hand };
-            EventHandler select = delegate { SelectReport(report.Path); };
-            card.Click += select;
-            title.Click += select;
-            date.Click += select;
-            summary.Click += select;
-            card.Controls.Add(title);
-            card.Controls.Add(date);
-            card.Controls.Add(summary);
-            return card;
-        }
-
-        private void SelectReport(string path)
-        {
-            if (string.Equals(path, _selectedReportPath, StringComparison.OrdinalIgnoreCase)) return;
-            _selectedReportPath = path;
-            LoadReportHistory();
-        }
-
-        private void ExportSelectedReport(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(_selectedReportPath) || !File.Exists(_selectedReportPath))
-            {
-                MessageBox.Show(this, "Selecione uma atividade para exportar.", "Histórico", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            using (var save = new SaveFileDialog { Filter = "Relatório de texto|*.txt", FileName = Path.GetFileName(_selectedReportPath) })
-                if (save.ShowDialog(this) == DialogResult.OK) File.Copy(_selectedReportPath, save.FileName, true);
+            _driverGrid.Rows.Clear();
+            foreach (DriverUpdate update in found)
+                _driverGrid.Rows.Add(update.Selected, update.Title, string.IsNullOrWhiteSpace(update.Provider) ? "Windows Update" : update.Provider, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.UpdateId);
+            _driverSummary.Text = found.Count == 0 ? "Seus drivers estão atualizados" : found.Count + (found.Count == 1 ? " atualização encontrada" : " atualizações encontradas");
+        }
+
+        private async Task InstallSelectedDrivers()
+        {
+            var ids = new List<string>();
+            foreach (DataGridViewRow row in _driverGrid.Rows)
+                if (!row.IsNewRow && Convert.ToBoolean(row.Cells["Selected"].Value)) ids.Add(Convert.ToString(row.Cells["UpdateId"].Value));
+            if (ids.Count == 0)
+            {
+                MessageBox.Show(this, "Selecione ao menos um driver.", "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (!Optimizer.IsAdministrator())
+            {
+                if (MessageBox.Show(this, "A instalação exige privilégios de administrador. Reabrir o Otimizador como administrador?", "Drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) RunAsAdmin(null, EventArgs.Empty);
+                return;
+            }
+            if (MessageBox.Show(this, "O Windows Update baixará e instalará " + ids.Count + (ids.Count == 1 ? " driver selecionado. Continuar?" : " drivers selecionados. Continuar?"), "Atualizar drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            string result = await RunWork("Atualizando drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.InstallUpdates(ids, token, progress); });
+            MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, result.IndexOf("Falha", StringComparison.OrdinalIgnoreCase) >= 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            await SearchDriverUpdates();
         }
 
         private async Task RefreshAudit()
@@ -674,7 +682,6 @@ namespace CodexPerformanceOptimizer
             _managedEnvironment = environment.IndexOf("Gerenciado", StringComparison.OrdinalIgnoreCase) >= 0 || environment.IndexOf("corporativo", StringComparison.OrdinalIgnoreCase) >= 0;
             UpdateMetricCards(_liveMetrics);
             UpdateSustainedAlert(_liveMetrics);
-            LoadStartup();
         }
 
         private void RefreshLiveMetrics()
@@ -875,9 +882,7 @@ namespace CodexPerformanceOptimizer
                 _status.Text = "Concluído em " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
                 if (saveReport)
                 {
-                    string path = V2Engine.SaveReport(result);
-                    if (!string.IsNullOrWhiteSpace(path)) _selectedReportPath = path;
-                    LoadReportHistory();
+                    V2Engine.SaveReport(result);
                 }
                 return result;
             }
@@ -892,9 +897,7 @@ namespace CodexPerformanceOptimizer
                 _status.Text = "Falha";
                 if (saveReport)
                 {
-                    string path = V2Engine.SaveReport(result);
-                    if (!string.IsNullOrWhiteSpace(path)) _selectedReportPath = path;
-                    LoadReportHistory();
+                    V2Engine.SaveReport(result);
                 }
                 return result;
             }
@@ -910,12 +913,28 @@ namespace CodexPerformanceOptimizer
             }
         }
 
-        private void LoadStartup()
+        private async Task LoadStartupAsync()
         {
-            if (_startupGrid == null) return;
-            _startupGrid.Rows.Clear();
-            foreach (StartupEntry item in V2Engine.ReadStartupEntries())
-                _startupGrid.Rows.Add(item.Enabled, item.Name, item.Impact, item.Command, item.Enabled);
+            if (_startupGrid == null || _startupLoading) return;
+            _startupLoading = true;
+            try
+            {
+                List<StartupEntry> entries = await Task.Run(delegate { return V2Engine.ReadStartupEntries(); });
+                if (IsDisposed) return;
+                _startupGrid.Rows.Clear();
+                foreach (StartupEntry item in entries)
+                {
+                    int index = _startupGrid.Rows.Add(item.Enabled, item.Name, item.Source, item.Impact, item.Command, item.OriginalEnabled, item.CanChange, item.RegistryHive, item.RegistryPath, item.ApprovalPath, item.ValueName, item.StateKind);
+                    DataGridViewRow row = _startupGrid.Rows[index];
+                    row.Cells["Enabled"].ReadOnly = !item.CanChange;
+                    if (!item.CanChange)
+                    {
+                        row.Cells["Enabled"].ToolTipText = "Esta entrada é controlada pelo Windows, por política ou exige administrador.";
+                        row.DefaultCellStyle.ForeColor = Theme.Muted;
+                    }
+                }
+            }
+            finally { _startupLoading = false; }
         }
 
         private async Task ApplyStartupGrid()
@@ -935,10 +954,24 @@ namespace CodexPerformanceOptimizer
                         enabled = true;
                     }
                 }
-                entries.Add(new StartupEntry { Enabled = enabled, Name = name, Command = Convert.ToString(row.Cells["Command"].Value), Impact = Convert.ToString(row.Cells["Impact"].Value) });
+                entries.Add(new StartupEntry
+                {
+                    Enabled = enabled,
+                    OriginalEnabled = original,
+                    CanChange = Convert.ToBoolean(row.Cells["CanChange"].Value),
+                    Name = name,
+                    Source = Convert.ToString(row.Cells["Source"].Value),
+                    Command = Convert.ToString(row.Cells["Command"].Value),
+                    Impact = Convert.ToString(row.Cells["Impact"].Value),
+                    RegistryHive = Convert.ToString(row.Cells["RegistryHive"].Value),
+                    RegistryPath = Convert.ToString(row.Cells["RegistryPath"].Value),
+                    ApprovalPath = Convert.ToString(row.Cells["ApprovalPath"].Value),
+                    ValueName = Convert.ToString(row.Cells["ValueName"].Value),
+                    StateKind = Convert.ToString(row.Cells["StateKind"].Value)
+                });
             }
             await RunWork("Atualizando inicialização...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.ApplyStartupEntries(entries, t, p); });
-            LoadStartup();
+            await LoadStartupAsync();
         }
 
         private void LoadVolumes()
@@ -1114,7 +1147,7 @@ namespace CodexPerformanceOptimizer
         private void RunAsAdmin(object sender, EventArgs e)
         {
             if (Optimizer.IsAdministrator()) { MessageBox.Show(this, "O programa já está elevado."); return; }
-            try { Process.Start(new ProcessStartInfo(Application.ExecutablePath) { UseShellExecute = true, Verb = "runas" }); Close(); }
+            try { Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--wait-for-instance") { UseShellExecute = true, Verb = "runas" }); Close(); }
             catch (Exception ex) { MessageBox.Show(this, "Elevação cancelada: " + ex.Message); }
         }
 
@@ -1148,7 +1181,7 @@ namespace CodexPerformanceOptimizer
                 string report = await Task.Run(delegate { return V2Engine.MaintenanceReport(CancellationToken.None, new Progress<string>()); });
                 V2Engine.SaveReport(report);
                 _trayIcon.BalloonTipTitle = "Manutenção concluída";
-                _trayIcon.BalloonTipText = "O relatório foi salvo no histórico.";
+                _trayIcon.BalloonTipText = "A manutenção segura foi finalizada.";
                 _trayIcon.ShowBalloonTip(4000);
             };
             exit.Click += delegate { _trayIcon.Visible = false; Close(); };
