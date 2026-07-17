@@ -395,6 +395,16 @@ namespace CodexPerformanceOptimizer
         public bool FirmwareSafe { get; set; }
     }
 
+    internal sealed class ProgramUpdate
+    {
+        public bool Selected { get; set; }
+        public string Name { get; set; }
+        public string PackageId { get; set; }
+        public string InstalledVersion { get; set; }
+        public string AvailableVersion { get; set; }
+        public string Source { get; set; }
+    }
+
     internal sealed class PackagedStartupTask
     {
         public string PackageFamilyName { get; set; }

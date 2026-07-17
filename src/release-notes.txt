@@ -1,11 +1,11 @@
-OTIMIZADOR DE DESEMPENHO 4.0
+OTIMIZADOR DE DESEMPENHO 4.1
 
-- Atualizações associadas ao Hardware ID e ao modelo informado pelo Windows Update.
-- Comparação instalada → disponível somente quando as versões são compatíveis.
-- Classificação em recomendada, opcional, obrigatória, firmware/BIOS, já instalada ou possivelmente antiga.
-- Busca exata no Microsoft Update Catalog pelo Hardware ID.
-- Diagnóstico de drivers ausentes, dispositivos desativados, erros e pacotes sem assinatura.
-- Filtros por categoria, pesquisa e modo somente problemas.
-- Backup automático dos drivers antes de atualizar e restauração pelo PnPUtil.
-- BIOS e firmware verificam energia, bateria, BitLocker, reinicialização pendente, administrador e fabricante.
-- Pacotes possivelmente antigos não ficam selecionados automaticamente.
+- Nova área Programas integrada ao Windows Package Manager (WinGet).
+- Busca automática ao abrir a área e atualização manual sob demanda.
+- Seleção individual ou em lote com confirmação antes de instalar.
+- Comparação clara entre versão instalada e versão disponível.
+- Pesquisa por nome, identificador ou versão.
+- Instalação silenciosa após autorização, com acompanhamento e cancelamento.
+- Relatório final separado por programa e nova verificação após concluir.
+- Identificadores WinGet são validados antes de executar qualquer comando.
+- Ausência do WinGet é detectada e explicada sem alterar o sistema.

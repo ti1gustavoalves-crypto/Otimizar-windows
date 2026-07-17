@@ -80,6 +80,11 @@ namespace CodexPerformanceOptimizer
         private Label _driverSummary;
         private List<DriverUpdate> _driverUpdates = new List<DriverUpdate>();
         private bool _driverInventoryLoaded;
+        private DataGridView _programUpdateGrid;
+        private Label _programUpdateSummary;
+        private TextBox _programUpdateSearch;
+        private List<ProgramUpdate> _programUpdates = new List<ProgramUpdate>();
+        private bool _programUpdatesLoaded;
         private ProgressBar _progress;
         private Label _status;
         private Button _cancel;
@@ -117,10 +122,15 @@ namespace CodexPerformanceOptimizer
             _tabs.TabPages.Add(BuildStartupTab());
             _tabs.TabPages.Add(BuildStorageTab());
             _tabs.TabPages.Add(BuildDriversTab());
+            _tabs.TabPages.Add(BuildProgramUpdatesTab());
             _tabs.TabPages.Add(BuildDiagnosticsTab());
             _tabs.TabPages.Add(BuildMaintenanceTab());
             _tabs.TabPages.Add(BuildControlTab());
-            _tabs.SelectedIndexChanged += delegate { UpdateNavigationState(); };
+            _tabs.SelectedIndexChanged += async delegate
+            {
+                UpdateNavigationState();
+                if (_tabs.SelectedIndex == 5 && !_programUpdatesLoaded) await SearchProgramUpdates();
+            };
 
             var content = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Background };
             content.Controls.Add(_tabs);
@@ -186,7 +196,7 @@ namespace CodexPerformanceOptimizer
             navigation.Controls.Add(new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true });
             navigation.Controls.Add(new Label { Text = "Versão " + _displayVersion, Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
 
-            string[] labels = { "Início", "Hardware", "Inicialização", "Armazenamento", "Drivers", "Diagnóstico", "Manutenção", "Ajustes" };
+            string[] labels = { "Início", "Hardware", "Inicialização", "Armazenamento", "Drivers", "Programas", "Diagnóstico", "Manutenção", "Ajustes" };
             _navigationButtons = new Button[labels.Length];
             for (int i = 0; i < labels.Length; i++)
             {
@@ -698,6 +708,137 @@ namespace CodexPerformanceOptimizer
             };
             page.Enter += async delegate { await LoadDriverInventoryAsync(false); };
             return page;
+        }
+
+        private TabPage BuildProgramUpdatesTab()
+        {
+            var page = NewPage("Programas");
+            _programUpdateSummary = new Label { Text = "Atualizações de programas • abra esta área para verificar", Location = new Point(20, 18), Size = new Size(700, 28), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
+            page.Controls.Add(new Label { Text = "Pesquisar", Location = new Point(20, 59), AutoSize = true, ForeColor = Theme.Muted });
+            _programUpdateSearch = new TextBox { Location = new Point(91, 55), Size = new Size(300, 26), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle };
+            _programUpdateSearch.TextChanged += delegate { ApplyProgramUpdateFilter(); };
+
+            _programUpdateGrid = Grid(20, 96, 1000, 460);
+            _programUpdateGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Atualizar", Width = 70 });
+            _programUpdateGrid.Columns.Add("Name", "Programa");
+            _programUpdateGrid.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            _programUpdateGrid.Columns.Add("Installed", "Instalada");
+            _programUpdateGrid.Columns[2].Width = 145;
+            _programUpdateGrid.Columns.Add("Available", "Disponível");
+            _programUpdateGrid.Columns[3].Width = 145;
+            _programUpdateGrid.Columns.Add("PackageId", "Identificador WinGet");
+            _programUpdateGrid.Columns[4].Width = 260;
+            _programUpdateGrid.Columns.Add("Source", "Origem");
+            _programUpdateGrid.Columns[5].Width = 90;
+            for (int index = 1; index < _programUpdateGrid.Columns.Count; index++) _programUpdateGrid.Columns[index].ReadOnly = true;
+
+            var refresh = ButtonFactory("Buscar atualizações", 20, 574, 170, Theme.Secondary);
+            var selectAll = ButtonFactory("Selecionar todos", 202, 574, 155, Theme.Secondary);
+            var install = ButtonFactory("Atualizar selecionados", 369, 574, 190, Theme.Primary);
+            var help = ButtonFactory("Sobre o WinGet", 571, 574, 145, Theme.Secondary);
+            refresh.Click += async delegate { await SearchProgramUpdates(); };
+            selectAll.Click += delegate
+            {
+                SyncProgramUpdateSelection();
+                bool select = _programUpdates.Any(item => !item.Selected);
+                foreach (ProgramUpdate item in _programUpdates) item.Selected = select;
+                ApplyProgramUpdateFilter();
+            };
+            install.Click += async delegate { await InstallSelectedPrograms(); };
+            help.Click += delegate { Process.Start(new ProcessStartInfo("https://learn.microsoft.com/windows/package-manager/winget/") { UseShellExecute = true }); };
+
+            page.Controls.Add(_programUpdateSummary);
+            page.Controls.Add(_programUpdateSearch);
+            page.Controls.Add(_programUpdateGrid);
+            page.Controls.Add(refresh);
+            page.Controls.Add(selectAll);
+            page.Controls.Add(install);
+            page.Controls.Add(help);
+            page.Resize += delegate
+            {
+                int y = Math.Max(574, page.ClientSize.Height - 55);
+                _programUpdateGrid.Size = new Size(Math.Max(760, page.ClientSize.Width - 40), Math.Max(300, y - 108));
+                refresh.Location = new Point(20, y);
+                selectAll.Location = new Point(202, y);
+                install.Location = new Point(369, y);
+                help.Location = new Point(571, y);
+            };
+            return page;
+        }
+
+        private async Task SearchProgramUpdates()
+        {
+            bool available = await Task.Run(delegate { return ProgramUpdater.IsAvailable(); });
+            if (!available)
+            {
+                _programUpdateSummary.Text = "WinGet não está disponível neste Windows";
+                MessageBox.Show(this, "O Windows Package Manager (WinGet) não foi encontrado. Instale ou atualize o App Installer pela Microsoft Store.", "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            List<ProgramUpdate> found = null;
+            string result = await RunWork("Buscando atualizações de programas...", delegate(CancellationToken token, IProgress<string> progress)
+            {
+                found = ProgramUpdater.SearchUpdates(token, progress);
+                return found.Count == 0 ? "Todos os programas consultados estão atualizados." : found.Count + " atualizações de programas encontradas.";
+            }, false);
+            if (found == null)
+            {
+                _programUpdateSummary.Text = "Não foi possível consultar o WinGet";
+                MessageBox.Show(this, result, "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            _programUpdates = found;
+            _programUpdatesLoaded = true;
+            ApplyProgramUpdateFilter();
+            string version = await Task.Run(delegate { return ProgramUpdater.ReadVersion(); });
+            _programUpdateSummary.Text = found.Count == 0 ? "Seus programas estão atualizados" : found.Count + (found.Count == 1 ? " atualização disponível" : " atualizações disponíveis");
+            if (!string.IsNullOrEmpty(version)) _programUpdateSummary.Text += " • WinGet " + version.TrimStart('v', 'V');
+        }
+
+        private void ApplyProgramUpdateFilter()
+        {
+            if (_programUpdateGrid == null) return;
+            SyncProgramUpdateSelection();
+            string search = _programUpdateSearch == null ? string.Empty : _programUpdateSearch.Text.Trim();
+            IEnumerable<ProgramUpdate> visible = _programUpdates.Where(delegate(ProgramUpdate item)
+            {
+                return string.IsNullOrEmpty(search) || (item.Name + " " + item.PackageId + " " + item.InstalledVersion + " " + item.AvailableVersion).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
+            });
+            _programUpdateGrid.Rows.Clear();
+            foreach (ProgramUpdate item in visible)
+                _programUpdateGrid.Rows.Add(item.Selected, item.Name, item.InstalledVersion, item.AvailableVersion, item.PackageId, item.Source);
+        }
+
+        private void SyncProgramUpdateSelection()
+        {
+            if (_programUpdateGrid == null) return;
+            foreach (DataGridViewRow row in _programUpdateGrid.Rows)
+            {
+                if (row.IsNewRow) continue;
+                string id = Convert.ToString(row.Cells["PackageId"].Value);
+                ProgramUpdate item = _programUpdates.FirstOrDefault(update => string.Equals(update.PackageId, id, StringComparison.OrdinalIgnoreCase));
+                if (item != null) item.Selected = Convert.ToBoolean(row.Cells["Selected"].Value);
+            }
+        }
+
+        private async Task InstallSelectedPrograms()
+        {
+            SyncProgramUpdateSelection();
+            var ids = _programUpdates.Where(item => item.Selected).Select(item => item.PackageId).ToList();
+            if (ids.Count == 0)
+            {
+                MessageBox.Show(this, "Selecione ao menos um programa.", "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            List<ProgramUpdate> selected = _programUpdates.Where(item => ids.Contains(item.PackageId, StringComparer.OrdinalIgnoreCase)).ToList();
+            string preview = string.Join("\r\n", selected.Take(8).Select(item => "• " + item.Name + ": " + item.InstalledVersion + " → " + item.AvailableVersion));
+            if (selected.Count > 8) preview += "\r\n• e mais " + (selected.Count - 8);
+            string confirmation = "Atualizar " + selected.Count + (selected.Count == 1 ? " programa" : " programas") + " pelo WinGet?\r\n\r\n" + preview + "\r\n\r\nAlguns instaladores podem solicitar permissão do Windows.";
+            if (MessageBox.Show(this, confirmation, "Confirmar atualizações", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            string result = await RunWork("Atualizando programas...", delegate(CancellationToken token, IProgress<string> progress) { return ProgramUpdater.InstallUpdates(ids, token, progress); });
+            ShowTextDialog("Resultado das atualizações", result);
+            _programUpdatesLoaded = false;
+            await SearchProgramUpdates();
         }
 
         private async Task LoadDriverInventoryAsync(bool force)

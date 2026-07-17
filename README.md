@@ -16,6 +16,7 @@ A interface apresenta identidade visual própria, navegação lateral simplifica
 - Atalhos seguros para o suporte oficial do fabricante de cada atualização encontrada.
 - Correspondência por Hardware ID, classificação e comparação segura de versões.
 - Backup e restauração de drivers, diagnóstico de dispositivos e proteção especial para BIOS/firmware.
+- Atualização selecionável de programas pelo WinGet, sempre com confirmação prévia.
 - Limpeza selecionável de arquivos temporários e análise por volume.
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
@@ -31,6 +32,7 @@ A interface apresenta identidade visual própria, navegação lateral simplifica
 - Windows 10 ou 11 de 64 bits.
 - Windows PowerShell 5.1 ou mais recente.
 - .NET Framework disponível no Windows.
+- Windows Package Manager (WinGet) para a área de atualização de programas.
 
 Algumas operações exigem privilégios de administrador. As leituras de temperatura dependem dos sensores expostos pelo fabricante; o adaptador para `LibreHardwareMonitorLib.dll` é opcional e a biblioteca não é distribuída neste repositório.
 

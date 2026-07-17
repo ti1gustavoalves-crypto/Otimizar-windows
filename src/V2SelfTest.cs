@@ -62,6 +62,9 @@ namespace CodexPerformanceOptimizer
                 if (!DriverManager.IsOfficialSupportUrlForTesting(intelSupport) || microsoftSupport.IndexOf("catalog.update.microsoft.com", StringComparison.OrdinalIgnoreCase) < 0 || amdSupport.IndexOf("amd.com", StringComparison.OrdinalIgnoreCase) < 0 || catalog.IndexOf("PCI", StringComparison.OrdinalIgnoreCase) < 0 || DriverManager.IsOfficialSupportUrlForTesting("https://intel.com.exemplo.invalid/driver")) throw new InvalidOperationException("Validação dos links oficiais falhou.");
                 string firmwareBlock = DriverManager.ValidateFirmwareSelection(new[] { new DriverUpdate { IsFirmware = true, Provider = "Dell", Title = "Dell Firmware" } }, new DriverSafetyStatus { FirmwareSafe = false, Summary = "teste" });
                 if (string.IsNullOrWhiteSpace(firmwareBlock)) throw new InvalidOperationException("Proteção de BIOS e firmware falhou.");
+                string wingetSample = "Name                 Id                    Version        Available\r\n----------------------------------------------------------------------------\r\nGoogle Chrome        Google.Chrome.EXE     150.0.7871.127 150.0.7871.129\r\nPowerShell 7         Microsoft.PowerShell  7.4.0          7.5.0\r\n2 upgrades available.";
+                var programUpdates = ProgramUpdater.ParseUpgradeOutputForTesting(wingetSample);
+                if (programUpdates.Count != 2 || programUpdates[0].PackageId != "Google.Chrome.EXE" || !ProgramUpdater.IsValidPackageIdForTesting("Microsoft.PowerShell") || ProgramUpdater.IsValidPackageIdForTesting("pacote & comando")) throw new InvalidOperationException("Parser seguro do WinGet falhou.");
                 if (DriverManager.CountInstalledDrivers() <= 0) throw new InvalidOperationException("Inventário de drivers falhou.");
                 var driverInventory = DriverManager.ReadInstalledDrivers();
                 if (driverInventory == null || driverInventory.Count == 0 || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Versões dos drivers importantes não foram lidas.");
@@ -84,6 +87,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Inicialização: " + startupEntries.Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);
                 Console.WriteLine("Drivers importantes: " + driverInventory.Count);
+                Console.WriteLine("Parser do WinGet: OK");
                 Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }
