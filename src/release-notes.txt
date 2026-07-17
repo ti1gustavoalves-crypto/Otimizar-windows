@@ -1,9 +1,8 @@
-OTIMIZADOR DE DESEMPENHO 4.2.0
+OTIMIZADOR DE DESEMPENHO 4.2.1
 
-- Manutenção condensada em uma bancada técnica compacta.
-- Navegação reorganizada para diagnóstico, manutenção e ações específicas.
-- Rotina técnica em um clique agora atende todos os discos fixos.
-- Removidos botões apenas informativos e o atalho de histórico sem função própria.
-- Histórico persistente removido; o diagnóstico imediato de processos foi preservado.
-- Acesso direto a limpeza, componentes, energia, Sensor de Armazenamento e relatórios.
-- Perfis temporários agora informam corretamente o plano de energia aplicado.
+- Aba Armazenamento redesenhada com ações mais claras e coerentes.
+- Botão de exportação removido por não contribuir para a manutenção diária.
+- Arquivos e pastas selecionados agora podem ser enviados para a Lixeira.
+- Raiz dos discos, Windows, programas, dados compartilhados e perfis principais permanecem protegidos.
+- Cabeçalhos e detalhes da tabela agora se adaptam a pastas, arquivos grandes e duplicados.
+- Novo teste automático valida os limites da exclusão protegida.

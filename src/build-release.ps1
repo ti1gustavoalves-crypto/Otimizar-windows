@@ -28,7 +28,7 @@ $sources = Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.cs' -File |
     Sort-Object Name |
     Select-Object -ExpandProperty FullName
 if ($sources.Count -eq 0) { throw 'Nenhum arquivo-fonte do aplicativo foi encontrado.' }
-$references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Management.dll','System.Web.Extensions.dll') | ForEach-Object { '/reference:' + $_ }
+$references = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Management.dll','System.Web.Extensions.dll','Microsoft.VisualBasic.dll') | ForEach-Object { '/reference:' + $_ }
 $manifestPath = Join-Path $PSScriptRoot 'app.manifest'
 
 $testExecutable = Join-Path ([IO.Path]::GetTempPath()) ("OtimizadorSelfTest-" + [Guid]::NewGuid().ToString('N') + '.exe')

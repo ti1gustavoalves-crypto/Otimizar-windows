@@ -122,6 +122,13 @@ namespace CodexPerformanceOptimizer
                 string child = Path.Combine(sandbox, "child.txt");
                 results.Add(Result("Limites de caminho", IsWithin(sandbox, child) && !IsWithin(sandbox, Environment.GetFolderPath(Environment.SpecialFolder.Windows)), "Nenhum caminho externo foi aceito."));
 
+                progress.Report("Testando exclusão protegida...");
+                string driveRoot = Path.GetPathRoot(sandbox);
+                bool safeDeletion = string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(sandbox)) &&
+                    !string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(driveRoot)) &&
+                    !string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(Environment.GetFolderPath(Environment.SpecialFolder.Windows)));
+                results.Add(Result("Exclusão protegida", safeDeletion, "Raiz, Windows e programas permanecem bloqueados; itens comuns podem ir para a Lixeira."));
+
                 progress.Report("Testando persistência isolada...");
                 string jsonPath = Path.Combine(sandbox, "state.json");
                 var serializer = new JavaScriptSerializer();

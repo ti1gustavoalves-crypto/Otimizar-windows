@@ -53,7 +53,7 @@ namespace CodexPerformanceOptimizer
                 });
                 if (benchmark.IndexOf("BENCHMARK CONCLUÍDO", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Comparativo pós-reinicialização falhou.");
                 string safety = SafetyTestSuite.Run(CancellationToken.None, new Progress<string>());
-                if (safety.IndexOf("10 de 10 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
+                if (safety.IndexOf("11 de 11 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
                 if (!DriverManager.IsValidUpdateIdForTesting("11111111-2222-3333-4444-555555555555") || DriverManager.IsValidUpdateIdForTesting("driver-inválido")) throw new InvalidOperationException("Validação segura de drivers falhou.");
                 string intelSupport = DriverManager.ResolveOfficialSupportForTesting("Intel Corporation", "Display Driver");
                 string microsoftSupport = DriverManager.ResolveOfficialSupportForTesting("Microsoft Corporation", "AudioProcessingObject Driver Update");
@@ -79,7 +79,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Medições de inicialização: " + diagnostics.Startup.Count);
                 Console.WriteLine("Estabilidade e atualizações: OK");
                 Console.WriteLine("Benchmark pós-reinicialização: OK");
-                Console.WriteLine("Testes de segurança isolados: 10/10");
+                Console.WriteLine("Testes de segurança isolados: 11/11");
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
                 Console.WriteLine("Inicialização: " + startupEntries.Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);

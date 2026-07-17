@@ -17,6 +17,7 @@ A interface apresenta identidade visual própria, barra de título escura, naveg
 - Backup e restauração de drivers, diagnóstico de dispositivos e proteção especial para BIOS/firmware.
 - Atualização selecionável de programas pelo WinGet, sempre com confirmação prévia.
 - Limpeza selecionável de arquivos temporários e análise por volume.
+- Exclusão selecionável de arquivos e pastas para a Lixeira, com proteção de locais críticos.
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
 - Acesso direto ao Sensor de Armazenamento para manutenção automática de espaço.

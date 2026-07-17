@@ -82,6 +82,7 @@ namespace CodexPerformanceOptimizer
         private Label _folderSummary;
         private string _selectedDrive;
         private Label _storageSummary;
+        private Button _deleteStorageItem;
         private ComboBox _schedule;
         private Label _maintenanceResult;
         private DataGridView _installedDriverGrid;
@@ -476,12 +477,11 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Armazenamento");
             _storageSummary = new Label { Text = "Discos e volumes", AutoSize = false, Size = new Size(520, 30), Location = new Point(20, 20), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 10.5f) };
-            var scan = ButtonFactory("Pastas", 430, 12, 84, Theme.Primary);
-            var largeFiles = ButtonFactory("Grandes", 524, 12, 92, Theme.Secondary);
-            var clean = ButtonFactory("Limpar", 626, 12, 84, Theme.Warning);
-            var duplicates = ButtonFactory("Duplicados", 720, 12, 92, Theme.Secondary);
-            var optimize = ButtonFactory("Otimizar", 822, 12, 92, Theme.Success);
-            var export = ButtonFactory("Exportar", 924, 12, 80, Theme.Secondary);
+            var scan = ButtonFactory("Analisar pastas", 340, 12, 130, Theme.Primary);
+            var largeFiles = ButtonFactory("Arquivos grandes", 480, 12, 135, Theme.Secondary);
+            var duplicates = ButtonFactory("Duplicados", 625, 12, 110, Theme.Secondary);
+            var clean = ButtonFactory("Limpeza segura", 745, 12, 130, Theme.Warning);
+            var optimize = ButtonFactory("Otimizar disco", 885, 12, 130, Theme.Success);
 
             _volumeGrid = Grid(20, 58, 1000, 145);
             _volumeGrid.Columns.Add("Drive", "Disco");
@@ -506,22 +506,27 @@ namespace CodexPerformanceOptimizer
                 if (_volumeGrid.SelectedRows.Count > 0) _selectedDrive = Convert.ToString(_volumeGrid.SelectedRows[0].Cells["Drive"].Value);
             };
 
-            _folderSummary = new Label { Text = "Selecione um disco e clique em Analisar", AutoSize = true, Location = new Point(20, 219), ForeColor = Theme.Muted };
+            _folderSummary = new Label { Text = "Selecione um disco e escolha uma análise", AutoSize = false, AutoEllipsis = true, Size = new Size(760, 28), Location = new Point(20, 219), ForeColor = Theme.Muted };
+            _deleteStorageItem = ButtonFactory("Mover para a Lixeira", 836, 209, 180, Theme.Warning);
+            _deleteStorageItem.Enabled = false;
+            _deleteStorageItem.Visible = false;
             _storageGrid = Grid(20, 246, 1000, 341);
-            _storageGrid.Columns.Add("Path", "Pasta");
+            _storageGrid.Columns.Add("Path", "Arquivo ou pasta");
             _storageGrid.Columns[0].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             _storageGrid.Columns.Add("Logical", "Tamanho");
             _storageGrid.Columns[1].Width = 130;
-            _storageGrid.Columns.Add("Allocated", "No disco");
-            _storageGrid.Columns[2].Width = 130;
+            _storageGrid.Columns.Add("Details", "Detalhes");
+            _storageGrid.Columns[2].Width = 180;
             _storageGrid.ReadOnly = true;
+            _storageGrid.MultiSelect = false;
+            _storageGrid.SelectionChanged += delegate { UpdateStorageSelection(); };
 
             scan.Click += async delegate { await ScanSelectedVolume(); };
             largeFiles.Click += async delegate { await ScanLargeFiles(); };
             clean.Click += async delegate { await OpenSafeCleanup(); };
             duplicates.Click += async delegate { await ScanDuplicates(); };
             optimize.Click += async delegate { await OptimizeSelectedVolume(); };
-            export.Click += delegate { ExportGrid(_storageGrid, "armazenamento.csv"); };
+            _deleteStorageItem.Click += async delegate { await DeleteSelectedStorageItem(); };
             page.Controls.Add(_storageSummary);
             page.Controls.Add(_volumeGrid);
             page.Controls.Add(_folderSummary);
@@ -531,29 +536,30 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(clean);
             page.Controls.Add(duplicates);
             page.Controls.Add(optimize);
-            page.Controls.Add(export);
+            page.Controls.Add(_deleteStorageItem);
             _volumeGrid.Anchor = AnchorStyles.None;
             _storageGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutStorageTab(page, scan, largeFiles, clean, duplicates, optimize, export); };
-            LayoutStorageTab(page, scan, largeFiles, clean, duplicates, optimize, export);
+            page.Resize += delegate { LayoutStorageTab(page, scan, largeFiles, duplicates, clean, optimize); };
+            LayoutStorageTab(page, scan, largeFiles, duplicates, clean, optimize);
             page.Enter += delegate { LoadVolumes(); };
             return page;
         }
 
-        private void LayoutStorageTab(TabPage page, Button scan, Button largeFiles, Button clean, Button duplicates, Button optimize, Button export)
+        private void LayoutStorageTab(TabPage page, Button scan, Button largeFiles, Button duplicates, Button clean, Button optimize)
         {
             int width = Math.Max(600, page.ClientSize.Width - 40);
             _volumeGrid.Location = new Point(20, 58);
             _volumeGrid.Size = new Size(width, 145);
             _storageGrid.Location = new Point(20, 246);
             _storageGrid.Size = new Size(width, Math.Max(210, page.ClientSize.Height - _storageGrid.Top - 20));
-            int actionsLeft = Math.Max(410, page.ClientSize.Width - 640);
+            int actionsLeft = Math.Max(280, page.ClientSize.Width - 730);
             scan.Location = new Point(actionsLeft, 12);
-            largeFiles.Location = new Point(actionsLeft + 94, 12);
-            clean.Location = new Point(actionsLeft + 196, 12);
-            duplicates.Location = new Point(actionsLeft + 290, 12);
-            optimize.Location = new Point(actionsLeft + 392, 12);
-            export.Location = new Point(actionsLeft + 494, 12);
+            largeFiles.Location = new Point(actionsLeft + 140, 12);
+            duplicates.Location = new Point(actionsLeft + 285, 12);
+            clean.Location = new Point(actionsLeft + 405, 12);
+            optimize.Location = new Point(actionsLeft + 545, 12);
+            _deleteStorageItem.Location = new Point(page.ClientSize.Width - 200, 209);
+            _folderSummary.Size = new Size(Math.Max(280, page.ClientSize.Width - 240), 28);
             _storageSummary.Size = new Size(Math.Max(320, actionsLeft - 40), 30);
         }
 
@@ -1305,7 +1311,7 @@ namespace CodexPerformanceOptimizer
                 {
                     BeginInvoke((Action)delegate
                     {
-                        _storageGrid.Rows.Add(row.Path, V2Engine.FormatBytes(row.LogicalBytes), V2Engine.FormatBytes(row.AllocatedBytes));
+                        _storageGrid.Rows.Add(row.Path, V2Engine.FormatBytes(row.LogicalBytes), V2Engine.FormatBytes(row.AllocatedBytes) + " no disco");
                         _folderSummary.Text = _storageGrid.Rows.Count + " pastas medidas em " + drive;
                     });
                 });
@@ -1359,7 +1365,7 @@ namespace CodexPerformanceOptimizer
                 return report.ToString();
             });
             if (files == null) return;
-            foreach (LargeFileEntry file in files) _storageGrid.Rows.Add(file.Path, V2Engine.FormatBytes(file.Size), file.Modified.ToString("dd/MM/yyyy"));
+            foreach (LargeFileEntry file in files) _storageGrid.Rows.Add(file.Path, V2Engine.FormatBytes(file.Size), "Modificado em " + file.Modified.ToString("dd/MM/yyyy"));
             _folderSummary.Text = files.Count + " arquivos grandes • " + V2Engine.FormatBytes(files.Sum(item => item.Size));
         }
 
@@ -1404,6 +1410,47 @@ namespace CodexPerformanceOptimizer
             _folderSummary.Text = rows == null || rows.Count == 0 ? "Nenhum duplicado restante" : rows.Select(item => item.Group).Distinct().Count() + " grupos restantes";
         }
 
+        private void UpdateStorageSelection()
+        {
+            if (_deleteStorageItem == null) return;
+            bool selected = _storageGrid != null && _storageGrid.SelectedRows.Count == 1;
+            _deleteStorageItem.Enabled = selected;
+            _deleteStorageItem.Visible = selected;
+        }
+
+        private async Task DeleteSelectedStorageItem()
+        {
+            if (_storageGrid == null || _storageGrid.SelectedRows.Count != 1) return;
+            DataGridViewRow selectedRow = _storageGrid.SelectedRows[0];
+            string path = Convert.ToString(selectedRow.Cells["Path"].Value);
+            string blocked = StorageDeletion.GetBlockReason(path);
+            if (!string.IsNullOrWhiteSpace(blocked))
+            {
+                MessageBox.Show(this, blocked, "Item protegido", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string kind = Directory.Exists(path) ? "a pasta" : "o arquivo";
+            string name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+            if (MessageBox.Show(this, "Mover " + kind + " para a Lixeira?\r\n\r\n" + path, "Confirmar exclusão", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+
+            string result = await RunWork("Movendo para a Lixeira...", delegate(CancellationToken t, IProgress<string> p)
+            {
+                t.ThrowIfCancellationRequested();
+                return StorageDeletion.MoveToRecycleBin(path);
+            });
+            if (!result.StartsWith("Movido para a Lixeira", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(this, result, "Não foi possível excluir", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _storageGrid.Rows.Remove(selectedRow);
+            _folderSummary.Text = "Movido para a Lixeira: " + name;
+            LoadVolumes();
+            UpdateStorageSelection();
+        }
+
         private async Task AdvancedCleanup()
         {
             using (var dialog = new CleanupForm())
@@ -1428,24 +1475,6 @@ namespace CodexPerformanceOptimizer
                     File.Copy(V2Engine.SnapshotPath, save.FileName, true);
                     MessageBox.Show(this, "Backup exportado.", "Concluído", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-            }
-        }
-
-        private void ExportGrid(DataGridView grid, string defaultName)
-        {
-            using (var save = new SaveFileDialog { Filter = "CSV|*.csv", FileName = defaultName })
-            {
-                if (save.ShowDialog(this) != DialogResult.OK) return;
-                var sb = new StringBuilder();
-                foreach (DataGridViewColumn c in grid.Columns) sb.Append('"').Append(c.HeaderText.Replace("\"", "\"\"")).Append("\",");
-                sb.AppendLine();
-                foreach (DataGridViewRow row in grid.Rows)
-                {
-                    if (row.IsNewRow) continue;
-                    foreach (DataGridViewCell cell in row.Cells) sb.Append('"').Append(Convert.ToString(cell.Value).Replace("\"", "\"\"")).Append("\",");
-                    sb.AppendLine();
-                }
-                File.WriteAllText(save.FileName, sb.ToString(), Encoding.UTF8);
             }
         }
 
