@@ -70,8 +70,6 @@ namespace CodexPerformanceOptimizer
             Process.Start(new ProcessStartInfo("explorer.exe", "\"" + LogFolder + "\"") { UseShellExecute = true });
         }
 
-        public static string FolderPath { get { Directory.CreateDirectory(LogFolder); return LogFolder; } }
-
         internal static string SanitizeForTesting(string value)
         {
             return Sanitize(value);
@@ -100,6 +98,7 @@ namespace CodexPerformanceOptimizer
         }
     }
 
+#if SELF_TEST
     internal sealed class SafetyTestResult
     {
         public string Name { get; set; }
@@ -218,4 +217,5 @@ namespace CodexPerformanceOptimizer
             }
         }
     }
+#endif
 }

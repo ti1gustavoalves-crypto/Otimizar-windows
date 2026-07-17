@@ -935,8 +935,14 @@ namespace CodexPerformanceOptimizer
             progress.Report("Limpando temporários antigos...");
             long freed = DeleteOldFiles(Path.GetTempPath(), DateTime.Now.AddDays(-14), token);
             if (Optimizer.IsAdministrator()) freed += DeleteOldFiles(@"C:\Windows\Temp", DateTime.Now.AddDays(-14), token);
-            string optimization = WindowsMaintenance.OptimizeVolume("C:", token, progress);
-            return "MANUTENÇÃO SEGURA\r\n" + new string('=', 72) + "\r\nData: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + "\r\nTemporários removidos: " + FormatBytes(freed) + "\r\n\r\n" + optimization;
+            var optimization = new StringBuilder();
+            List<VolumeEntry> volumes = ReadVolumes();
+            foreach (VolumeEntry volume in volumes)
+            {
+                token.ThrowIfCancellationRequested();
+                optimization.AppendLine(WindowsMaintenance.OptimizeVolume(volume.Drive, token, progress));
+            }
+            return "MANUTENÇÃO SEGURA\r\n" + new string('=', 72) + "\r\nData: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + "\r\nTemporários removidos: " + FormatBytes(freed) + "\r\nUnidades otimizadas: " + volumes.Count + "\r\n\r\n" + optimization;
         }
 
         public static string SaveReport(string content)
@@ -949,6 +955,12 @@ namespace CodexPerformanceOptimizer
                 return path;
             }
             catch { return string.Empty; }
+        }
+
+        public static void OpenReportsFolder()
+        {
+            Directory.CreateDirectory(ReportsFolder);
+            Process.Start(new ProcessStartInfo("explorer.exe", "\"" + ReportsFolder + "\"") { UseShellExecute = true });
         }
 
         public static string DetectManagedEnvironmentShort()

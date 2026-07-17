@@ -530,7 +530,7 @@ namespace CodexPerformanceOptimizer
             string target = gameMode ? "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" : "381b4222-f694-41f0-9685-ff5bb260df2e";
             string result = RunCommand("powercfg.exe", "/setactive " + target, 15000);
             SaveSettings(settings);
-            return string.IsNullOrWhiteSpace(result) ? (gameMode ? "Modo jogo ativado temporariamente." : "Modo trabalho equilibrado ativado.") : result;
+            return string.IsNullOrWhiteSpace(result) ? (gameMode ? "Alto desempenho ativado temporariamente." : "Plano equilibrado ativado temporariamente.") : result;
         }
 
         public static string RestoreTemporaryProfile()
@@ -625,13 +625,6 @@ namespace CodexPerformanceOptimizer
                 try { if (File.Exists(destination)) File.Delete(destination); } catch { }
                 return "Não foi possível baixar a atualização: " + ex.Message;
             }
-        }
-
-        public static string ReadReleaseNotes()
-        {
-            string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "release-notes.txt");
-            try { return File.Exists(path) ? File.ReadAllText(path, Encoding.UTF8) : "Notas da versão não encontradas."; }
-            catch (Exception ex) { return "Não foi possível ler as notas: " + ex.Message; }
         }
 
         public static string ReadSignatureStatus(string path)

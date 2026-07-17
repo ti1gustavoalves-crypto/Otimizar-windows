@@ -14,6 +14,19 @@ namespace CodexPerformanceOptimizer
 {
     internal sealed partial class MainFormV2 : Form
     {
+        private enum AppSection
+        {
+            Dashboard,
+            Diagnostics,
+            Maintenance,
+            Storage,
+            Startup,
+            Drivers,
+            Programs,
+            Hardware,
+            Settings
+        }
+
         private TabControl _tabs;
         private Button[] _navigationButtons;
         private Image _brandImage;
@@ -70,6 +83,7 @@ namespace CodexPerformanceOptimizer
         private string _selectedDrive;
         private Label _storageSummary;
         private ComboBox _schedule;
+        private Label _maintenanceResult;
         private DataGridView _installedDriverGrid;
         private Label _driverInventorySummary;
         private ComboBox _driverFilter;
@@ -95,7 +109,6 @@ namespace CodexPerformanceOptimizer
         private SustainedAlertMonitor _alertMonitor;
         private SystemMetrics _liveMetrics;
         private List<ProcessActivity> _lastProcessActivities = new List<ProcessActivity>();
-        private int _historyWriteInProgress;
         private bool _managedEnvironment;
         private int _liveMetricTicks;
 
@@ -119,18 +132,18 @@ namespace CodexPerformanceOptimizer
 
             _tabs = new TabControl { Location = new Point(-4, -28), SizeMode = TabSizeMode.Fixed, ItemSize = new Size(1, 24), Appearance = TabAppearance.FlatButtons };
             _tabs.TabPages.Add(BuildDashboard());
-            _tabs.TabPages.Add(BuildHardwareTab());
-            _tabs.TabPages.Add(BuildStartupTab());
-            _tabs.TabPages.Add(BuildStorageTab());
-            _tabs.TabPages.Add(BuildDriversTab());
-            _tabs.TabPages.Add(BuildProgramUpdatesTab());
             _tabs.TabPages.Add(BuildDiagnosticsTab());
             _tabs.TabPages.Add(BuildMaintenanceTab());
-            _tabs.TabPages.Add(BuildControlTab());
+            _tabs.TabPages.Add(BuildStorageTab());
+            _tabs.TabPages.Add(BuildStartupTab());
+            _tabs.TabPages.Add(BuildDriversTab());
+            _tabs.TabPages.Add(BuildProgramUpdatesTab());
+            _tabs.TabPages.Add(BuildHardwareTab());
+            _tabs.TabPages.Add(BuildSettingsTab());
             _tabs.SelectedIndexChanged += async delegate
             {
                 UpdateNavigationState();
-                if (_tabs.SelectedIndex == 5 && !_programUpdatesLoaded) await SearchProgramUpdates();
+                if (_tabs.SelectedIndex == (int)AppSection.Programs && !_programUpdatesLoaded) await SearchProgramUpdates();
             };
 
             var content = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Background };
@@ -197,7 +210,7 @@ namespace CodexPerformanceOptimizer
             navigation.Controls.Add(new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true });
             navigation.Controls.Add(new Label { Text = "Versão " + _displayVersion, Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
 
-            string[] labels = { "Início", "Hardware", "Inicialização", "Armazenamento", "Drivers", "Programas", "Diagnóstico", "Manutenção", "Ajustes" };
+            string[] labels = { "Início", "Diagnóstico", "Manutenção", "Armazenamento", "Inicialização", "Drivers", "Programas", "Hardware", "Ajustes" };
             _navigationButtons = new Button[labels.Length];
             for (int i = 0; i < labels.Length; i++)
             {
@@ -309,13 +322,12 @@ namespace CodexPerformanceOptimizer
             toolsCard.Controls.Add(new Label { Text = "Ferramentas", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11.5f) });
             var restore = ButtonFactory("Restaurar original", 20, 48, 152, Theme.Secondary);
             var export = ButtonFactory("Exportar backup", 188, 48, 152, Theme.Secondary);
-            var admin = ButtonFactory("Executar como admin", 20, 101, 152, Theme.Secondary);
-            var history = ButtonFactory("Ver histórico", 188, 101, 152, Theme.Secondary);
-            restore.Size = export.Size = admin.Size = history.Size = new Size(152, 42);
+            var admin = ButtonFactory("Executar como administrador", 20, 101, 320, Theme.Secondary);
+            restore.Size = export.Size = new Size(152, 42);
+            admin.Size = new Size(320, 42);
             toolsCard.Controls.Add(restore);
             toolsCard.Controls.Add(export);
             toolsCard.Controls.Add(admin);
-            toolsCard.Controls.Add(history);
 
             var activityCard = DashboardCard(20, 498, 1016, 142);
             activityCard.Controls.Add(new Label { Text = "Processos em destaque", Location = new Point(18, 14), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
@@ -369,7 +381,6 @@ namespace CodexPerformanceOptimizer
             };
             export.Click += ExportBackup;
             admin.Click += RunAsAdmin;
-            history.Click += delegate { _tabs.SelectedIndex = _tabs.TabCount - 1; };
 
             page.Controls.Add(healthCard);
             page.Controls.Add(profileCard);
@@ -549,24 +560,42 @@ namespace CodexPerformanceOptimizer
         private TabPage BuildMaintenanceTab()
         {
             var page = NewPage("Manutenção");
-            page.Controls.Add(new Label { Text = "Manutenção automática", AutoSize = true, Location = new Point(22, 22), ForeColor = Theme.Muted });
-            page.Controls.Add(new Label { Text = "Frequência", AutoSize = true, Location = new Point(22, 78), ForeColor = Theme.Muted });
-            _schedule = new ComboBox { Location = new Point(22, 102), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList };
+            var routine = DashboardCard(20, 20, 1016, 150);
+            routine.Controls.Add(new Label { Text = "Rotina técnica", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
+            routine.Controls.Add(new Label { Text = "Frequência", AutoSize = true, Location = new Point(20, 54), ForeColor = Theme.Muted });
+            _schedule = new ComboBox { Location = new Point(20, 78), Width = 230, DropDownStyle = ComboBoxStyle.DropDownList };
             _schedule.Items.AddRange(new object[] { "Desativada", "Semanal (segunda-feira)", "Mensal (dia 1)" });
             _schedule.SelectedIndex = V2Engine.ReadScheduleIndex();
-            var configure = ButtonFactory("Salvar agendamento", 270, 98, 180, Theme.Primary);
-            configure.Click += async delegate { await RunWork("Configurando agendamento...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.ConfigureSchedule(_schedule.SelectedIndex); }); };
-            var run = ButtonFactory("Executar manutenção agora", 22, 165, 220, Theme.Secondary);
-            run.Click += async delegate { await RunWork("Executando manutenção...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.MaintenanceReport(t, p); }); };
-            var advanced = ButtonFactory("Limpeza avançada...", 254, 165, 190, Theme.Warning);
+            var configure = ButtonFactory("Salvar agendamento", 265, 74, 180, Theme.Secondary);
+            configure.Click += async delegate
+            {
+                string result = await RunWork("Configurando agendamento...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.ConfigureSchedule(_schedule.SelectedIndex); });
+                _maintenanceResult.Text = FirstResultLine(result, "Agendamento atualizado");
+            };
+            var run = ButtonFactory("Executar rotina técnica", 744, 53, 240, Theme.Primary);
+            run.Size = new Size(240, 56);
+            run.Click += async delegate
+            {
+                string result = await RunWork("Executando manutenção...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.MaintenanceReport(t, p); });
+                _maintenanceResult.Text = MaintenanceResultLine(result);
+            };
+            _maintenanceResult = new Label { Text = "Pronto para executar", Location = new Point(20, 118), Size = new Size(964, 22), AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.7f) };
+            routine.Controls.Add(_schedule);
+            routine.Controls.Add(configure);
+            routine.Controls.Add(run);
+            routine.Controls.Add(_maintenanceResult);
+
+            var actions = DashboardCard(20, 188, 1016, 148);
+            actions.Controls.Add(new Label { Text = "Ações diretas", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
+            var advanced = ButtonFactory("Limpeza avançada", 20, 65, 170, Theme.Warning);
             advanced.Click += async delegate { await AdvancedCleanup(); };
-            var components = ButtonFactory("Componentes do Windows", 456, 165, 200, Theme.Secondary);
+            var components = ButtonFactory("Componentes do Windows", 200, 65, 200, Theme.Secondary);
             components.Click += async delegate
             {
                 if (MessageBox.Show(this, "Remover componentes substituídos do Windows? O modo agressivo ResetBase não será usado.", "Componentes do Windows", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                 await RunWork("Limpando componentes do Windows...", delegate(CancellationToken t, IProgress<string> p) { return WindowsMaintenance.CleanupComponentStore(t, p); });
             };
-            var energy = ButtonFactory("Diagnóstico de energia", 668, 165, 200, Theme.Secondary);
+            var energy = ButtonFactory("Diagnóstico de energia", 410, 65, 180, Theme.Secondary);
             energy.Click += async delegate
             {
                 string result = await RunWork("Gerando diagnóstico de energia...", delegate(CancellationToken t, IProgress<string> p) { return WindowsMaintenance.GenerateEnergyReport(t, p); });
@@ -574,23 +603,18 @@ namespace CodexPerformanceOptimizer
                     MessageBox.Show(this, "Relatório criado. Abrir agora?", "Diagnóstico de energia", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     WindowsMaintenance.OpenLatestEnergyReport();
             };
-            var storageSense = ButtonFactory("Limpeza automática", 880, 165, 160, Theme.Secondary);
+            var storageSense = ButtonFactory("Sensor de armazenamento", 600, 65, 190, Theme.Secondary);
             storageSense.AccessibleName = "Abrir Sensor de Armazenamento";
             storageSense.Click += delegate { WindowsMaintenance.OpenStorageSenseSettings(); };
-            var info = DashboardCard(22, 230, 1018, 220);
-            info.Controls.Add(new Label { Text = "Protegido automaticamente", Location = new Point(20, 18), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11.5f) });
-            info.Controls.Add(new Label { Text = "OneDrive e arquivos pessoais\r\nVeeam, Defender e Intune\r\nPolíticas corporativas", Location = new Point(22, 55), Size = new Size(330, 90), ForeColor = Theme.Text, Font = new Font("Segoe UI", 10f) });
-            info.Controls.Add(new Label { Text = "Novas ações", Location = new Point(510, 18), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11.5f) });
-            info.Controls.Add(new Label { Text = "Otimização adequada para SSD ou HDD\r\nLimpeza do WinSxS sem ResetBase\r\nRelatório energético de 15 segundos", Location = new Point(512, 55), Size = new Size(450, 90), ForeColor = Theme.Text, Font = new Font("Segoe UI", 10f) });
-            info.Controls.Add(new Label { Text = "Lixeira, Windows.old e componentes do Windows sempre pedem confirmação.", Location = new Point(22, 171), AutoSize = true, ForeColor = Theme.Warning });
-            page.Controls.Add(_schedule);
-            page.Controls.Add(configure);
-            page.Controls.Add(run);
-            page.Controls.Add(advanced);
-            page.Controls.Add(components);
-            page.Controls.Add(energy);
-            page.Controls.Add(storageSense);
-            page.Controls.Add(info);
+            var reports = ButtonFactory("Relatórios", 800, 65, 170, Theme.Secondary);
+            reports.Click += delegate { V2Engine.OpenReportsFolder(); };
+            actions.Controls.Add(advanced);
+            actions.Controls.Add(components);
+            actions.Controls.Add(energy);
+            actions.Controls.Add(storageSense);
+            actions.Controls.Add(reports);
+            page.Controls.Add(routine);
+            page.Controls.Add(actions);
             return page;
         }
 
@@ -736,7 +760,6 @@ namespace CodexPerformanceOptimizer
             var refresh = ButtonFactory("Buscar atualizações", 20, 574, 170, Theme.Secondary);
             var selectAll = ButtonFactory("Selecionar todos", 202, 574, 155, Theme.Secondary);
             var install = ButtonFactory("Atualizar selecionados", 369, 574, 190, Theme.Primary);
-            var help = ButtonFactory("Sobre o WinGet", 571, 574, 145, Theme.Secondary);
             refresh.Click += async delegate { await SearchProgramUpdates(); };
             selectAll.Click += delegate
             {
@@ -746,7 +769,6 @@ namespace CodexPerformanceOptimizer
                 ApplyProgramUpdateFilter();
             };
             install.Click += async delegate { await InstallSelectedPrograms(); };
-            help.Click += delegate { Process.Start(new ProcessStartInfo("https://learn.microsoft.com/windows/package-manager/winget/") { UseShellExecute = true }); };
 
             page.Controls.Add(_programUpdateSummary);
             page.Controls.Add(_programUpdateSearch);
@@ -754,7 +776,6 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(refresh);
             page.Controls.Add(selectAll);
             page.Controls.Add(install);
-            page.Controls.Add(help);
             page.Resize += delegate
             {
                 int y = Math.Max(574, page.ClientSize.Height - 55);
@@ -762,7 +783,6 @@ namespace CodexPerformanceOptimizer
                 refresh.Location = new Point(20, y);
                 selectAll.Location = new Point(202, y);
                 install.Location = new Point(369, y);
-                help.Location = new Point(571, y);
             };
             return page;
         }
@@ -987,7 +1007,6 @@ namespace CodexPerformanceOptimizer
                 if (_liveMetricTicks % 10 == 0) UpdateProcessHistoryGrid();
             }
             if (_liveMetricTicks % 5 == 0) HandleAutomaticPowerProfile();
-            if (_liveMetricTicks == 2 || _liveMetricTicks % 60 == 0) BeginHistoryCapture();
         }
 
         private void ApplyActivitySample(SystemMetrics metrics)
@@ -1589,6 +1608,21 @@ namespace CodexPerformanceOptimizer
             if (_profile.SelectedIndex == 1) _profileDescription.Text = "Bom equilíbrio para o uso diário";
             else if (_profile.SelectedIndex == 2) _profileDescription.Text = "Menor consumo quando estiver na bateria";
             else _profileDescription.Text = "Prioriza velocidade e resposta do sistema";
+        }
+
+        private static string MaintenanceResultLine(string result)
+        {
+            if (string.IsNullOrWhiteSpace(result)) return "A rotina não produziu um resultado.";
+            if (result.StartsWith("Falha", StringComparison.OrdinalIgnoreCase)) return FirstResultLine(result, "Falha na rotina");
+            string removed = result.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault(line => line.StartsWith("Temporários removidos:", StringComparison.OrdinalIgnoreCase));
+            return "Rotina concluída" + (string.IsNullOrWhiteSpace(removed) ? string.Empty : "  •  " + removed);
+        }
+
+        private static string FirstResultLine(string result, string fallback)
+        {
+            string line = (result ?? string.Empty).Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            return string.IsNullOrWhiteSpace(line) ? fallback : line;
         }
 
         private static int ClampPercent(double value)

@@ -33,7 +33,7 @@ $manifestPath = Join-Path $PSScriptRoot 'app.manifest'
 
 $testExecutable = Join-Path ([IO.Path]::GetTempPath()) ("OtimizadorSelfTest-" + [Guid]::NewGuid().ToString('N') + '.exe')
 try {
-    & $csc /nologo /target:exe /warn:4 /optimize+ /platform:x64 /main:CodexPerformanceOptimizer.V2SelfTest @references "/out:$testExecutable" @sources (Join-Path $PSScriptRoot 'V2SelfTest.cs')
+    & $csc /nologo /target:exe /warn:4 /optimize+ /platform:x64 /define:SELF_TEST /main:CodexPerformanceOptimizer.V2SelfTest @references "/out:$testExecutable" @sources (Join-Path $PSScriptRoot 'V2SelfTest.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar os testes.' }
     & $testExecutable
     if ($LASTEXITCODE -ne 0) { throw 'A suíte de testes bloqueou a release.' }
@@ -71,7 +71,7 @@ $appSigned = Sign-Artifact $app
 $version = [Reflection.AssemblyName]::GetAssemblyName($app).Version.ToString()
 $channelObject = @{ ManifestUrl = if ([string]::IsNullOrWhiteSpace($UpdateBaseUrl)) { '' } else { $UpdateBaseUrl.TrimEnd('/') + '/update-manifest.public.json' } }
 [IO.File]::WriteAllText($channel, ($channelObject | ConvertTo-Json -Compress), $utf8NoBom)
-[IO.File]::WriteAllText($localManifest, (@{ Version=$version; InstallerUrl=''; Sha256=''; Notes='Versao instalada. Consulte as notas no aplicativo.' } | ConvertTo-Json -Compress), $utf8NoBom)
+[IO.File]::WriteAllText($localManifest, (@{ Version=$version; InstallerUrl=''; Sha256=''; Notes='Versao instalada e pronta para uso.' } | ConvertTo-Json -Compress), $utf8NoBom)
 
 Copy-Item -LiteralPath $notes -Destination (Join-Path $output 'release-notes.txt') -Force
 Copy-Item -LiteralPath $localManifest -Destination (Join-Path $output 'update-manifest.json') -Force

@@ -2,12 +2,11 @@
 
 Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador, aplicar perfis reversíveis de desempenho e executar manutenção controlada.
 
-A interface apresenta identidade visual própria, barra de título escura, navegação lateral simplificada e organização consistente para uso diário.
+A interface apresenta identidade visual própria, barra de título escura, navegação lateral simplificada e fluxo compacto para manutenção técnica.
 
 ## Recursos principais
 
 - Monitoramento em tempo real de CPU, memória, armazenamento e processos.
-- Histórico diário, semanal e mensal com retenção local de 30 dias.
 - Benchmark antes e depois, concluído após reiniciar o Windows.
 - Diagnóstico de discos, estabilidade, inicialização e recomendações.
 - Inicialização completa com entradas do usuário, computador, pastas e aplicativos da Microsoft Store.
@@ -21,10 +20,10 @@ A interface apresenta identidade visual própria, barra de título escura, naveg
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
 - Acesso direto ao Sensor de Armazenamento para manutenção automática de espaço.
+- Bancada de manutenção condensada, com rotina técnica em um clique e ações diretas.
 - Perfis de energia, tema escuro, efeitos visuais e aplicativos em segundo plano.
 - Backup das configurações alteradas e restauração por seção.
 - Quarentena reversível para arquivos duplicados.
-- Testes de segurança executados em arquivos e Registro isolados.
 - Instalador com atualização pelo GitHub, reparo, troca atômica e rollback.
 
 ## Requisitos
@@ -73,7 +72,7 @@ Sem o certificado, a compilação continua funcional e o canal do GitHub permane
 
 ## Privacidade e segurança
 
-- O histórico e os relatórios permanecem no computador do usuário.
+- Os relatórios permanecem no computador do usuário.
 - Logs de falha removem automaticamente nome da conta, máquina e caminho do perfil.
 - Downloads de atualização exigem HTTPS e verificação SHA-256.
 - Processos protegidos e ambientes corporativos são tratados de forma conservadora.

@@ -70,9 +70,6 @@ namespace CodexPerformanceOptimizer
                 if (driverInventory == null || driverInventory.Count == 0 || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Versões dos drivers importantes não foram lidas.");
                 var startupEntries = V2Engine.ReadStartupEntries();
                 if (startupEntries == null || startupEntries.Any(item => string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.Source))) throw new InvalidOperationException("Inventário de inicialização falhou.");
-                TrendSummary trend = PersistentMetricStore.Read(1);
-                if (trend == null || trend.Points == null || trend.Processes == null) throw new InvalidOperationException("Histórico persistente falhou.");
-
                 Console.WriteLine("CPU em tempo real: " + sampledCpu.Value.ToString("N0") + "%");
                 Console.WriteLine("Memória em tempo real: " + sampledFreeRam.ToString("N1") + " GB livres");
                 Console.WriteLine("Processos em destaque: " + processes.Count);
@@ -81,7 +78,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Sensores de temperatura: " + diagnostics.Temperatures.Count);
                 Console.WriteLine("Medições de inicialização: " + diagnostics.Startup.Count);
                 Console.WriteLine("Estabilidade e atualizações: OK");
-                Console.WriteLine("Benchmark e histórico persistente: OK");
+                Console.WriteLine("Benchmark pós-reinicialização: OK");
                 Console.WriteLine("Testes de segurança isolados: 10/10");
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
                 Console.WriteLine("Inicialização: " + startupEntries.Count);

@@ -1,16 +1,15 @@
 using System;
 using System.Drawing;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CodexPerformanceOptimizer
 {
     internal sealed partial class MainFormV2
     {
-        private TabPage BuildControlTab()
+        private TabPage BuildSettingsTab()
         {
-            var page = NewPage("Controle");
+            var page = NewPage("Ajustes");
             var automatic = DashboardCard(20, 20, 490, 195);
             automatic.Controls.Add(new Label { Text = "Automação", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
             automatic.Controls.Add(new Label { Text = "Comportamentos opcionais e reversíveis", Location = new Point(20, 44), AutoSize = true, ForeColor = Theme.Muted });
@@ -25,8 +24,8 @@ namespace CodexPerformanceOptimizer
             var modes = DashboardCard(530, 20, 506, 195);
             modes.Controls.Add(new Label { Text = "Perfis temporários", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
             modes.Controls.Add(new Label { Text = "Ajustam apenas o plano de energia", Location = new Point(20, 44), AutoSize = true, ForeColor = Theme.Muted });
-            var game = ButtonFactory("Modo jogo", 20, 80, 140, Theme.Primary);
-            var work = ButtonFactory("Modo trabalho", 174, 80, 140, Theme.Secondary);
+            var game = ButtonFactory("Alto desempenho", 20, 80, 140, Theme.Primary);
+            var work = ButtonFactory("Equilibrado", 174, 80, 140, Theme.Secondary);
             var restoreMode = ButtonFactory("Restaurar anterior", 328, 80, 158, Theme.Secondary);
             game.Click += delegate { MessageBox.Show(this, AdvancedEngine.ApplyTemporaryProfile(true), "Perfil temporário"); };
             work.Click += delegate { MessageBox.Show(this, AdvancedEngine.ApplyTemporaryProfile(false), "Perfil temporário"); };
@@ -61,21 +60,11 @@ namespace CodexPerformanceOptimizer
             updates.Controls.Add(new Label { Text = "Atualizações e versão", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
             _updateStatus = new Label { Text = "Versão " + GetType().Assembly.GetName().Version + "  •  " + AdvancedEngine.ReadSignatureStatus(Application.ExecutablePath), Location = new Point(20, 48), Size = new Size(466, 44), AutoEllipsis = true, ForeColor = Theme.Muted };
             var check = ButtonFactory("Verificar atualização", 20, 102, 190, Theme.Primary);
-            var notes = ButtonFactory("Notas da versão", 224, 102, 160, Theme.Secondary);
-            var safetyTests = ButtonFactory("Testes de segurança", 20, 151, 190, Theme.Secondary);
-            var logs = ButtonFactory("Logs técnicos", 224, 151, 160, Theme.Secondary);
+            var logs = ButtonFactory("Logs técnicos", 20, 151, 190, Theme.Secondary);
             check.Click += async delegate { await CheckForUpdates(); };
-            notes.Click += delegate { ShowTextDialog("Notas da versão", AdvancedEngine.ReadReleaseNotes()); };
-            safetyTests.Click += async delegate
-            {
-                string result = await RunWork("Executando testes isolados...", delegate(CancellationToken t, IProgress<string> p) { return SafetyTestSuite.Run(t, p); });
-                ShowTextDialog("Testes de segurança", result);
-            };
             logs.Click += delegate { CrashLogger.OpenFolder(); };
             updates.Controls.Add(_updateStatus);
             updates.Controls.Add(check);
-            updates.Controls.Add(notes);
-            updates.Controls.Add(safetyTests);
             updates.Controls.Add(logs);
             updates.Controls.Add(new Label { Text = "Downloads exigem HTTPS e SHA-256. Logs removem nomes e caminhos pessoais.", Location = new Point(22, 207), Size = new Size(450, 40), ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
 

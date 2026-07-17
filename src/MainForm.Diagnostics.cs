@@ -16,12 +16,10 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Diagnóstico");
             page.Controls.Add(new Label { Text = "Diagnóstico do sistema", Location = new Point(20, 17), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 13f) });
-            _diagnosticStatus = new Label { Text = "Temperaturas, discos, inicialização e estabilidade", Location = new Point(210, 20), Size = new Size(300, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
-            var trends = ButtonFactory("Tendências", 520, 10, 105, Theme.Secondary);
+            _diagnosticStatus = new Label { Text = "Temperaturas, discos, inicialização e estabilidade", Location = new Point(210, 20), Size = new Size(410, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
             var benchmark = ButtonFactory("Benchmark", 635, 10, 125, Theme.Secondary);
             var details = ButtonFactory("Ver detalhes", 770, 10, 120, Theme.Secondary);
             var refresh = ButtonFactory("Atualizar", 900, 10, 110, Theme.Primary);
-            trends.Click += delegate { using (var dialog = new TrendForm()) dialog.ShowDialog(this); };
             benchmark.Click += async delegate { await StartBenchmark(); };
             details.Click += delegate { if (_diagnosticSnapshot != null) ShowTextDialog("Diagnóstico detalhado", DetailedDiagnosticText(_diagnosticSnapshot)); };
             refresh.Click += async delegate { await LoadDiagnostics(true); };
@@ -50,7 +48,6 @@ namespace CodexPerformanceOptimizer
             _processHistoryGrid.Columns[4].Width = 100;
             _processHistoryGrid.ReadOnly = true;
             page.Controls.Add(_diagnosticStatus);
-            page.Controls.Add(trends);
             page.Controls.Add(benchmark);
             page.Controls.Add(details);
             page.Controls.Add(refresh);
@@ -112,26 +109,6 @@ namespace CodexPerformanceOptimizer
             V2Engine.SaveReport(result);
             _diagnosticsLoaded = false;
             ShowTextDialog("Benchmark concluído", result);
-        }
-
-        private void BeginHistoryCapture()
-        {
-            if (_liveMetrics == null || Interlocked.Exchange(ref _historyWriteInProgress, 1) != 0) return;
-            var metrics = new SystemMetrics
-            {
-                TotalRamGb = _liveMetrics.TotalRamGb,
-                FreeRamGb = _liveMetrics.FreeRamGb,
-                FreeDiskGb = _liveMetrics.FreeDiskGb,
-                TotalDiskGb = _liveMetrics.TotalDiskGb,
-                FreeDiskPercent = _liveMetrics.FreeDiskPercent,
-                CpuUsagePercent = _liveMetrics.CpuUsagePercent
-            };
-            List<ProcessActivity> processes = _lastProcessActivities.Select(item => new ProcessActivity { Name = item.Name, CpuPercent = item.CpuPercent, WorkingSetBytes = item.WorkingSetBytes }).ToList();
-            Task.Run(delegate
-            {
-                try { PersistentMetricStore.Append(metrics, processes, AdvancedEngine.ReadTemperatures()); }
-                finally { Interlocked.Exchange(ref _historyWriteInProgress, 0); }
-            });
         }
 
         private void PopulateDiagnostics(DiagnosticSnapshot snapshot)

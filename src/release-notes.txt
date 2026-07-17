@@ -1,7 +1,9 @@
-OTIMIZADOR DE DESEMPENHO 4.1.1
+OTIMIZADOR DE DESEMPENHO 4.2.0
 
-- Barra de título nativa agora acompanha o tema escuro do aplicativo.
-- Botões nativos de minimizar, maximizar e fechar foram preservados.
-- Cor da legenda, texto e borda foi harmonizada com a identidade visual.
-- Tema aplicado também aos diálogos, ferramentas auxiliares e instalador.
-- Windows anteriores ou sem suporte aos atributos visuais continuam usando o comportamento nativo com segurança.
+- Manutenção condensada em uma bancada técnica compacta.
+- Navegação reorganizada para diagnóstico, manutenção e ações específicas.
+- Rotina técnica em um clique agora atende todos os discos fixos.
+- Removidos botões apenas informativos e o atalho de histórico sem função própria.
+- Histórico persistente removido; o diagnóstico imediato de processos foi preservado.
+- Acesso direto a limpeza, componentes, energia, Sensor de Armazenamento e relatórios.
+- Perfis temporários agora informam corretamente o plano de energia aplicado.
