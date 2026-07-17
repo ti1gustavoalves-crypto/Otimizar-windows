@@ -10,38 +10,37 @@ namespace CodexPerformanceOptimizer
         private TabPage BuildSettingsTab()
         {
             var page = NewPage("Ajustes");
-            var automatic = DashboardCard(20, 20, 490, 195);
+
+            var automatic = DashboardCard(20, 20, 490, 260);
             automatic.Controls.Add(new Label { Text = "Automação", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
-            automatic.Controls.Add(new Label { Text = "Comportamentos opcionais e reversíveis", Location = new Point(20, 44), AutoSize = true, ForeColor = Theme.Muted });
-            _minimizeToTray = Option("Continuar monitorando ao minimizar", 20, 80, _advancedSettings.MinimizeToTray);
-            _automaticProfiles = Option("Desempenho na tomada e equilíbrio na bateria", 20, 116, _advancedSettings.AutomaticPowerProfiles);
+            _minimizeToTray = Option("Continuar monitorando ao minimizar", 20, 58, _advancedSettings.MinimizeToTray);
+            _automaticProfiles = Option("Adequar energia à tomada ou bateria", 20, 94, _advancedSettings.AutomaticPowerProfiles);
             _minimizeToTray.CheckedChanged += delegate { SaveAdvancedPreferences(); };
             _automaticProfiles.CheckedChanged += delegate { _lastPowerLineStatus = null; SaveAdvancedPreferences(); };
             automatic.Controls.Add(_minimizeToTray);
             automatic.Controls.Add(_automaticProfiles);
-            automatic.Controls.Add(new Label { Text = "As trocas ocorrem somente quando a alimentação muda.", Location = new Point(22, 153), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+            automatic.Controls.Add(new Label { Text = "Manutenção automática", Location = new Point(20, 139), AutoSize = true, ForeColor = Theme.Muted });
+            _schedule = new ComboBox { Location = new Point(20, 164), Width = 245, DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
+            _schedule.Items.AddRange(new object[] { "Desativada", "Semanal — segunda-feira", "Mensal — dia 1" });
+            _schedule.SelectedIndex = V2Engine.ReadScheduleIndex();
+            var scheduleSave = ButtonFactory("Salvar", 278, 160, 120, Theme.Primary);
+            _maintenanceResult = new Label { Text = "", Location = new Point(20, 210), Size = new Size(440, 28), AutoEllipsis = true, ForeColor = Theme.Muted };
+            scheduleSave.Click += async delegate
+            {
+                string result = await RunWork("Configurando agendamento...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.ConfigureSchedule(_schedule.SelectedIndex); });
+                _maintenanceResult.Text = FirstResultLine(result, "Agendamento atualizado");
+            };
+            automatic.Controls.Add(_schedule);
+            automatic.Controls.Add(scheduleSave);
+            automatic.Controls.Add(_maintenanceResult);
 
-            var modes = DashboardCard(530, 20, 506, 195);
-            modes.Controls.Add(new Label { Text = "Perfis temporários", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
-            modes.Controls.Add(new Label { Text = "Ajustam apenas o plano de energia", Location = new Point(20, 44), AutoSize = true, ForeColor = Theme.Muted });
-            var game = ButtonFactory("Alto desempenho", 20, 80, 140, Theme.Primary);
-            var work = ButtonFactory("Equilibrado", 174, 80, 140, Theme.Secondary);
-            var restoreMode = ButtonFactory("Restaurar anterior", 328, 80, 158, Theme.Secondary);
-            game.Click += delegate { MessageBox.Show(this, AdvancedEngine.ApplyTemporaryProfile(true), "Perfil temporário"); };
-            work.Click += delegate { MessageBox.Show(this, AdvancedEngine.ApplyTemporaryProfile(false), "Perfil temporário"); };
-            restoreMode.Click += delegate { MessageBox.Show(this, AdvancedEngine.RestoreTemporaryProfile(), "Perfil temporário"); };
-            modes.Controls.Add(game);
-            modes.Controls.Add(work);
-            modes.Controls.Add(restoreMode);
-            modes.Controls.Add(new Label { Text = "Nenhum serviço é encerrado e o plano anterior pode ser restaurado.", Location = new Point(22, 137), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
-
-            var undo = DashboardCard(20, 235, 490, 270);
-            undo.Controls.Add(new Label { Text = "Desfazer por categoria", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
-            undo.Controls.Add(new Label { Text = "Restaura somente o grupo escolhido", Location = new Point(20, 44), AutoSize = true, ForeColor = Theme.Muted });
+            var recovery = DashboardCard(530, 20, 506, 260);
+            recovery.Controls.Add(new Label { Text = "Recuperação", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
+            recovery.Controls.Add(new Label { Text = "Desfaça somente o necessário", Location = new Point(20, 45), AutoSize = true, ForeColor = Theme.Muted });
             var section = new ComboBox { Location = new Point(20, 82), Width = 280, DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
             section.Items.AddRange(new object[] { "Energia", "Tema", "Efeitos visuais", "Segundo plano", "Inicialização" });
             section.SelectedIndex = 0;
-            var restoreSection = ButtonFactory("Restaurar", 316, 78, 150, Theme.Warning);
+            var restoreSection = ButtonFactory("Restaurar seção", 316, 78, 166, Theme.Warning);
             restoreSection.Click += async delegate
             {
                 string selected = Convert.ToString(section.SelectedItem);
@@ -49,29 +48,40 @@ namespace CodexPerformanceOptimizer
                 await RunWork("Restaurando " + selected.ToLowerInvariant() + "...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.RestoreSection(selected, t, p); });
                 await RefreshAudit();
             };
-            var restoreQuarantine = ButtonFactory("Restaurar última quarentena", 20, 145, 230, Theme.Secondary);
+            var restoreQuarantine = ButtonFactory("Restaurar quarentena", 20, 139, 205, Theme.Secondary);
             restoreQuarantine.Click += delegate { MessageBox.Show(this, AdvancedEngine.RestoreLatestQuarantine(), "Quarentena"); };
-            undo.Controls.Add(section);
-            undo.Controls.Add(restoreSection);
-            undo.Controls.Add(restoreQuarantine);
-            undo.Controls.Add(new Label { Text = "Limpezas definitivas não podem recriar arquivos.\r\nDuplicados movidos para quarentena podem ser restaurados.", Location = new Point(22, 201), Size = new Size(440, 50), ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+            var restoreAll = ButtonFactory("Restaurar configuração original", 237, 139, 245, Theme.Secondary);
+            restoreAll.Click += async delegate
+            {
+                if (MessageBox.Show(this, "Restaurar todas as configurações registradas antes da primeira otimização?", "Recuperação completa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                await RunWork("Restaurando configurações...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.Restore(t, p); });
+                await RefreshAudit();
+            };
+            recovery.Controls.Add(section);
+            recovery.Controls.Add(restoreSection);
+            recovery.Controls.Add(restoreQuarantine);
+            recovery.Controls.Add(restoreAll);
 
-            var updates = DashboardCard(530, 235, 506, 270);
-            updates.Controls.Add(new Label { Text = "Atualizações e versão", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
-            _updateStatus = new Label { Text = "Versão " + GetType().Assembly.GetName().Version + "  •  " + AdvancedEngine.ReadSignatureStatus(Application.ExecutablePath), Location = new Point(20, 48), Size = new Size(466, 44), AutoEllipsis = true, ForeColor = Theme.Muted };
-            var check = ButtonFactory("Verificar atualização", 20, 102, 190, Theme.Primary);
-            var logs = ButtonFactory("Logs técnicos", 20, 151, 190, Theme.Secondary);
+            var application = DashboardCard(20, 300, 1016, 190);
+            application.Controls.Add(new Label { Text = "Aplicativo e suporte", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
+            _updateStatus = new Label { Text = "Versão " + GetType().Assembly.GetName().Version + "  •  " + AdvancedEngine.ReadSignatureStatus(Application.ExecutablePath), Location = new Point(20, 49), Size = new Size(965, 28), AutoEllipsis = true, ForeColor = Theme.Muted };
+            var check = ButtonFactory("Verificar atualização", 20, 94, 190, Theme.Primary);
+            var report = ButtonFactory("Relatório técnico", 222, 94, 175, Theme.Secondary);
+            var reports = ButtonFactory("Relatórios salvos", 409, 94, 175, Theme.Secondary);
+            var logs = ButtonFactory("Logs técnicos", 596, 94, 155, Theme.Secondary);
             check.Click += async delegate { await CheckForUpdates(); };
+            report.Click += delegate { ShowTechnicalServiceReport(); };
+            reports.Click += delegate { V2Engine.OpenReportsFolder(); };
             logs.Click += delegate { CrashLogger.OpenFolder(); };
-            updates.Controls.Add(_updateStatus);
-            updates.Controls.Add(check);
-            updates.Controls.Add(logs);
-            updates.Controls.Add(new Label { Text = "Downloads exigem HTTPS e SHA-256. Logs removem nomes e caminhos pessoais.", Location = new Point(22, 207), Size = new Size(450, 40), ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+            application.Controls.Add(_updateStatus);
+            application.Controls.Add(check);
+            application.Controls.Add(report);
+            application.Controls.Add(reports);
+            application.Controls.Add(logs);
 
             page.Controls.Add(automatic);
-            page.Controls.Add(modes);
-            page.Controls.Add(undo);
-            page.Controls.Add(updates);
+            page.Controls.Add(recovery);
+            page.Controls.Add(application);
             return page;
         }
     }

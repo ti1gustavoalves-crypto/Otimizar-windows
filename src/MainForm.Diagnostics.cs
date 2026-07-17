@@ -16,12 +16,14 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Diagnóstico");
             page.Controls.Add(new Label { Text = "Diagnóstico do sistema", Location = new Point(20, 17), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 13f) });
-            _diagnosticStatus = new Label { Text = "Temperaturas, discos, inicialização e estabilidade", Location = new Point(210, 20), Size = new Size(410, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
-            var benchmark = ButtonFactory("Benchmark", 635, 10, 125, Theme.Secondary);
-            var details = ButtonFactory("Ver detalhes", 770, 10, 120, Theme.Secondary);
-            var refresh = ButtonFactory("Atualizar", 900, 10, 110, Theme.Primary);
+            _diagnosticStatus = new Label { Text = "Temperaturas, discos, inicialização e estabilidade", Location = new Point(210, 20), Size = new Size(350, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
+            var benchmark = ButtonFactory("Benchmark", 570, 10, 115, Theme.Secondary);
+            var energy = ButtonFactory("Energia", 695, 10, 115, Theme.Secondary);
+            var details = ButtonFactory("Relatório técnico", 820, 10, 155, Theme.Primary);
+            var refresh = ButtonFactory("↻", 985, 10, 38, Theme.Secondary);
             benchmark.Click += async delegate { await StartBenchmark(); };
-            details.Click += delegate { if (_diagnosticSnapshot != null) ShowTextDialog("Diagnóstico detalhado", DetailedDiagnosticText(_diagnosticSnapshot)); };
+            energy.Click += async delegate { await RunEnergyDiagnostic(); };
+            details.Click += delegate { ShowTechnicalServiceReport(); };
             refresh.Click += async delegate { await LoadDiagnostics(true); };
             _diagnosticCards = new FlowLayoutPanel
             {
@@ -49,6 +51,7 @@ namespace CodexPerformanceOptimizer
             _processHistoryGrid.ReadOnly = true;
             page.Controls.Add(_diagnosticStatus);
             page.Controls.Add(benchmark);
+            page.Controls.Add(energy);
             page.Controls.Add(details);
             page.Controls.Add(refresh);
             page.Controls.Add(_diagnosticCards);
@@ -78,7 +81,9 @@ namespace CodexPerformanceOptimizer
             _diagnosticsLoaded = true;
             PopulateDiagnostics(snapshot);
             UpdateProcessHistoryGrid();
-            _diagnosticStatus.Text = "Atualizado em " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+            int warnings = snapshot.Recommendations.Count(item => item.Severity == "Alta") + snapshot.Disks.Count(item => item.Warning);
+            if (snapshot.Stability.PendingRestart || snapshot.Stability.UnexpectedShutdowns > 0 || snapshot.Stability.SystemFailures > 0) warnings++;
+            _diagnosticStatus.Text = warnings == 0 ? "Nenhum alerta importante" : warnings + (warnings == 1 ? " alerta encontrado" : " alertas encontrados");
         }
 
         private async Task StartBenchmark()
@@ -134,45 +139,53 @@ namespace CodexPerformanceOptimizer
                 comparisonMain = comparison == null ? "Aguardando medição" : string.Format(CultureInfo.CurrentCulture, "RAM {0:+0.0;-0.0;0.0} GB  •  Disco {1:+0.0;-0.0;0.0} GB", comparison.AfterFreeRamGb - comparison.BeforeFreeRamGb, comparison.AfterFreeDiskGb - comparison.BeforeFreeDiskGb);
                 comparisonDetail = comparison == null ? "Use Benchmark para comparar após reiniciar" : comparison.Operation + "  •  CPU " + comparison.BeforeCpuPercent.ToString("N0") + "% → " + comparison.AfterCpuPercent.ToString("N0") + "%";
             }
-            _diagnosticCards.Controls.Add(DiagnosticCard("BENCHMARK / ANTES E DEPOIS", comparisonMain, comparisonDetail, false));
+            _diagnosticCards.Controls.Add(DiagnosticCard("BENCHMARK / ANTES E DEPOIS", comparisonMain, comparisonDetail, false, null));
 
             TemperatureReading hottest = snapshot.Temperatures.OrderByDescending(item => item.Celsius).FirstOrDefault();
             string temperatureMain = hottest == null ? "Sensor não exposto" : hottest.Celsius.ToString("N0", CultureInfo.CurrentCulture) + " °C  •  " + hottest.Name;
             string temperatureDetail = hottest == null ? OptionalSensorProvider.Status + "  •  Compatível com ACPI/WMI" : snapshot.ClockStatus + "  •  " + hottest.Source;
-            _diagnosticCards.Controls.Add(DiagnosticCard("TEMPERATURA / THROTTLING", temperatureMain, temperatureDetail, hottest != null && hottest.Celsius >= 85));
+            if (hottest != null) _diagnosticCards.Controls.Add(DiagnosticCard("TEMPERATURA / THROTTLING", temperatureMain, temperatureDetail, hottest.Celsius >= 85, null));
 
             bool diskWarning = snapshot.Disks.Any(item => item.Warning);
             string diskMain = snapshot.Disks.Count == 0 ? "Nenhum dado disponível" : snapshot.Disks.Count + (snapshot.Disks.Count == 1 ? " dispositivo" : " dispositivos") + "  •  " + (diskWarning ? "atenção" : "sem alertas");
             string diskDetail = snapshot.Disks.Count == 0 ? snapshot.TrimStatus : snapshot.Disks[0].Name + "  •  " + snapshot.Disks[0].Health + "  •  " + snapshot.Disks[0].Life + "  •  " + snapshot.TrimStatus;
-            _diagnosticCards.Controls.Add(DiagnosticCard("SAÚDE DOS DISCOS", diskMain, diskDetail, diskWarning));
+            _diagnosticCards.Controls.Add(DiagnosticCard("SAÚDE DOS DISCOS", diskMain, diskDetail, diskWarning, delegate { _tabs.SelectedIndex = (int)AppSection.Storage; }));
 
             StartupMeasurement boot = snapshot.Startup.FirstOrDefault(item => item.Name == "Inicialização do Windows");
             StartupMeasurement slowest = snapshot.Startup.FirstOrDefault(item => item.Name != "Inicialização do Windows");
             string bootMain = boot == null ? "Medição não disponível" : TimeSpan.FromMilliseconds(boot.DurationMilliseconds).TotalSeconds.ToString("N1", CultureInfo.CurrentCulture) + " s para iniciar";
             string bootDetail = slowest == null ? (Optimizer.IsAdministrator() ? "O Windows ainda não registrou impacto por aplicativo" : "Reabra como administrador para acessar os eventos") : slowest.Name + "  •  " + (slowest.DurationMilliseconds / 1000.0).ToString("N1", CultureInfo.CurrentCulture) + " s de impacto";
-            _diagnosticCards.Controls.Add(DiagnosticCard("INICIALIZAÇÃO MEDIDA", bootMain, bootDetail, boot != null && boot.DurationMilliseconds > 60000));
+            _diagnosticCards.Controls.Add(DiagnosticCard("INICIALIZAÇÃO MEDIDA", bootMain, bootDetail, boot != null && boot.DurationMilliseconds > 60000, delegate { _tabs.SelectedIndex = (int)AppSection.Startup; }));
 
             StabilityDiagnostic stability = snapshot.Stability;
             string stabilityMain = stability.UnexpectedShutdowns + " desligamentos inesperados  •  " + stability.SystemFailures + " falhas";
             string stabilityDetail = "Ligado há " + Math.Floor(stability.Uptime.TotalDays).ToString("N0", CultureInfo.CurrentCulture) + " dia(s)" + (stability.PendingRestart ? "  •  Reinicialização pendente" : "  •  Sem reinicialização pendente");
-            _diagnosticCards.Controls.Add(DiagnosticCard("ESTABILIDADE — 30 DIAS", stabilityMain, stabilityDetail, stability.UnexpectedShutdowns > 0 || stability.SystemFailures > 0));
+            _diagnosticCards.Controls.Add(DiagnosticCard("ESTABILIDADE — 30 DIAS", stabilityMain, stabilityDetail, stability.UnexpectedShutdowns > 0 || stability.SystemFailures > 0, null));
 
             string recommendationMain = string.Join("  •  ", snapshot.Recommendations.Take(2).Select(item => item.Title).ToArray());
             string recommendationDetail = string.Join("  |  ", snapshot.Recommendations.Take(2).Select(item => item.Detail).ToArray());
-            _diagnosticCards.Controls.Add(DiagnosticCard("RECOMENDAÇÕES", recommendationMain, recommendationDetail, snapshot.Recommendations.Any(item => item.Severity == "Alta")));
+            _diagnosticCards.Controls.Add(DiagnosticCard("RECOMENDAÇÕES", recommendationMain, recommendationDetail, snapshot.Recommendations.Any(item => item.Severity == "Alta"), null));
             for (int i = 0; i < _diagnosticCards.Controls.Count; i++)
                 _diagnosticCards.SetFlowBreak(_diagnosticCards.Controls[i], (i + 1) % 3 == 0);
             _diagnosticCards.ResumeLayout();
         }
 
-        private DashboardPanel DiagnosticCard(string title, string main, string detail, bool warning)
+        private DashboardPanel DiagnosticCard(string title, string main, string detail, bool warning, Action action)
         {
             var card = DashboardCard(0, 0, 306, 137);
             card.Margin = new Padding(5);
             card.Controls.Add(new Label { Text = title, Location = new Point(16, 13), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.3f) });
             card.Controls.Add(new Label { Text = main, Location = new Point(15, 39), Size = new Size(274, 35), AutoEllipsis = true, ForeColor = warning ? Theme.Warning : Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
             card.Controls.Add(new Label { Text = detail, Location = new Point(16, 80), Size = new Size(274, 42), AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+            if (action != null) AttachClick(card, action);
             return card;
+        }
+
+        private static void AttachClick(Control control, Action action)
+        {
+            control.Cursor = Cursors.Hand;
+            control.Click += delegate { action(); };
+            foreach (Control child in control.Controls) AttachClick(child, action);
         }
 
         private static string DiagnosticReport(DiagnosticSnapshot snapshot)

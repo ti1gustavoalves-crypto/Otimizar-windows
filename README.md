@@ -2,28 +2,29 @@
 
 Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador, aplicar perfis reversíveis de desempenho e executar manutenção controlada.
 
-A interface apresenta identidade visual própria, barra de título escura, navegação lateral simplificada e fluxo compacto para manutenção técnica.
+A interface apresenta identidade visual própria, barra de título escura e sete áreas organizadas para reduzir cliques durante a manutenção técnica.
 
 ## Recursos principais
 
 - Monitoramento em tempo real de CPU, memória, armazenamento e processos.
 - Benchmark antes e depois, concluído após reiniciar o Windows.
-- Diagnóstico de discos, estabilidade, inicialização e recomendações.
+- Diagnóstico acionável de discos, estabilidade, inicialização, energia e recomendações.
 - Inicialização completa com entradas do usuário, computador, pastas e aplicativos da Microsoft Store.
 - Inventário de versões de vídeo, BIOS, firmware, chipset e demais drivers importantes.
 - Busca e instalação de drivers oficiais pelo Windows Update.
 - Atalhos seguros para o suporte oficial do fabricante de cada atualização encontrada.
 - Correspondência por Hardware ID, classificação e comparação segura de versões.
 - Backup e restauração de drivers, diagnóstico de dispositivos e proteção especial para BIOS/firmware.
-- Atualização selecionável de programas pelo WinGet, sempre com confirmação prévia.
+- Central unificada de atualizações para drivers e programas pelo WinGet, sempre com confirmação prévia.
 - Limpeza selecionável de arquivos temporários e análise por volume.
 - Exclusão selecionável de arquivos e pastas para a Lixeira, com proteção de locais críticos.
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
 - Acesso direto ao Sensor de Armazenamento para manutenção automática de espaço.
-- Bancada de manutenção condensada, com rotina técnica em um clique e ações diretas.
+- Relatório técnico consolidado com recursos, diagnóstico, hardware e atualizações disponíveis.
+- Pesquisa e filtros para inicialização, armazenamento, drivers e programas.
 - Perfis de energia, tema escuro, efeitos visuais e aplicativos em segundo plano.
-- Backup das configurações alteradas e restauração por seção.
+- Recuperação centralizada das configurações alteradas, restauração por seção e quarentena reversível.
 - Quarentena reversível para arquivos duplicados.
 - Instalador com atualização pelo GitHub, reparo, troca atômica e rollback.
 
