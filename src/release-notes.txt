@@ -1,12 +1,10 @@
-OTIMIZADOR DE DESEMPENHO 4.3.0
+OTIMIZADOR DE DESEMPENHO 4.3.1
 
-- Navegação reduzida de nove para sete áreas, priorizando o fluxo de manutenção técnica.
-- Drivers e programas agora compartilham a central de Atualizações.
-- Manutenção foi distribuída entre Diagnóstico, Armazenamento e Ajustes, eliminando duplicações.
-- Página inicial simplificada, com uma ação clara de otimização e estado de administrador visível.
-- Diagnóstico destaca alertas, oculta sensores indisponíveis e gera relatório técnico consolidado.
-- Inicialização ganhou pesquisa, filtros, contagem de alterações e comandos ocultos da visão principal.
-- Armazenamento ganhou pesquisa, abertura por duplo clique, itens protegidos identificados e ferramentas avançadas agrupadas.
-- Drivers mostram somente dados essenciais e agrupam backup, restauração e Windows Update em Proteção.
-- Hardware passou a atualizar automaticamente e oferece atalhos contextuais para armazenamento e drivers.
-- Agendamento e recuperação foram centralizados em Ajustes.
+- Corrigida a faixa clara e a composição quebrada da central de Atualizações.
+- Atualizações de drivers e aplicativos agora se adaptam à largura da janela sem cortar colunas ou ações.
+- Armazenamento ganhou distribuição mais compacta, pesquisa persistente e indicação discreta para itens protegidos.
+- Locais críticos do Windows, como Recovery e System Volume Information, receberam proteção explícita contra exclusão.
+- Pesquisas de Inicialização, Armazenamento e Atualizações agora usam indicações nativas que não desaparecem ao trocar de aba.
+- Diagnóstico teve cabeçalho, cartões e histórico reorganizados para evitar sobreposição e textos desconexos.
+- Colunas, cartões e grupos das demais áreas foram revisados para manter alinhamento em diferentes larguras.
+- Textos, estados vazios e instruções administrativas foram padronizados em português.

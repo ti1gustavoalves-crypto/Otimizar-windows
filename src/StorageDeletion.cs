@@ -20,6 +20,7 @@ namespace CodexPerformanceOptimizer
 
                 var drive = new DriveInfo(root);
                 if (!drive.IsReady || drive.DriveType != DriveType.Fixed) return "Somente itens de discos locais fixos podem ser enviados para a Lixeira.";
+                if (IsCriticalRootPath(fullPath, root)) return "Este local é necessário para a inicialização, recuperação ou proteção do Windows.";
 
                 FileAttributes attributes = File.GetAttributes(fullPath);
                 if ((attributes & FileAttributes.System) != 0) return "Este é um item protegido pelo sistema e não pode ser excluído pelo Otimizador.";
@@ -79,6 +80,17 @@ namespace CodexPerformanceOptimizer
             string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             return string.Equals(path, normalizedRoot, StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static bool IsCriticalRootPath(string path, string root)
+        {
+            if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(root)) return false;
+            string normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string normalizedRoot = Path.GetFullPath(root);
+            string[] criticalNames = { "Recovery", "Boot", "EFI", "System Volume Information", "$Recycle.Bin", "Documents and Settings" };
+            foreach (string name in criticalNames)
+                if (IsSameOrChild(normalizedPath, Path.Combine(normalizedRoot, name))) return true;
+            return false;
         }
     }
 }

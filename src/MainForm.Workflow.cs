@@ -11,36 +11,44 @@ namespace CodexPerformanceOptimizer
         private TabPage BuildUpdatesTab()
         {
             var page = NewPage("Atualizações");
+            page.AutoScroll = false;
             var driversButton = ButtonFactory("Windows e drivers", 20, 12, 170, Theme.Primary);
             var programsButton = ButtonFactory("Aplicativos", 202, 12, 135, Theme.Secondary);
-            var innerTabs = new TabControl
-            {
-                Location = new Point(-4, 26),
-                SizeMode = TabSizeMode.Fixed,
-                ItemSize = new Size(1, 24),
-                Appearance = TabAppearance.FlatButtons
-            };
-            innerTabs.TabPages.Add(BuildDriversTab());
-            innerTabs.TabPages.Add(BuildProgramUpdatesTab());
+            var content = new Panel { Location = new Point(0, 58), BackColor = Theme.Background, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
+            Panel drivers = BuildDriversPanel();
+            Panel programs = BuildProgramUpdatesPanel();
+            drivers.Dock = DockStyle.Fill;
+            programs.Dock = DockStyle.Fill;
+            programs.Visible = false;
+            content.Controls.Add(programs);
+            content.Controls.Add(drivers);
             Action updateSelection = delegate
             {
-                bool drivers = innerTabs.SelectedIndex == 0;
-                driversButton.BackColor = drivers ? Theme.Primary : Theme.Secondary;
-                programsButton.BackColor = drivers ? Theme.Secondary : Theme.Primary;
+                bool driversVisible = drivers.Visible;
+                SetButtonColor(driversButton, driversVisible ? Theme.Primary : Theme.Secondary);
+                SetButtonColor(programsButton, driversVisible ? Theme.Secondary : Theme.Primary);
             };
-            driversButton.Click += delegate { innerTabs.SelectedIndex = 0; };
-            programsButton.Click += delegate { innerTabs.SelectedIndex = 1; };
-            innerTabs.SelectedIndexChanged += async delegate
+            driversButton.Click += async delegate
             {
+                programs.Visible = false;
+                drivers.Visible = true;
+                drivers.BringToFront();
                 updateSelection();
-                if (innerTabs.SelectedIndex == 0) await LoadDriverInventoryAsync(false);
-                else if (!_programUpdatesLoaded) await SearchProgramUpdates();
+                await LoadDriverInventoryAsync(false);
             };
-            page.Controls.Add(innerTabs);
+            programsButton.Click += async delegate
+            {
+                drivers.Visible = false;
+                programs.Visible = true;
+                programs.BringToFront();
+                updateSelection();
+                if (!_programUpdatesLoaded) await SearchProgramUpdates();
+            };
+            page.Controls.Add(content);
             page.Controls.Add(driversButton);
             page.Controls.Add(programsButton);
-            page.Resize += delegate { innerTabs.Size = new Size(page.ClientSize.Width + 8, page.ClientSize.Height - 22); };
-            innerTabs.Size = new Size(page.ClientSize.Width + 8, page.ClientSize.Height - 22);
+            page.Resize += delegate { content.Size = new Size(page.ClientSize.Width, Math.Max(300, page.ClientSize.Height - content.Top)); };
+            content.Size = new Size(page.ClientSize.Width, Math.Max(300, page.ClientSize.Height - content.Top));
             return page;
         }
 

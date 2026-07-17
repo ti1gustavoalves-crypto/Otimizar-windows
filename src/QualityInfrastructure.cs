@@ -126,8 +126,10 @@ namespace CodexPerformanceOptimizer
                 string driveRoot = Path.GetPathRoot(sandbox);
                 bool safeDeletion = string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(sandbox)) &&
                     !string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(driveRoot)) &&
-                    !string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(Environment.GetFolderPath(Environment.SpecialFolder.Windows)));
-                results.Add(Result("Exclusão protegida", safeDeletion, "Raiz, Windows e programas permanecem bloqueados; itens comuns podem ir para a Lixeira."));
+                    !string.IsNullOrWhiteSpace(StorageDeletion.GetBlockReason(Environment.GetFolderPath(Environment.SpecialFolder.Windows))) &&
+                    StorageDeletion.IsCriticalRootPath(Path.Combine(driveRoot, "Recovery"), driveRoot) &&
+                    StorageDeletion.IsCriticalRootPath(Path.Combine(driveRoot, "System Volume Information", "tracking.log"), driveRoot);
+                results.Add(Result("Exclusão protegida", safeDeletion, "Raiz, Windows, recuperação e dados de sistema permanecem bloqueados; itens comuns podem ir para a Lixeira."));
 
                 progress.Report("Testando persistência isolada...");
                 string jsonPath = Path.Combine(sandbox, "state.json");

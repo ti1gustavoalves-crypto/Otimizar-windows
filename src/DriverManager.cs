@@ -90,7 +90,7 @@ namespace CodexPerformanceOptimizer
 
         public static string InstallUpdates(IEnumerable<string> updateIds, CancellationToken token, IProgress<string> progress)
         {
-            if (!Optimizer.IsAdministrator()) return "A atualização de drivers exige privilégios de administrador. Use 'Executar como admin'.";
+            if (!Optimizer.IsAdministrator()) return "A atualização de drivers exige privilégios de administrador. Reabra o Otimizador como administrador.";
             string[] ids = (updateIds ?? Enumerable.Empty<string>()).Where(IsValidUpdateId).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (ids.Length == 0) return "Nenhuma atualização de driver válida foi selecionada.";
 
@@ -562,7 +562,7 @@ namespace CodexPerformanceOptimizer
 
         private static string DisplayDriverDate(DateTime value)
         {
-            return value.Year < 2010 ? "Data padrão" : value.ToString("dd/MM/yyyy", CultureInfo.CurrentCulture);
+            return value.Year < 2010 ? "Não informada" : value.ToString("dd/MM/yyyy", CultureInfo.CurrentCulture);
         }
     }
 }

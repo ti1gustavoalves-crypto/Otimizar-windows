@@ -4,6 +4,8 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e sete áreas organizadas para reduzir cliques durante a manutenção técnica.
 
+A versão 4.3.1 revisa a responsividade das sete áreas, corrige a central de Atualizações e reforça a proteção de locais críticos na análise de armazenamento.
+
 ## Recursos principais
 
 - Monitoramento em tempo real de CPU, memória, armazenamento e processos.

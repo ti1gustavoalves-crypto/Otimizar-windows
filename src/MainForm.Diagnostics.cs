@@ -16,7 +16,7 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Diagnóstico");
             page.Controls.Add(new Label { Text = "Diagnóstico do sistema", Location = new Point(20, 17), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 13f) });
-            _diagnosticStatus = new Label { Text = "Temperaturas, discos, inicialização e estabilidade", Location = new Point(210, 20), Size = new Size(350, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
+            _diagnosticStatus = new Label { Text = "• Temperaturas, discos, inicialização e estabilidade", Location = new Point(230, 20), Size = new Size(330, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
             var benchmark = ButtonFactory("Benchmark", 570, 10, 115, Theme.Secondary);
             var energy = ButtonFactory("Energia", 695, 10, 115, Theme.Secondary);
             var details = ButtonFactory("Relatório técnico", 820, 10, 155, Theme.Primary);
@@ -36,6 +36,7 @@ namespace CodexPerformanceOptimizer
                 Padding = new Padding(9),
                 WrapContents = true
             };
+            _diagnosticCards.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             page.Controls.Add(new Label { Text = "Histórico de processos — últimos 5 minutos", Location = new Point(20, 405), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 9f) });
             _processHistoryGrid = Grid(20, 432, 1000, 160);
             _processHistoryGrid.Columns.Add("Name", "Aplicativo");
@@ -49,6 +50,7 @@ namespace CodexPerformanceOptimizer
             _processHistoryGrid.Columns.Add("Samples", "Amostras");
             _processHistoryGrid.Columns[4].Width = 100;
             _processHistoryGrid.ReadOnly = true;
+            _processHistoryGrid.Anchor = AnchorStyles.None;
             page.Controls.Add(_diagnosticStatus);
             page.Controls.Add(benchmark);
             page.Controls.Add(energy);
@@ -56,6 +58,18 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(refresh);
             page.Controls.Add(_diagnosticCards);
             page.Controls.Add(_processHistoryGrid);
+            page.Resize += delegate
+            {
+                int right = page.ClientSize.Width - 20;
+                refresh.Left = right - refresh.Width;
+                details.Left = refresh.Left - 10 - details.Width;
+                energy.Left = details.Left - 10 - energy.Width;
+                benchmark.Left = energy.Left - 10 - benchmark.Width;
+                _diagnosticStatus.Size = new Size(Math.Max(250, benchmark.Left - _diagnosticStatus.Left - 10), 24);
+                _diagnosticCards.Size = new Size(Math.Max(700, page.ClientSize.Width - 40), 330);
+                _processHistoryGrid.Location = new Point(20, 432);
+                _processHistoryGrid.Size = new Size(Math.Max(700, page.ClientSize.Width - 40), Math.Max(150, page.ClientSize.Height - _processHistoryGrid.Top - 20));
+            };
             page.Enter += async delegate
             {
                 if (_diagnosticsLoaded) return;
@@ -83,7 +97,7 @@ namespace CodexPerformanceOptimizer
             UpdateProcessHistoryGrid();
             int warnings = snapshot.Recommendations.Count(item => item.Severity == "Alta") + snapshot.Disks.Count(item => item.Warning);
             if (snapshot.Stability.PendingRestart || snapshot.Stability.UnexpectedShutdowns > 0 || snapshot.Stability.SystemFailures > 0) warnings++;
-            _diagnosticStatus.Text = warnings == 0 ? "Nenhum alerta importante" : warnings + (warnings == 1 ? " alerta encontrado" : " alertas encontrados");
+            _diagnosticStatus.Text = warnings == 0 ? "• Nenhum alerta importante" : "• " + warnings + (warnings == 1 ? " alerta encontrado" : " alertas encontrados");
         }
 
         private async Task StartBenchmark()
@@ -148,7 +162,7 @@ namespace CodexPerformanceOptimizer
 
             bool diskWarning = snapshot.Disks.Any(item => item.Warning);
             string diskMain = snapshot.Disks.Count == 0 ? "Nenhum dado disponível" : snapshot.Disks.Count + (snapshot.Disks.Count == 1 ? " dispositivo" : " dispositivos") + "  •  " + (diskWarning ? "atenção" : "sem alertas");
-            string diskDetail = snapshot.Disks.Count == 0 ? snapshot.TrimStatus : snapshot.Disks[0].Name + "  •  " + snapshot.Disks[0].Health + "  •  " + snapshot.Disks[0].Life + "  •  " + snapshot.TrimStatus;
+            string diskDetail = snapshot.Disks.Count == 0 ? snapshot.TrimStatus : snapshot.Disks[0].Name + Environment.NewLine + snapshot.TrimStatus;
             _diagnosticCards.Controls.Add(DiagnosticCard("SAÚDE DOS DISCOS", diskMain, diskDetail, diskWarning, delegate { _tabs.SelectedIndex = (int)AppSection.Storage; }));
 
             StartupMeasurement boot = snapshot.Startup.FirstOrDefault(item => item.Name == "Inicialização do Windows");
@@ -158,12 +172,13 @@ namespace CodexPerformanceOptimizer
             _diagnosticCards.Controls.Add(DiagnosticCard("INICIALIZAÇÃO MEDIDA", bootMain, bootDetail, boot != null && boot.DurationMilliseconds > 60000, delegate { _tabs.SelectedIndex = (int)AppSection.Startup; }));
 
             StabilityDiagnostic stability = snapshot.Stability;
-            string stabilityMain = stability.UnexpectedShutdowns + " desligamentos inesperados  •  " + stability.SystemFailures + " falhas";
+            string stabilityMain = stability.UnexpectedShutdowns + " desligamentos  •  " + stability.SystemFailures + " falhas";
             string stabilityDetail = "Ligado há " + Math.Floor(stability.Uptime.TotalDays).ToString("N0", CultureInfo.CurrentCulture) + " dia(s)" + (stability.PendingRestart ? "  •  Reinicialização pendente" : "  •  Sem reinicialização pendente");
             _diagnosticCards.Controls.Add(DiagnosticCard("ESTABILIDADE — 30 DIAS", stabilityMain, stabilityDetail, stability.UnexpectedShutdowns > 0 || stability.SystemFailures > 0, null));
 
-            string recommendationMain = string.Join("  •  ", snapshot.Recommendations.Take(2).Select(item => item.Title).ToArray());
-            string recommendationDetail = string.Join("  |  ", snapshot.Recommendations.Take(2).Select(item => item.Detail).ToArray());
+            RecommendationItem firstRecommendation = snapshot.Recommendations.FirstOrDefault();
+            string recommendationMain = firstRecommendation == null ? "Nenhuma ação urgente" : firstRecommendation.Title;
+            string recommendationDetail = firstRecommendation == null ? "Os indicadores disponíveis estão dentro dos limites definidos." : firstRecommendation.Detail;
             _diagnosticCards.Controls.Add(DiagnosticCard("RECOMENDAÇÕES", recommendationMain, recommendationDetail, snapshot.Recommendations.Any(item => item.Severity == "Alta"), null));
             for (int i = 0; i < _diagnosticCards.Controls.Count; i++)
                 _diagnosticCards.SetFlowBreak(_diagnosticCards.Controls[i], (i + 1) % 3 == 0);
@@ -175,7 +190,7 @@ namespace CodexPerformanceOptimizer
             var card = DashboardCard(0, 0, 306, 137);
             card.Margin = new Padding(5);
             card.Controls.Add(new Label { Text = title, Location = new Point(16, 13), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.3f) });
-            card.Controls.Add(new Label { Text = main, Location = new Point(15, 39), Size = new Size(274, 35), AutoEllipsis = true, ForeColor = warning ? Theme.Warning : Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
+            card.Controls.Add(new Label { Text = main, Location = new Point(15, 39), Size = new Size(274, 38), AutoEllipsis = true, ForeColor = warning ? Theme.Warning : Theme.Text, Font = new Font("Segoe UI Semibold", 11f) });
             card.Controls.Add(new Label { Text = detail, Location = new Point(16, 80), Size = new Size(274, 42), AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
             if (action != null) AttachClick(card, action);
             return card;

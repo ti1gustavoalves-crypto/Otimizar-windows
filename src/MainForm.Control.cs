@@ -82,6 +82,13 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(automatic);
             page.Controls.Add(recovery);
             page.Controls.Add(application);
+            page.Resize += delegate
+            {
+                int left = Math.Max(20, (page.ClientSize.Width - 1016) / 2);
+                automatic.Left = left;
+                recovery.Left = left + 510;
+                application.Left = left;
+            };
             return page;
         }
     }
