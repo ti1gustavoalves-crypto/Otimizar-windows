@@ -77,7 +77,7 @@ Copy-Item -LiteralPath $notes -Destination (Join-Path $output 'release-notes.txt
 Copy-Item -LiteralPath $localManifest -Destination (Join-Path $output 'update-manifest.json') -Force
 Copy-Item -LiteralPath $channel -Destination (Join-Path $output 'release-channel.json') -Force
 
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" "/win32icon:$iconIco" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll "/resource:$app,OptimizerBinary" "/resource:$notes,ReleaseNotes" "/resource:$localManifest,UpdateManifest" "/resource:$channel,ReleaseChannel" "/out:$installer" (Join-Path $PSScriptRoot 'Installer.cs')
+& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" "/win32icon:$iconIco" /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll "/resource:$app,OptimizerBinary" "/resource:$notes,ReleaseNotes" "/resource:$localManifest,UpdateManifest" "/resource:$channel,ReleaseChannel" "/out:$installer" (Join-Path $PSScriptRoot 'NativeWindowTheme.cs') (Join-Path $PSScriptRoot 'Installer.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o instalador.' }
 $installerSigned = Sign-Artifact $installer
 

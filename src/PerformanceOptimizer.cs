@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("4.1.0.0")]
-[assembly: AssemblyFileVersion("4.1.0.0")]
+[assembly: AssemblyVersion("4.1.1.0")]
+[assembly: AssemblyFileVersion("4.1.1.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer
@@ -79,6 +79,7 @@ namespace CodexPerformanceOptimizer
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
 
             Controls.Add(new Label
             {

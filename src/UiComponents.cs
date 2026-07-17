@@ -237,6 +237,7 @@ namespace CodexPerformanceOptimizer
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
             Controls.Add(new Label { Text = "Arquivos temporários e caches", Location = new Point(24, 20), AutoSize = true, Font = new Font("Segoe UI Semibold", 14f) });
             Controls.Add(new Label { Text = "Cookies, senhas, documentos e arquivos pessoais não são incluídos.", Location = new Point(27, 54), AutoSize = true, ForeColor = Theme.Muted });
             _items = new CheckedListBox { Location = new Point(26, 88), Size = new Size(566, 260), BackColor = Theme.SurfaceDark, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, CheckOnClick = true };

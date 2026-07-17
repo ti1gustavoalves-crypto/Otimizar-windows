@@ -340,6 +340,7 @@ namespace CodexPerformanceOptimizer
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
             AutoScaleMode = AutoScaleMode.Dpi;
 
             Controls.Add(new Label { Text = "Histórico persistente", Location = new Point(24, 18), AutoSize = true, Font = new Font("Segoe UI Semibold", 15f), ForeColor = Theme.Text });

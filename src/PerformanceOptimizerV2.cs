@@ -110,6 +110,7 @@ namespace CodexPerformanceOptimizer
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
             AutoScaleMode = AutoScaleMode.Dpi;
             AccessibleName = "Otimizador de Desempenho " + _displayVersion;
             try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
@@ -1539,6 +1540,7 @@ namespace CodexPerformanceOptimizer
         {
             using (var dialog = new Form { Text = title, StartPosition = FormStartPosition.CenterParent, Size = new Size(720, 520), MinimumSize = new Size(560, 400), BackColor = Theme.Background, ForeColor = Theme.Text, Font = new Font("Segoe UI", 9.5f) })
             {
+                NativeWindowTheme.Apply(dialog);
                 var text = new TextBox { Text = content, Location = new Point(20, 20), Size = new Size(664, 400), Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, BackColor = Theme.SurfaceDark, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle };
                 var close = ButtonFactory("Fechar", 584, 432, 100, Theme.Secondary);
                 close.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;

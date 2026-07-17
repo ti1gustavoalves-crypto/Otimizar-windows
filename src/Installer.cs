@@ -13,8 +13,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("Instala ou atualiza o Otimizador de Desempenho para o usuário atual.")]
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
-[assembly: AssemblyVersion("4.1.0.0")]
-[assembly: AssemblyFileVersion("4.1.0.0")]
+[assembly: AssemblyVersion("4.1.1.0")]
+[assembly: AssemblyFileVersion("4.1.1.0")]
 
 namespace CodexPerformanceOptimizerInstaller
 {
@@ -299,6 +299,7 @@ namespace CodexPerformanceOptimizerInstaller
             BackColor = Color.FromArgb(14, 18, 24);
             ForeColor = Color.FromArgb(241, 245, 249);
             Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
             AutoScaleMode = AutoScaleMode.Dpi;
             AccessibleName = "Instalador do Otimizador " + displayVersion;
             try

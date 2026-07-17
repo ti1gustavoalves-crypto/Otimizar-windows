@@ -763,6 +763,7 @@ namespace CodexPerformanceOptimizer
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
 
             Controls.Add(new Label { Text = "Duplicados confirmados por SHA-256", Location = new Point(22, 18), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 14f) });
             Controls.Add(new Label { Text = "Um arquivo de cada grupo é preservado. Os selecionados irão para uma quarentena reversível.", Location = new Point(24, 52), AutoSize = true, ForeColor = Theme.Muted });
