@@ -11,7 +11,7 @@ namespace CodexPerformanceOptimizer
         private TabPage BuildUpdatesTab()
         {
             var page = NewPage("Atualizações");
-            page.AutoScroll = false;
+            page.AutoScroll = true;
             var driversButton = ButtonFactory("Windows e drivers", 20, 12, 170, Theme.Primary);
             var programsButton = ButtonFactory("Aplicativos", 202, 12, 135, Theme.Secondary);
             var content = new Panel { Location = new Point(0, 58), BackColor = Theme.Background, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };

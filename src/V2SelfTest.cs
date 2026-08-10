@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -9,6 +10,7 @@ namespace CodexPerformanceOptimizer
 {
     internal static class V2SelfTest
     {
+        [STAThread]
         public static int Main()
         {
             try
@@ -90,6 +92,20 @@ namespace CodexPerformanceOptimizer
                 int[] testedDpis = { 96, 120, 144, 168, 192 };
                 if (testedDpis.Any(dpi => !string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1260, 760, dpi))) || string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1100, 700, 96))) throw new InvalidOperationException("Política de responsividade falhou.");
                 if (!AppPaths.IsPortableConfiguration("OtimizadorDeDesempenho-Portatil.exe", new string[0], false) || !AppPaths.IsPortableConfiguration("Otimizador.exe", new[] { "--portable" }, false) || AppPaths.IsPortableConfiguration("Otimizador.exe", new string[0], false)) throw new InvalidOperationException("Detecção do modo portátil falhou.");
+                HealthAssessment healthy = SystemHealthEngine.Assess(new SystemMetrics { TotalRamGb = 16, FreeRamGb = 8, TotalDiskGb = 500, FreeDiskGb = 200, FreeDiskPercent = 40, CpuUsagePercent = 20 }, null, new ProcessActivity[0], 0, 0);
+                HealthAssessment limited = SystemHealthEngine.Assess(new SystemMetrics { TotalRamGb = 16, FreeRamGb = 1, TotalDiskGb = 500, FreeDiskGb = 20, FreeDiskPercent = 4, CpuUsagePercent = 92 }, null, new[] { new ProcessActivity { Name = "Browser", CpuPercent = 80, WorkingSetBytes = 2147483648 } }, 4, 3);
+                BottleneckCause cause = BottleneckAnalyzer.Analyze(new SystemMetrics { TotalRamGb = 16, FreeRamGb = 1, CpuUsagePercent = 92, FreeDiskPercent = 4 }, null, new[] { new ProcessActivity { Name = "Browser", CpuPercent = 80, WorkingSetBytes = 2147483648 } });
+                if (healthy.Score <= limited.Score || limited.Level != "Crítica" || cause.Title.IndexOf("Browser", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Saúde e causa provável não priorizaram os gargalos corretamente.");
+                AnalysisCache.Set("self-test", "A", "valor");
+                string cachedValue;
+                if (!AnalysisCache.TryGet("self-test", "A", TimeSpan.FromMinutes(1), out cachedValue) || cachedValue != "valor" || AnalysisCache.TryGet("self-test", "B", TimeSpan.FromMinutes(1), out cachedValue)) throw new InvalidOperationException("Cache inteligente não respeitou validade e impressão digital.");
+                AnalysisCache.Invalidate("self-test");
+                using (var form = new MainFormV2())
+                {
+                    string minimumLayout = form.ValidateInterfaceForTesting(new Size(1260, 760));
+                    string wideLayout = form.ValidateInterfaceForTesting(new Size(1600, 900));
+                    if (!string.IsNullOrEmpty(minimumLayout) || !string.IsNullOrEmpty(wideLayout)) throw new InvalidOperationException("Validação automatizada da interface falhou. " + minimumLayout + " " + wideLayout);
+                }
                 Console.WriteLine("CPU em tempo real: " + sampledCpu.Value.ToString("N0") + "%");
                 Console.WriteLine("Memória em tempo real: " + sampledFreeRam.ToString("N1") + " GB livres");
                 Console.WriteLine("Processos em destaque: " + processes.Count);
@@ -109,6 +125,9 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Manutenção guiada: " + guidedPlan.SelectedCount + " ações");
                 Console.WriteLine("Layouts: 100%, 125%, 150%, 175% e 200% OK");
                 Console.WriteLine("Modo portátil: OK");
+                Console.WriteLine("Saúde e causa provável: " + healthy.Score + " → " + limited.Score + " OK");
+                Console.WriteLine("Cache inteligente: OK");
+                Console.WriteLine("Interface real em 1260x760 e 1600x900: OK");
                 Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }

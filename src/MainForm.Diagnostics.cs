@@ -87,7 +87,7 @@ namespace CodexPerformanceOptimizer
             await RunWork("Lendo diagnósticos...", delegate(CancellationToken t, IProgress<string> p)
             {
                 p.Report("Lendo sensores e saúde dos discos...");
-                snapshot = AdvancedEngine.ReadDiagnostics();
+                snapshot = CachedAnalysis.ReadDiagnostics(force);
                 return DiagnosticReport(snapshot);
             }, false);
             if (snapshot == null) { _diagnosticStatus.Text = "Não foi possível concluir o diagnóstico"; return; }
@@ -176,10 +176,8 @@ namespace CodexPerformanceOptimizer
             string stabilityDetail = "Ligado há " + Math.Floor(stability.Uptime.TotalDays).ToString("N0", CultureInfo.CurrentCulture) + " dia(s)" + (stability.PendingRestart ? "  •  Reinicialização pendente" : "  •  Sem reinicialização pendente");
             _diagnosticCards.Controls.Add(DiagnosticCard("ESTABILIDADE — 30 DIAS", stabilityMain, stabilityDetail, stability.UnexpectedShutdowns > 0 || stability.SystemFailures > 0, null));
 
-            RecommendationItem firstRecommendation = snapshot.Recommendations.FirstOrDefault();
-            string recommendationMain = firstRecommendation == null ? "Nenhuma ação urgente" : firstRecommendation.Title;
-            string recommendationDetail = firstRecommendation == null ? "Os indicadores disponíveis estão dentro dos limites definidos." : firstRecommendation.Detail;
-            _diagnosticCards.Controls.Add(DiagnosticCard("RECOMENDAÇÕES", recommendationMain, recommendationDetail, snapshot.Recommendations.Any(item => item.Severity == "Alta"), null));
+            BottleneckCause cause = BottleneckAnalyzer.Analyze(_liveMetrics, snapshot, _lastProcessActivities);
+            _diagnosticCards.Controls.Add(DiagnosticCard("CAUSA PROVÁVEL", cause.Title, cause.Detail, cause.Warning, null));
             for (int i = 0; i < _diagnosticCards.Controls.Count; i++)
                 _diagnosticCards.SetFlowBreak(_diagnosticCards.Controls[i], (i + 1) % 3 == 0);
             _diagnosticCards.ResumeLayout();

@@ -81,12 +81,15 @@ namespace CodexPerformanceOptimizer
             _runPlanButton.Click += async delegate { await ExecuteMaintenancePlanAsync(); };
             var selectSafe = ButtonFactory("Selecionar recomendadas", 566, 319, 198, Theme.Secondary);
             selectSafe.Click += delegate { SelectRecommendedPlanItems(); };
+            _fullServiceButton = ButtonFactory("Atendimento completo", 316, 319, 238, Theme.Primary);
+            _fullServiceButton.Click += async delegate { await ExecuteCompleteTechnicalServiceAsync(false); };
 
             service.Controls.Add(_serviceProfile);
             service.Controls.Add(_planSummary);
             service.Controls.Add(_comparisonSummary);
             service.Controls.Add(_elevatePlanButton);
             service.Controls.Add(_issueGrid);
+            service.Controls.Add(_fullServiceButton);
             service.Controls.Add(selectSafe);
             service.Controls.Add(_runPlanButton);
 
@@ -178,6 +181,11 @@ namespace CodexPerformanceOptimizer
             _runPlanButton.Enabled = selected > 0 && !needsElevation;
             SetButtonColor(_runPlanButton, needsElevation ? Theme.Secondary : Theme.Success);
             _runPlanButton.Text = needsElevation ? "Requer administrador" : selected == 0 ? "Selecione uma ação" : "Executar " + selected + (selected == 1 ? " ação" : " ações");
+            if (_fullServiceButton != null)
+            {
+                _fullServiceButton.Enabled = !_fullServiceRunning;
+                _fullServiceButton.Text = _fullServiceRunning ? "Atendimento em andamento..." : "Atendimento completo";
+            }
         }
 
         private async Task ExecuteMaintenancePlanAsync()
@@ -197,12 +205,62 @@ namespace CodexPerformanceOptimizer
             _comparisonSummary.Text = ComparisonSummary();
         }
 
-        private void RequestPlanElevation()
+        private async Task ExecuteCompleteTechnicalServiceAsync(bool alreadyConfirmed)
+        {
+            if (_fullServiceRunning || _maintenancePlan == null) return;
+            SyncPlanSelection();
+            if (_maintenancePlan.RequiresAdministrator && !Optimizer.IsAdministrator())
+            {
+                RequestPlanElevation(true);
+                return;
+            }
+            if (!alreadyConfirmed)
+            {
+                string message = "Executar o atendimento completo?\r\n\r\nO fluxo registrará o estado inicial, aplicará as ações selecionadas, consultará atualizações e verificará o resultado final. Drivers e programas não serão instalados sem uma nova confirmação.";
+                if (MessageBox.Show(this, message, "Atendimento técnico completo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            }
+
+            _fullServiceRunning = true;
+            UpdatePlanSummary();
+            TechnicalServiceResult service = null;
+            string operation = await RunWork("Iniciando atendimento técnico...", delegate(CancellationToken token, IProgress<string> progress)
+            {
+                service = TechnicalServiceWorkflow.Execute(_maintenancePlan, _lastProcessActivities, token, progress);
+                return service.Report;
+            });
+            _fullServiceRunning = false;
+            UpdatePlanSummary();
+            if (service == null)
+            {
+                _planSummary.Text = FirstResultLine(operation, "Atendimento não concluído");
+                return;
+            }
+
+            PopulateDriverUpdates(service.DriverUpdates);
+            string wingetVersion = await Task.Run(delegate { return ProgramUpdater.ReadVersion(); });
+            PopulateProgramUpdates(service.ProgramUpdates, wingetVersion);
+            _liveMetrics = V2Engine.ReadMetrics();
+            _diagnosticSnapshot = CachedAnalysis.ReadDiagnostics(false);
+            _diagnosticsLoaded = true;
+            UpdateMetricCards(_liveMetrics);
+            PopulateDiagnostics(_diagnosticSnapshot);
+            await RefreshMaintenancePlanAsync();
+            _comparisonSummary.Text = ComparisonSummary();
+            _planSummary.Text = "Atendimento concluído • saúde " + service.BeforeHealth.Score + " → " + service.AfterHealth.Score + "/100";
+
+            int pending = service.DriverUpdates.Count + service.ProgramUpdates.Count;
+            string summary = "Atendimento concluído.\r\n\r\nSaúde: " + service.BeforeHealth.Score + " → " + service.AfterHealth.Score + "/100\r\nCausa provável: " + service.Cause.Title + "\r\nAtualizações para revisar: " + pending;
+            if (pending > 0 && MessageBox.Show(this, summary + "\r\n\r\nAbrir a área de Atualizações?", "Resultado do atendimento", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                _tabs.SelectedIndex = (int)AppSection.Updates;
+            else if (pending == 0) MessageBox.Show(this, summary, "Resultado do atendimento", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void RequestPlanElevation(bool fullService = false)
         {
             if (Optimizer.IsAdministrator()) return;
             int profile = _serviceProfile == null ? 0 : _serviceProfile.SelectedIndex;
             if (MessageBox.Show(this, "As ações selecionadas precisam de administrador. Reabrir uma única vez com o plano preservado?", "Permissão administrativa", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            string arguments = "--wait-for-instance --guided " + profile + (AppPaths.IsPortable ? " --portable" : string.Empty);
+            string arguments = "--wait-for-instance --guided " + profile + (fullService ? " --full-service" : string.Empty) + (AppPaths.IsPortable ? " --portable" : string.Empty);
             try
             {
                 Process.Start(new ProcessStartInfo(Application.ExecutablePath, arguments) { UseShellExecute = true, Verb = "runas" });

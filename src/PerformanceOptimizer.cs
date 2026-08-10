@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("4.4.1.0")]
-[assembly: AssemblyFileVersion("4.4.1.0")]
+[assembly: AssemblyVersion("4.5.0.0")]
+[assembly: AssemblyFileVersion("4.5.0.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer
@@ -49,7 +49,7 @@ namespace CodexPerformanceOptimizer
                     MessageBox.Show("O Otimizador já está aberto.", "Otimizador de Desempenho", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                try { Application.Run(new MainFormV2(ReadGuidedProfile(args))); }
+                try { Application.Run(new MainFormV2(ReadGuidedProfile(args), HasArgument(args, "--full-service"))); }
                 finally { instance.ReleaseMutex(); }
             }
         }

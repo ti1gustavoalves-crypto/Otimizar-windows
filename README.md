@@ -4,12 +4,15 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e sete áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 4.4.1 acelera a atualização do aplicativo com cache verificado, progresso real, download e SHA-256 em uma única passagem e reinicialização automática.
+A versão 4.5.0 concentra o atendimento técnico em um único fluxo, apresenta a saúde do computador e a causa provável de lentidão, reutiliza análises recentes e testa a interface real durante a compilação.
 
 ## Recursos principais
 
 - Monitoramento em tempo real de CPU, memória, armazenamento e processos.
+- Índice de saúde de 0 a 100 calculado a partir de recursos, estabilidade, armazenamento, inicialização e atualizações pendentes.
+- Identificação da causa mais provável de lentidão com base nas métricas atuais e no histórico disponível.
 - Atendimento guiado para manutenção preventiva, PC lento, pouco espaço e inicialização lenta.
+- Atendimento técnico completo em quatro etapas: diagnóstico inicial, correções selecionadas, busca de atualizações e verificação final.
 - Central de pendências com ações críticas, recomendadas, opcionais e informativas.
 - Elevação administrativa antecipada e única para o conjunto selecionado.
 - Benchmark antes e depois, concluído após reiniciar o Windows.
@@ -28,6 +31,7 @@ A versão 4.4.1 acelera a atualização do aplicativo com cache verificado, prog
 - Acesso direto ao Sensor de Armazenamento para manutenção automática de espaço.
 - Relatório técnico consolidado com recursos, diagnóstico, hardware e atualizações disponíveis.
 - Pesquisa e filtros para inicialização, armazenamento, drivers e programas.
+- Cache inteligente para hardware, diagnósticos, armazenamento, drivers e programas, invalidado após alterações relevantes.
 - Perfis de energia, tema escuro, efeitos visuais e aplicativos em segundo plano.
 - Recuperação centralizada das configurações alteradas, restauração por seção e quarentena reversível.
 - Quarentena reversível para arquivos duplicados.
@@ -67,6 +71,8 @@ O processo compila a suíte de autotestes, exige aprovação de todos os testes 
 - `outputs/OtimizadorDeDesempenho-Portatil.exe`
 - `outputs/InstalarOtimizadorDeDesempenho.exe`
 - manifestos, notas e resumo SHA-256 da versão
+
+Os testes incluem regras de saúde e diagnóstico, validade do cache e validação da interface real em diferentes tamanhos de janela.
 
 Os artefatos gerados não são versionados.
 

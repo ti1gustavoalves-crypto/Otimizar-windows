@@ -118,10 +118,15 @@ namespace CodexPerformanceOptimizer
         private Button _elevatePlanButton;
         private MaintenancePlan _maintenancePlan;
         private bool _planLoading;
+        private HealthAssessment _healthAssessment;
+        private Button _fullServiceButton;
+        private bool _fullServiceRunning;
+        private readonly bool _startFullService;
 
-        public MainFormV2(int? initialServiceProfile = null)
+        public MainFormV2(int? initialServiceProfile = null, bool startFullService = false)
         {
             _initialServiceProfile = initialServiceProfile;
+            _startFullService = startFullService;
             Version version = GetType().Assembly.GetName().Version;
             _displayVersion = version.Major + "." + version.Minor;
             Text = "Otimizador de Desempenho " + _displayVersion;
@@ -196,6 +201,7 @@ namespace CodexPerformanceOptimizer
                 await RefreshAudit();
                 await TryCompletePendingBenchmark();
                 BeginAutomaticUpdateCheck();
+                if (_startFullService && !IsDisposed) await ExecuteCompleteTechnicalServiceAsync(true);
             };
             FormClosed += delegate
             {
@@ -697,6 +703,11 @@ namespace CodexPerformanceOptimizer
 
         private async Task SearchProgramUpdates()
         {
+            await SearchProgramUpdates(true);
+        }
+
+        private async Task SearchProgramUpdates(bool force)
+        {
             bool available = await Task.Run(delegate { return ProgramUpdater.IsAvailable(); });
             if (!available)
             {
@@ -707,7 +718,7 @@ namespace CodexPerformanceOptimizer
             List<ProgramUpdate> found = null;
             string result = await RunWork("Buscando atualizações de programas...", delegate(CancellationToken token, IProgress<string> progress)
             {
-                found = ProgramUpdater.SearchUpdates(token, progress);
+                found = CachedAnalysis.SearchProgramUpdates(force, token, progress);
                 return found.Count == 0 ? "Todos os programas consultados estão atualizados." : found.Count + " atualizações de programas encontradas.";
             }, false);
             if (found == null)
@@ -716,12 +727,17 @@ namespace CodexPerformanceOptimizer
                 MessageBox.Show(this, result, "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            _programUpdates = found;
+            string version = await Task.Run(delegate { return ProgramUpdater.ReadVersion(); });
+            PopulateProgramUpdates(found, version);
+        }
+
+        private void PopulateProgramUpdates(List<ProgramUpdate> found, string wingetVersion)
+        {
+            _programUpdates = found ?? new List<ProgramUpdate>();
             _programUpdatesLoaded = true;
             ApplyProgramUpdateFilter();
-            string version = await Task.Run(delegate { return ProgramUpdater.ReadVersion(); });
-            _programUpdateSummary.Text = found.Count == 0 ? "Seus programas estão atualizados" : found.Count + (found.Count == 1 ? " atualização disponível" : " atualizações disponíveis");
-            if (!string.IsNullOrEmpty(version)) _programUpdateSummary.Text += " • WinGet " + version.TrimStart('v', 'V');
+            _programUpdateSummary.Text = _programUpdates.Count == 0 ? "Seus programas estão atualizados" : _programUpdates.Count + (_programUpdates.Count == 1 ? " atualização disponível" : " atualizações disponíveis");
+            if (!string.IsNullOrEmpty(wingetVersion)) _programUpdateSummary.Text += " • WinGet " + wingetVersion.TrimStart('v', 'V');
         }
 
         private void ApplyProgramUpdateFilter()
@@ -767,7 +783,8 @@ namespace CodexPerformanceOptimizer
             string result = await RunWork("Atualizando programas...", delegate(CancellationToken token, IProgress<string> progress) { return ProgramUpdater.InstallUpdates(ids, token, progress); });
             ShowTextDialog("Resultado das atualizações", result);
             _programUpdatesLoaded = false;
-            await SearchProgramUpdates();
+            AnalysisCache.Invalidate("program-updates");
+            await SearchProgramUpdates(true);
         }
 
         private async Task LoadDriverInventoryAsync(bool force)
@@ -775,7 +792,7 @@ namespace CodexPerformanceOptimizer
             if (_driverInventoryLoaded && !force) return;
             _driverInventoryLoaded = true;
             _driverInventorySummary.Text = "Drivers instalados • lendo vídeo, BIOS, chipset e dispositivos...";
-            List<DriverInventoryItem> items = await Task.Run(delegate { return DriverManager.ReadInstalledDrivers(); });
+            List<DriverInventoryItem> items = await Task.Run(delegate { return CachedAnalysis.ReadDriverInventory(force); });
             if (IsDisposed) return;
             _driverInventoryItems = items;
             ApplyDriverInventoryFilter();
@@ -806,10 +823,15 @@ namespace CodexPerformanceOptimizer
 
         private async Task SearchDriverUpdates()
         {
+            await SearchDriverUpdates(true);
+        }
+
+        private async Task SearchDriverUpdates(bool force)
+        {
             List<DriverUpdate> found = null;
             string result = await RunWork("Buscando drivers no Windows Update...", delegate(CancellationToken token, IProgress<string> progress)
             {
-                found = DriverManager.SearchUpdates(token, progress);
+                found = CachedAnalysis.SearchDriverUpdates(force, token, progress);
                 return DriverManager.BuildSearchReport(found);
             }, false);
             if (found == null)
@@ -817,16 +839,21 @@ namespace CodexPerformanceOptimizer
                 MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            _driverUpdates = found;
+            PopulateDriverUpdates(found);
+        }
+
+        private void PopulateDriverUpdates(List<DriverUpdate> found)
+        {
+            _driverUpdates = found ?? new List<DriverUpdate>();
             _driverGrid.Rows.Clear();
-            foreach (DriverUpdate update in found)
+            foreach (DriverUpdate update in _driverUpdates)
             {
                 int index = _driverGrid.Rows.Add(update.Selected, update.Classification, update.Title, update.Comparison, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.SupportName, "Catálogo", update.UpdateId, update.SupportUrl, update.CatalogUrl, update.IsFirmware);
                 if (update.IsOlderRisk) _driverGrid.Rows[index].DefaultCellStyle.ForeColor = Theme.Warning;
             }
-            int recommended = found.Count(delegate(DriverUpdate item) { return item.Classification == "Recomendada" || item.Classification == "Obrigatória"; });
-            int firmware = found.Count(delegate(DriverUpdate item) { return item.IsFirmware; });
-            _driverSummary.Text = found.Count == 0 ? "Seus drivers estão atualizados" : found.Count + " atualizações • " + recommended + " recomendadas" + (firmware == 0 ? string.Empty : " • " + firmware + " firmware/BIOS");
+            int recommended = _driverUpdates.Count(delegate(DriverUpdate item) { return item.Classification == "Recomendada" || item.Classification == "Obrigatória"; });
+            int firmware = _driverUpdates.Count(delegate(DriverUpdate item) { return item.IsFirmware; });
+            _driverSummary.Text = _driverUpdates.Count == 0 ? "Seus drivers estão atualizados" : _driverUpdates.Count + " atualizações • " + recommended + " recomendadas" + (firmware == 0 ? string.Empty : " • " + firmware + " firmware/BIOS");
         }
 
         private async Task InstallSelectedDrivers()
@@ -859,8 +886,9 @@ namespace CodexPerformanceOptimizer
             if (MessageBox.Show(this, confirmation, "Atualizar drivers", MessageBoxButtons.YesNo, older ? MessageBoxIcon.Warning : MessageBoxIcon.Question) != DialogResult.Yes) return;
             string result = await RunWork("Atualizando drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.InstallUpdates(ids, token, progress); });
             MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, result.IndexOf("Falha", StringComparison.OrdinalIgnoreCase) >= 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            CachedAnalysis.InvalidateDrivers();
             await LoadDriverInventoryAsync(true);
-            await SearchDriverUpdates();
+            await SearchDriverUpdates(true);
         }
 
         private async Task CreateDriverBackup()
@@ -884,6 +912,7 @@ namespace CodexPerformanceOptimizer
             if (MessageBox.Show(this, "Reaplicar o backup de drivers mais recente? O Windows manterá o pacote com melhor classificação para cada dispositivo.", "Restaurar drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             string result = await RunWork("Restaurando drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.RestoreLatestDriverBackup(token, progress); });
             MessageBox.Show(this, result, "Restaurar drivers", MessageBoxButtons.OK, result.IndexOf("não concluído", StringComparison.OrdinalIgnoreCase) >= 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            CachedAnalysis.InvalidateDrivers();
             await LoadDriverInventoryAsync(true);
         }
 
@@ -972,26 +1001,11 @@ namespace CodexPerformanceOptimizer
             _cpuChart.AddValue(m.CpuUsagePercent);
 
             _environmentBadge.Text = (_managedEnvironment ? "Corporativo" : "Pessoal") + "  •  " + (Optimizer.IsAdministrator() ? "Administrador" : "Acesso padrão") + "  •  " + (AppPaths.IsPortable ? "Portátil" : "Instalado");
-            if (m.FreeDiskPercent < 10 && freeRamPercent < 15)
-            {
-                _overviewStatus.Text = "Otimizado, com recursos no limite";
-                _overviewNote.Text = "Memória em uso e pouco espaço livre no disco C:";
-            }
-            else if (m.FreeDiskPercent < 10)
-            {
-                _overviewStatus.Text = "Otimizado, com pouco espaço";
-                _overviewNote.Text = "O disco C: precisa de uma limpeza";
-            }
-            else if (freeRamPercent < 15)
-            {
-                _overviewStatus.Text = "Otimizado, com memória em uso";
-                _overviewNote.Text = "Feche aplicativos pesados para ganhar agilidade";
-            }
-            else
-            {
-                _overviewStatus.Text = "Tudo em ordem";
-                _overviewNote.Text = "Seu perfil e as proteções essenciais estão ativos";
-            }
+            _healthAssessment = SystemHealthEngine.Assess(m, _diagnosticSnapshot, _lastProcessActivities, _driverUpdates == null ? 0 : _driverUpdates.Count, _programUpdates == null ? 0 : _programUpdates.Count);
+            BottleneckCause cause = BottleneckAnalyzer.Analyze(m, _diagnosticSnapshot, _lastProcessActivities);
+            _overviewStatus.Text = "Saúde " + _healthAssessment.Level.ToLowerInvariant() + "  •  " + _healthAssessment.Score + "/100";
+            _overviewStatus.ForeColor = _healthAssessment.Score < 55 ? Theme.Danger : _healthAssessment.Score < 75 ? Theme.Warning : Theme.Text;
+            _overviewNote.Text = cause.Title;
         }
 
         private void UpdateProcessCards(List<ProcessActivity> processes)
@@ -1040,7 +1054,7 @@ namespace CodexPerformanceOptimizer
             _hardwareCards.Controls.Clear();
             await RunWork("Lendo hardware...", delegate(CancellationToken t, IProgress<string> p)
             {
-                List<ImportantHardware> records = V2Engine.ReadImportantHardware(t, p);
+                List<ImportantHardware> records = CachedAnalysis.ReadHardware(force, t, p);
                 string recommendations = V2Engine.BuildPerformanceRecommendations();
                 BeginInvoke((Action)delegate
                 {
@@ -1195,7 +1209,7 @@ namespace CodexPerformanceOptimizer
             string drive = _selectedDrive;
             await RunWork("Analisando " + drive + "...", delegate(CancellationToken t, IProgress<string> p)
             {
-                List<StorageEntry> rows = V2Engine.ScanVolume(drive, t, p, delegate(StorageEntry row)
+                List<StorageEntry> rows = CachedAnalysis.ScanVolume(drive, false, t, p, delegate(StorageEntry row)
                 {
                     BeginInvoke((Action)delegate
                     {
@@ -1234,6 +1248,7 @@ namespace CodexPerformanceOptimizer
                 long total = selected.Sum(delegate(CleanupTarget item) { return item.SizeBytes; });
                 if (MessageBox.Show(this, "Limpar " + V2Engine.FormatBytes(total) + " de arquivos temporários e caches?", "Limpeza segura", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                 await RunWork("Limpando arquivos temporários...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.CleanTargets(selected, t, p); });
+                CachedAnalysis.InvalidateStorage();
                 LoadVolumes();
             }
         }
@@ -1247,7 +1262,7 @@ namespace CodexPerformanceOptimizer
             List<LargeFileEntry> files = null;
             await RunWork("Mapeando arquivos grandes...", delegate(CancellationToken t, IProgress<string> p)
             {
-                files = AdvancedEngine.FindLargeFiles(drive, t, p);
+                files = CachedAnalysis.FindLargeFiles(drive, false, t, p);
                 var report = new StringBuilder("ARQUIVOS GRANDES\r\n" + new string('=', 72) + "\r\n");
                 foreach (LargeFileEntry file in files) report.AppendLine(V2Engine.FormatBytes(file.Size) + " | " + file.Path);
                 return report.ToString();
@@ -1267,7 +1282,7 @@ namespace CodexPerformanceOptimizer
                 List<DuplicateEntry> rows = null;
                 await RunWork("Procurando duplicados...", delegate(CancellationToken t, IProgress<string> p)
                 {
-                    rows = V2Engine.FindDuplicates(folder, t, p);
+                    rows = CachedAnalysis.FindDuplicates(folder, false, t, p);
                     return V2Engine.DuplicateReport(folder, rows);
                 });
                 if (rows == null) return;
@@ -1280,6 +1295,7 @@ namespace CodexPerformanceOptimizer
                     int count = dialog.SelectedEntries.Count;
                     if (MessageBox.Show(this, "Mover " + count + " arquivo(s) para a quarentena reversível?", "Duplicados", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                     await RunWork("Movendo duplicados para a quarentena...", delegate(CancellationToken t, IProgress<string> p) { return AdvancedEngine.QuarantineDuplicates(dialog.SelectedEntries, t, p); });
+                    CachedAnalysis.InvalidateStorage();
                     await ScanDuplicatesRefresh(folder);
                 }
             }
@@ -1290,7 +1306,7 @@ namespace CodexPerformanceOptimizer
             List<DuplicateEntry> rows = null;
             await RunWork("Atualizando duplicados...", delegate(CancellationToken t, IProgress<string> p)
             {
-                rows = V2Engine.FindDuplicates(folder, t, p);
+                rows = CachedAnalysis.FindDuplicates(folder, true, t, p);
                 return V2Engine.DuplicateReport(folder, rows);
             }, false);
             _storageGrid.Rows.Clear();
@@ -1385,6 +1401,7 @@ namespace CodexPerformanceOptimizer
 
             _storageGrid.Rows.Remove(selectedRow);
             _folderSummary.Text = "Movido para a Lixeira: " + name;
+            CachedAnalysis.InvalidateStorage();
             LoadVolumes();
             UpdateStorageSelection();
         }
@@ -1400,6 +1417,7 @@ namespace CodexPerformanceOptimizer
                 bool recycle = dialog.EmptyRecycleBin;
                 bool old = dialog.RemoveWindowsOld;
                 await RunWork("Executando limpeza avançada...", delegate(CancellationToken t, IProgress<string> p) { return Optimizer.AdvancedCleanup(recycle, old); });
+                CachedAnalysis.InvalidateStorage();
             }
         }
 

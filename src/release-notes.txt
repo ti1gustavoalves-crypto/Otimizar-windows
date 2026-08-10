@@ -1,9 +1,9 @@
-OTIMIZADOR DE DESEMPENHO 4.4.1
+OTIMIZADOR DE DESEMPENHO 4.5.0
 
-- Consultas automáticas e manuais compartilham o mesmo resultado por dois minutos, evitando acesso duplicado ao GitHub.
-- Um instalador já baixado é reutilizado imediatamente quando o SHA-256 continua válido.
-- Download e cálculo SHA-256 agora acontecem na mesma passagem, reduzindo leitura de disco e tempo de espera.
-- A tela mostra porcentagem e volume transferido em tempo real.
-- Depois da confirmação, o aplicativo fecha, instala a nova versão e reabre automaticamente.
-- Atualizações simultâneas são consolidadas para impedir downloads duplicados ou arquivos parciais em conflito.
-- Limites de tamanho, HTTPS, SHA-256, troca atômica e rollback continuam obrigatórios.
+- Novo Atendimento completo reúne diagnóstico, ações selecionadas, busca de atualizações e conferência final em um único fluxo.
+- A tela inicial agora apresenta uma nota de saúde de 0 a 100 e o gargalo mais provável do computador.
+- Diagnósticos, hardware, drivers, programas e análises de armazenamento reutilizam resultados recentes quando nada mudou.
+- O cache é descartado automaticamente depois de limpezas, exclusões, quarentena e instalações.
+- A área de diagnósticos prioriza a causa provável do problema em vez de recomendações genéricas.
+- Autotestes agora abrem a interface real e verificam navegação, rolagem, botões e tabelas em diferentes tamanhos.
+- Corrigida a falta de rolagem na área de Atualizações em janelas menores.
