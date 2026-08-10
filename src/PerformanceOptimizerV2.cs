@@ -58,6 +58,7 @@ namespace CodexPerformanceOptimizer
         private CheckBox _minimizeToTray;
         private CheckBox _automaticProfiles;
         private Label _updateStatus;
+        private bool _applicationUpdateInProgress;
         private NotifyIcon _trayIcon;
         private AdvancedSettings _advancedSettings;
         private PowerLineStatus? _lastPowerLineStatus;
@@ -1475,15 +1476,50 @@ namespace CodexPerformanceOptimizer
 
         private async Task CheckForUpdates()
         {
+            if (_applicationUpdateInProgress)
+            {
+                _updateStatus.Text = "A atualização já está em andamento.";
+                return;
+            }
             _updateStatus.Text = "Verificando canal de atualização...";
             UpdateCheckResult result = await Task.Run(delegate { return AdvancedEngine.CheckForUpdates(); });
             _updateStatus.Text = result.Message;
             if (!result.Available || result.Manifest == null) return;
             string notes = string.IsNullOrWhiteSpace(result.Manifest.Notes) ? string.Empty : "\r\n\r\n" + result.Manifest.Notes;
-            if (MessageBox.Show(this, result.Message + notes + "\r\n\r\nBaixar e verificar o instalador?", "Atualização", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes) return;
-            _updateStatus.Text = "Baixando e verificando SHA-256...";
-            string download = await Task.Run(delegate { return AdvancedEngine.DownloadVerifiedUpdate(result.Manifest); });
-            _updateStatus.Text = download;
+            if (MessageBox.Show(this, result.Message + notes + "\r\n\r\nBaixar agora? O aplicativo será fechado, atualizado e reaberto automaticamente.", "Atualização", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes) return;
+            _applicationUpdateInProgress = true;
+            _updateStatus.Text = "Preparando atualização...";
+            _progress.Visible = true;
+            _progress.Style = ProgressBarStyle.Continuous;
+            _progress.Minimum = 0;
+            _progress.Maximum = 100;
+            _progress.Value = 0;
+            var progress = new Progress<UpdateDownloadProgress>(delegate(UpdateDownloadProgress state)
+            {
+                _progress.Value = Math.Max(0, Math.Min(100, state.Percent));
+                _updateStatus.Text = state.TotalBytes > 0
+                    ? "Baixando atualização... " + state.Percent + "%  •  " + V2Engine.FormatBytes(state.ReceivedBytes) + " de " + V2Engine.FormatBytes(state.TotalBytes)
+                    : "Baixando atualização... " + V2Engine.FormatBytes(state.ReceivedBytes);
+            });
+            try
+            {
+                UpdateDownloadResult download = await Task.Run(delegate { return AdvancedEngine.DownloadVerifiedUpdate(result.Manifest, CancellationToken.None, progress); });
+                _updateStatus.Text = download.Message;
+                if (!download.Success) return;
+                AdvancedEngine.LaunchVerifiedUpdate(download.InstallerPath, Process.GetCurrentProcess().Id);
+                _updateStatus.Text = download.Reused ? "Pacote validado em cache. Reiniciando..." : "Atualização verificada. Reiniciando...";
+                Close();
+            }
+            catch (Exception ex) { _updateStatus.Text = "Não foi possível iniciar a atualização: " + ex.Message; }
+            finally
+            {
+                _applicationUpdateInProgress = false;
+                if (_progress != null && !_progress.IsDisposed)
+                {
+                    _progress.Visible = false;
+                    _progress.Value = 0;
+                }
+            }
         }
 
         private void BeginAutomaticUpdateCheck()

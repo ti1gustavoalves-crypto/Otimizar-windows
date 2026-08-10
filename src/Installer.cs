@@ -13,8 +13,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("Instala ou atualiza o Otimizador de Desempenho para o usuário atual.")]
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
-[assembly: AssemblyVersion("4.4.0.0")]
-[assembly: AssemblyFileVersion("4.4.0.0")]
+[assembly: AssemblyVersion("4.4.1.0")]
+[assembly: AssemblyFileVersion("4.4.1.0")]
 
 namespace CodexPerformanceOptimizerInstaller
 {
@@ -30,6 +30,14 @@ namespace CodexPerformanceOptimizerInstaller
         [STAThread]
         private static void Main(string[] args)
         {
+            int updateProcessId;
+            if (args.Length > 1 && string.Equals(args[0], "--update", StringComparison.OrdinalIgnoreCase) && int.TryParse(args[1], out updateProcessId) && updateProcessId > 0)
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new InstallerUpdateForm(updateProcessId));
+                return;
+            }
             if (args.Length > 0 && string.Equals(args[0], "--uninstall", StringComparison.OrdinalIgnoreCase))
             {
                 StartUninstallWorker();
@@ -165,6 +173,26 @@ namespace CodexPerformanceOptimizerInstaller
             catch { return null; }
         }
 
+        internal static bool WaitForApplicationExit(int processId, int timeoutMilliseconds)
+        {
+            try
+            {
+                using (Process process = Process.GetProcessById(processId)) return process.WaitForExit(timeoutMilliseconds);
+            }
+            catch (ArgumentException) { return true; }
+            catch { return false; }
+        }
+
+        internal static bool HasDesktopShortcut()
+        {
+            try
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                return Directory.Exists(desktop) && Directory.GetFiles(desktop, ShortcutPrefix + "*.lnk", SearchOption.TopDirectoryOnly).Length > 0;
+            }
+            catch { return true; }
+        }
+
         private static List<Process> RunningInstalledApplication()
         {
             var result = new List<Process>();
@@ -278,6 +306,57 @@ namespace CodexPerformanceOptimizerInstaller
                     if (process != null) process.WaitForExit(15000);
             }
             catch { }
+        }
+    }
+
+    internal sealed class InstallerUpdateForm : Form
+    {
+        private readonly int _applicationProcessId;
+        private readonly Label _status;
+        private readonly ProgressBar _progress;
+
+        public InstallerUpdateForm(int applicationProcessId)
+        {
+            _applicationProcessId = applicationProcessId;
+            Text = "Atualizando Otimizador";
+            StartPosition = FormStartPosition.CenterScreen;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            ControlBox = false;
+            ClientSize = new Size(520, 150);
+            BackColor = Color.FromArgb(14, 18, 24);
+            ForeColor = Color.FromArgb(241, 245, 249);
+            Font = new Font("Segoe UI", 9.5f);
+            NativeWindowTheme.Apply(this);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            Controls.Add(new Label { Text = "Aplicando atualização", Font = new Font("Segoe UI Semibold", 18f), AutoSize = true, Location = new Point(24, 22) });
+            _status = new Label { Text = "Aguardando o aplicativo fechar...", AutoSize = true, Location = new Point(27, 67), ForeColor = Color.FromArgb(148, 163, 184) };
+            _progress = new ProgressBar { Location = new Point(27, 101), Size = new Size(466, 16), Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 22 };
+            Controls.Add(_status);
+            Controls.Add(_progress);
+            Shown += delegate { BeginInvoke((Action)ApplyUpdate); };
+        }
+
+        private void ApplyUpdate()
+        {
+            try
+            {
+                if (!InstallerProgram.WaitForApplicationExit(_applicationProcessId, 15000)) throw new InvalidOperationException("O aplicativo não foi encerrado a tempo.");
+                _status.Text = "Substituindo os arquivos verificados...";
+                Refresh();
+                InstallerProgram.Install(InstallerProgram.HasDesktopShortcut());
+                _status.Text = "Concluído. Reabrindo o Otimizador...";
+                Refresh();
+                InstallerProgram.LaunchInstalled();
+                Close();
+            }
+            catch (Exception ex)
+            {
+                _progress.Style = ProgressBarStyle.Continuous;
+                _progress.Value = 0;
+                _status.Text = "A atualização não foi concluída.";
+                MessageBox.Show(this, ex.Message, "Falha na atualização", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
+            }
         }
     }
 

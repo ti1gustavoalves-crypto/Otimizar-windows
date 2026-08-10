@@ -1,12 +1,9 @@
-OTIMIZADOR DE DESEMPENHO 4.4.0
+OTIMIZADOR DE DESEMPENHO 4.4.1
 
-- Nova tela inicial de atendimento rápido com perfis para manutenção preventiva, PC lento, pouco espaço e inicialização lenta.
-- Central de pendências classifica problemas e ações como críticos, recomendados, opcionais, informativos ou de proteção.
-- Execução consolidada aplica somente as ações selecionadas e salva automaticamente o relatório técnico antes/depois.
-- Elevação administrativa é detectada antes da manutenção e solicitada uma única vez, preservando o perfil escolhido.
-- Comparação mostra memória, CPU, espaço em disco, operação realizada e tempo de inicialização quando disponível.
-- Novo executável portátil mantém relatórios, logs, backups e configurações na própria pasta, sem usar o perfil do cliente.
-- Caminhos de dados foram centralizados e novas funções foram separadas em serviços e arquivos parciais menores.
-- Leituras de memória e processador ganharam alternativas quando o WMI estiver indisponível.
-- Testes agora cobrem planos guiados, modo portátil e layouts em 100%, 125%, 150%, 175% e 200% de escala.
-- Políticas corporativas de Registro e inventário são respeitadas sem tentar contornar as restrições do equipamento.
+- Consultas automáticas e manuais compartilham o mesmo resultado por dois minutos, evitando acesso duplicado ao GitHub.
+- Um instalador já baixado é reutilizado imediatamente quando o SHA-256 continua válido.
+- Download e cálculo SHA-256 agora acontecem na mesma passagem, reduzindo leitura de disco e tempo de espera.
+- A tela mostra porcentagem e volume transferido em tempo real.
+- Depois da confirmação, o aplicativo fecha, instala a nova versão e reabre automaticamente.
+- Atualizações simultâneas são consolidadas para impedir downloads duplicados ou arquivos parciais em conflito.
+- Limites de tamanho, HTTPS, SHA-256, troca atômica e rollback continuam obrigatórios.

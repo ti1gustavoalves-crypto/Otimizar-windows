@@ -1,5 +1,8 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 
 namespace CodexPerformanceOptimizer
@@ -45,6 +48,16 @@ namespace CodexPerformanceOptimizer
                 if (diagnostics.Stability == null || diagnostics.Stability.Uptime <= TimeSpan.Zero) throw new InvalidOperationException("Diagnóstico de estabilidade falhou.");
                 UpdateCheckResult update = AdvancedEngine.CheckForUpdates();
                 if (update == null || string.IsNullOrWhiteSpace(update.Message)) throw new InvalidOperationException("Verificação de atualização falhou.");
+                string cachedUpdate = Path.Combine(Path.GetTempPath(), "OtimizadorUpdateCacheTest-" + Guid.NewGuid().ToString("N") + ".bin");
+                try
+                {
+                    File.WriteAllText(cachedUpdate, "update-cache-test", Encoding.UTF8);
+                    string cachedHash;
+                    using (SHA256 sha = SHA256.Create())
+                    using (FileStream stream = File.OpenRead(cachedUpdate)) cachedHash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty);
+                    if (!AdvancedEngine.IsVerifiedUpdateFileForTesting(cachedUpdate, cachedHash) || AdvancedEngine.IsVerifiedUpdateFileForTesting(cachedUpdate, new string('0', 64))) throw new InvalidOperationException("Cache verificado do atualizador falhou.");
+                }
+                finally { try { if (File.Exists(cachedUpdate)) File.Delete(cachedUpdate); } catch { } }
                 string benchmark = BenchmarkManager.BuildComparison(new BenchmarkSession
                 {
                     PendingRestart = false,
@@ -85,6 +98,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Sensores de temperatura: " + diagnostics.Temperatures.Count);
                 Console.WriteLine("Medições de inicialização: " + diagnostics.Startup.Count);
                 Console.WriteLine("Estabilidade e atualizações: OK");
+                Console.WriteLine("Cache SHA-256 do atualizador: OK");
                 Console.WriteLine("Benchmark pós-reinicialização: OK");
                 Console.WriteLine("Testes de segurança isolados: 11/11");
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);

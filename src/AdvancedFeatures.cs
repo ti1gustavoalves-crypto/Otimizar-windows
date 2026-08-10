@@ -127,6 +127,21 @@ namespace CodexPerformanceOptimizer
         public UpdateManifest Manifest { get; set; }
     }
 
+    internal sealed class UpdateDownloadProgress
+    {
+        public long ReceivedBytes { get; set; }
+        public long TotalBytes { get; set; }
+        public int Percent { get; set; }
+    }
+
+    internal sealed class UpdateDownloadResult
+    {
+        public bool Success { get; set; }
+        public bool Reused { get; set; }
+        public string InstallerPath { get; set; }
+        public string Message { get; set; }
+    }
+
     internal sealed class ProcessHistorySummary
     {
         public string Name { get; set; }
@@ -186,6 +201,12 @@ namespace CodexPerformanceOptimizer
 
     internal static class AdvancedEngine
     {
+        private static readonly object UpdateCheckSync = new object();
+        private static readonly object UpdateDownloadSync = new object();
+        private static readonly TimeSpan UpdateCheckLifetime = TimeSpan.FromMinutes(2);
+        private static DateTime _lastUpdateCheckUtc;
+        private static UpdateCheckResult _lastUpdateCheck;
+
         private sealed class UpdateWebClient : WebClient
         {
             private readonly int _timeoutMilliseconds;
@@ -551,6 +572,21 @@ namespace CodexPerformanceOptimizer
 
         public static UpdateCheckResult CheckForUpdates()
         {
+            lock (UpdateCheckSync)
+            {
+                if (_lastUpdateCheck != null && DateTime.UtcNow - _lastUpdateCheckUtc < UpdateCheckLifetime) return _lastUpdateCheck;
+                UpdateCheckResult result = CheckForUpdatesCore();
+                if (result != null && result.Manifest != null)
+                {
+                    _lastUpdateCheck = result;
+                    _lastUpdateCheckUtc = DateTime.UtcNow;
+                }
+                return result;
+            }
+        }
+
+        private static UpdateCheckResult CheckForUpdatesCore()
+        {
             AdvancedSettings settings = ReadSettings();
             string source = settings.UpdateManifestUrl;
             if (string.IsNullOrWhiteSpace(source))
@@ -575,7 +611,7 @@ namespace CodexPerformanceOptimizer
                     var uri = new Uri(source);
                     if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return new UpdateCheckResult { Message = "O canal de atualização deve usar HTTPS." };
                     ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-                    using (var client = new UpdateWebClient(20000)) json = client.DownloadString(uri);
+                    using (var client = new UpdateWebClient(8000)) json = client.DownloadString(uri);
                 }
                 else
                 {
@@ -599,32 +635,123 @@ namespace CodexPerformanceOptimizer
 
         public static string DownloadVerifiedUpdate(UpdateManifest manifest)
         {
-            if (manifest == null || string.IsNullOrWhiteSpace(manifest.InstallerUrl) || !Uri.IsWellFormedUriString(manifest.InstallerUrl, UriKind.Absolute)) return "O manifesto não contém um instalador válido.";
-            var uri = new Uri(manifest.InstallerUrl);
-            if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return "O instalador precisa ser fornecido por HTTPS.";
-            if (!Regex.IsMatch(manifest.Sha256 ?? string.Empty, "^[0-9a-fA-F]{64}$")) return "O manifesto não contém um SHA-256 válido.";
-            string destination = Path.Combine(Path.GetTempPath(), "InstalarOtimizador-" + manifest.Version + ".exe");
+            UpdateDownloadResult result = DownloadVerifiedUpdate(manifest, CancellationToken.None, null);
+            if (!result.Success) return result.Message;
             try
             {
-                if (File.Exists(destination)) File.Delete(destination);
-                ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-                using (var client = new UpdateWebClient(120000)) client.DownloadFile(uri, destination);
-                string actual;
-                using (SHA256 sha = SHA256.Create())
-                using (FileStream stream = File.OpenRead(destination)) actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty);
-                if (!actual.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Delete(destination);
-                    return "A atualização foi rejeitada porque a verificação SHA-256 falhou.";
-                }
-                Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
-                return "Instalador verificado e iniciado.";
+                LaunchVerifiedUpdate(result.InstallerPath, Process.GetCurrentProcess().Id);
+                return result.Message;
             }
-            catch (Exception ex)
+            catch (Exception ex) { return "O pacote foi validado, mas o instalador não pôde ser iniciado: " + ex.Message; }
+        }
+
+        public static UpdateDownloadResult DownloadVerifiedUpdate(UpdateManifest manifest, CancellationToken token, IProgress<UpdateDownloadProgress> progress)
+        {
+            if (manifest == null || string.IsNullOrWhiteSpace(manifest.InstallerUrl) || !Uri.IsWellFormedUriString(manifest.InstallerUrl, UriKind.Absolute)) return DownloadFailure("O manifesto não contém um instalador válido.");
+            var uri = new Uri(manifest.InstallerUrl);
+            if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return DownloadFailure("O instalador precisa ser fornecido por HTTPS.");
+            if (!Regex.IsMatch(manifest.Sha256 ?? string.Empty, "^[0-9a-fA-F]{64}$")) return DownloadFailure("O manifesto não contém um SHA-256 válido.");
+            string safeVersion = Regex.Replace(manifest.Version ?? "update", "[^0-9A-Za-z._-]", string.Empty);
+            string updateFolder = Path.Combine(Path.GetTempPath(), "OtimizadorDeDesempenho", "Updates");
+            string destination = Path.Combine(updateFolder, "InstalarOtimizador-" + safeVersion + "-" + manifest.Sha256.Substring(0, 12) + ".exe");
+            string partial = destination + ".part";
+            lock (UpdateDownloadSync)
             {
-                try { if (File.Exists(destination)) File.Delete(destination); } catch { }
-                return "Não foi possível baixar a atualização: " + ex.Message;
+                try
+                {
+                    Directory.CreateDirectory(updateFolder);
+                    if (IsVerifiedUpdateFile(destination, manifest.Sha256))
+                        return new UpdateDownloadResult { Success = true, Reused = true, InstallerPath = destination, Message = "Pacote já verificado; iniciando atualização." };
+                    if (File.Exists(destination)) File.Delete(destination);
+                    if (File.Exists(partial)) File.Delete(partial);
+                    ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+                    request.Timeout = 15000;
+                    request.ReadWriteTimeout = 30000;
+                    request.CachePolicy = new RequestCachePolicy(RequestCacheLevel.NoCacheNoStore);
+                    request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+                    request.UserAgent = "OtimizadorDeDesempenho/" + typeof(AdvancedEngine).Assembly.GetName().Version;
+                    string actual;
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    {
+                        long total = response.ContentLength;
+                        if (total > 262144000) throw new InvalidOperationException("O pacote excede o limite de 250 MB.");
+                        using (Stream source = response.GetResponseStream())
+                        using (FileStream target = new FileStream(partial, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.SequentialScan))
+                        using (SHA256 sha = SHA256.Create())
+                        {
+                            byte[] buffer = new byte[131072];
+                            long received = 0;
+                            int read;
+                            int lastPercent = -1;
+                            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                target.Write(buffer, 0, read);
+                                sha.TransformBlock(buffer, 0, read, buffer, 0);
+                                received += read;
+                                int percent = total > 0 ? (int)Math.Min(100, received * 100 / total) : 0;
+                                if (progress != null && percent != lastPercent)
+                                {
+                                    lastPercent = percent;
+                                    progress.Report(new UpdateDownloadProgress { ReceivedBytes = received, TotalBytes = total, Percent = percent });
+                                }
+                            }
+                            sha.TransformFinalBlock(new byte[0], 0, 0);
+                            actual = BitConverter.ToString(sha.Hash).Replace("-", string.Empty);
+                        }
+                    }
+                    if (!actual.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Delete(partial);
+                        return DownloadFailure("A atualização foi rejeitada porque a verificação SHA-256 falhou.");
+                    }
+                    File.Move(partial, destination);
+                    if (progress != null) progress.Report(new UpdateDownloadProgress { ReceivedBytes = new FileInfo(destination).Length, TotalBytes = new FileInfo(destination).Length, Percent = 100 });
+                    return new UpdateDownloadResult { Success = true, InstallerPath = destination, Message = "Download verificado; iniciando atualização." };
+                }
+                catch (OperationCanceledException)
+                {
+                    try { if (File.Exists(partial)) File.Delete(partial); } catch { }
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    try { if (File.Exists(partial)) File.Delete(partial); } catch { }
+                    return DownloadFailure("Não foi possível baixar a atualização: " + ex.Message);
+                }
             }
+        }
+
+        public static void LaunchVerifiedUpdate(string installerPath, int applicationProcessId)
+        {
+            if (string.IsNullOrWhiteSpace(installerPath) || !File.Exists(installerPath)) throw new FileNotFoundException("O instalador verificado não foi encontrado.", installerPath);
+            Process.Start(new ProcessStartInfo(installerPath, "--update " + applicationProcessId) { UseShellExecute = true });
+        }
+
+        internal static bool IsVerifiedUpdateFileForTesting(string path, string expectedSha256)
+        {
+            return IsVerifiedUpdateFile(path, expectedSha256);
+        }
+
+        private static bool IsVerifiedUpdateFile(string path, string expectedSha256)
+        {
+            if (!File.Exists(path) || !Regex.IsMatch(expectedSha256 ?? string.Empty, "^[0-9a-fA-F]{64}$")) return false;
+            try
+            {
+                using (SHA256 sha = SHA256.Create())
+                using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 131072, FileOptions.SequentialScan))
+                {
+                    string actual = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty);
+                    return actual.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { return false; }
+        }
+
+        private static UpdateDownloadResult DownloadFailure(string message)
+        {
+            return new UpdateDownloadResult { Success = false, Message = message };
         }
 
         public static string ReadSignatureStatus(string path)

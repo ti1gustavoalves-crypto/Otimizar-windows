@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e sete áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 4.4.0 transforma a tela inicial em um fluxo de atendimento técnico, com pendências priorizadas, execução consolidada, comparação antes/depois e opção portátil.
+A versão 4.4.1 acelera a atualização do aplicativo com cache verificado, progresso real, download e SHA-256 em uma única passagem e reinicialização automática.
 
 ## Recursos principais
 
@@ -31,7 +31,7 @@ A versão 4.4.0 transforma a tela inicial em um fluxo de atendimento técnico, c
 - Perfis de energia, tema escuro, efeitos visuais e aplicativos em segundo plano.
 - Recuperação centralizada das configurações alteradas, restauração por seção e quarentena reversível.
 - Quarentena reversível para arquivos duplicados.
-- Instalador com atualização pelo GitHub, reparo, troca atômica e rollback.
+- Atualização rápida pelo GitHub, com cache SHA-256, progresso de download, troca atômica, reinicialização automática e rollback.
 - Executável portátil que mantém dados e relatórios na própria pasta.
 
 ## Requisitos
@@ -88,6 +88,7 @@ Sem o certificado, a compilação continua funcional e o canal do GitHub permane
 - Os relatórios permanecem no computador do usuário.
 - Logs de falha removem automaticamente nome da conta, máquina e caminho do perfil.
 - Downloads de atualização exigem HTTPS e verificação SHA-256.
+- Pacotes já baixados somente são reutilizados quando o SHA-256 continua idêntico ao manifesto oficial.
 - Processos protegidos e ambientes corporativos são tratados de forma conservadora.
 - As otimizações mantêm um backup para restauração.
 
