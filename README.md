@@ -4,11 +4,14 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e sete áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 4.3.1 revisa a responsividade das sete áreas, corrige a central de Atualizações e reforça a proteção de locais críticos na análise de armazenamento.
+A versão 4.4.0 transforma a tela inicial em um fluxo de atendimento técnico, com pendências priorizadas, execução consolidada, comparação antes/depois e opção portátil.
 
 ## Recursos principais
 
 - Monitoramento em tempo real de CPU, memória, armazenamento e processos.
+- Atendimento guiado para manutenção preventiva, PC lento, pouco espaço e inicialização lenta.
+- Central de pendências com ações críticas, recomendadas, opcionais e informativas.
+- Elevação administrativa antecipada e única para o conjunto selecionado.
 - Benchmark antes e depois, concluído após reiniciar o Windows.
 - Diagnóstico acionável de discos, estabilidade, inicialização, energia e recomendações.
 - Inicialização completa com entradas do usuário, computador, pastas e aplicativos da Microsoft Store.
@@ -29,6 +32,7 @@ A versão 4.3.1 revisa a responsividade das sete áreas, corrige a central de At
 - Recuperação centralizada das configurações alteradas, restauração por seção e quarentena reversível.
 - Quarentena reversível para arquivos duplicados.
 - Instalador com atualização pelo GitHub, reparo, troca atômica e rollback.
+- Executável portátil que mantém dados e relatórios na própria pasta.
 
 ## Requisitos
 
@@ -43,6 +47,10 @@ Algumas operações exigem privilégios de administrador. As leituras de tempera
 
 [Baixar a versão mais recente do instalador](https://raw.githubusercontent.com/ti1gustavoalves-crypto/Otimizar-windows/main/releases/InstalarOtimizadorDeDesempenho.exe)
 
+[Baixar a versão portátil](https://raw.githubusercontent.com/ti1gustavoalves-crypto/Otimizar-windows/main/releases/OtimizadorDeDesempenho-Portatil.exe)
+
+No modo portátil, mantenha o executável em uma pasta gravável. O programa criará `Dados do Otimizador` ao lado dele para armazenar relatórios, logs, configurações, quarentena e backups.
+
 O executável ainda não possui assinatura digital comercial, portanto o Windows SmartScreen pode solicitar confirmação na primeira execução.
 
 ## Compilar e testar
@@ -56,6 +64,7 @@ powershell -ExecutionPolicy Bypass -File .\src\build-release.ps1 -OutputDirector
 O processo compila a suíte de autotestes, exige aprovação de todos os testes e só então cria:
 
 - `outputs/OtimizadorDeDesempenho.exe`
+- `outputs/OtimizadorDeDesempenho-Portatil.exe`
 - `outputs/InstalarOtimizadorDeDesempenho.exe`
 - manifestos, notas e resumo SHA-256 da versão
 

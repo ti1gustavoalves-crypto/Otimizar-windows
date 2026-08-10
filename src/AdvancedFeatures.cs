@@ -212,10 +212,10 @@ namespace CodexPerformanceOptimizer
             }
         }
 
-        private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Codex", "PerformanceOptimizer");
-        private static readonly string ComparisonPath = Path.Combine(AppFolder, "comparison-v2.json");
-        private static readonly string SettingsPath = Path.Combine(AppFolder, "advanced-settings.json");
-        private static readonly string QuarantineFolder = Path.Combine(AppFolder, "Quarantine");
+        private static readonly string AppFolder = AppPaths.RootFolder;
+        private static readonly string ComparisonPath = AppPaths.ComparisonPath;
+        private static readonly string SettingsPath = AppPaths.SettingsPath;
+        private static readonly string QuarantineFolder = AppPaths.QuarantineFolder;
 
         [DllImport("kernel32.dll")]
         private static extern ulong GetTickCount64();

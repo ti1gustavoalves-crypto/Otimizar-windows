@@ -9,12 +9,14 @@ namespace CodexPerformanceOptimizer
     internal sealed class ApplyOptions
     {
         public int Profile { get; set; }
+        public bool ConfigurePower { get; set; }
         public bool DarkMode { get; set; }
         public bool ReduceVisuals { get; set; }
         public bool OptimizeStartup { get; set; }
         public bool CleanupTemp { get; set; }
         public bool CreateRestorePoint { get; set; }
         public bool BackgroundEfficiency { get; set; }
+        public bool OptimizeVolume { get; set; }
     }
 
     internal sealed class SystemMetrics

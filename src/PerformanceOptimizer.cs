@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("4.3.1.0")]
-[assembly: AssemblyFileVersion("4.3.1.0")]
+[assembly: AssemblyVersion("4.4.0.0")]
+[assembly: AssemblyFileVersion("4.4.0.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer
@@ -49,14 +49,26 @@ namespace CodexPerformanceOptimizer
                     MessageBox.Show("O Otimizador já está aberto.", "Otimizador de Desempenho", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                try { Application.Run(new MainFormV2()); }
+                try { Application.Run(new MainFormV2(ReadGuidedProfile(args))); }
                 finally { instance.ReleaseMutex(); }
             }
         }
 
         private static bool HasArgument(string[] args, string expected)
         {
-            return args.Length > 0 && string.Equals(args[0], expected, StringComparison.OrdinalIgnoreCase);
+            return Array.Exists(args ?? new string[0], item => string.Equals(item, expected, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static int? ReadGuidedProfile(string[] args)
+        {
+            if (args == null) return null;
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                int profile;
+                if (string.Equals(args[i], "--guided", StringComparison.OrdinalIgnoreCase) && int.TryParse(args[i + 1], out profile))
+                    return Math.Max(0, Math.Min(3, profile));
+            }
+            return null;
         }
     }
 

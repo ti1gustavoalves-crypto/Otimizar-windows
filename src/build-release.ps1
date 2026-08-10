@@ -13,6 +13,7 @@ if (-not (Test-Path -LiteralPath $csc)) { throw 'Compilador .NET Framework x64 n
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 [IO.Directory]::CreateDirectory($output) | Out-Null
 $app = Join-Path $output 'OtimizadorDeDesempenho.exe'
+$portableApp = Join-Path $output 'OtimizadorDeDesempenho-Portatil.exe'
 $installer = Join-Path $output 'InstalarOtimizadorDeDesempenho.exe'
 $legacyApp = Join-Path $output 'Otimizar desempenho.exe'
 if (Test-Path -LiteralPath $legacyApp) { Remove-Item -LiteralPath $legacyApp -Force }
@@ -68,6 +69,7 @@ function Sign-Artifact([string]$Path) {
 }
 
 $appSigned = Sign-Artifact $app
+Copy-Item -LiteralPath $app -Destination $portableApp -Force
 $version = [Reflection.AssemblyName]::GetAssemblyName($app).Version.ToString()
 $channelObject = @{ ManifestUrl = if ([string]::IsNullOrWhiteSpace($UpdateBaseUrl)) { '' } else { $UpdateBaseUrl.TrimEnd('/') + '/update-manifest.public.json' } }
 [IO.File]::WriteAllText($channel, ($channelObject | ConvertTo-Json -Compress), $utf8NoBom)
@@ -82,6 +84,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o instalador.' }
 $installerSigned = Sign-Artifact $installer
 
 $appHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $app).Hash
+$portableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $portableApp).Hash
 $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash
 $publicManifest = [ordered]@{
     Version = $version
@@ -97,6 +100,7 @@ $summary = @(
     "Aplicativo assinado: $appSigned"
     "Instalador assinado: $installerSigned"
     "SHA-256 do aplicativo: $appHash"
+    "SHA-256 do aplicativo portátil: $portableHash"
     "SHA-256 do instalador: $installerHash"
     "Canal: $($channelObject.ManifestUrl)"
 ) -join [Environment]::NewLine

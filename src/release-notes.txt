@@ -1,10 +1,12 @@
-OTIMIZADOR DE DESEMPENHO 4.3.1
+OTIMIZADOR DE DESEMPENHO 4.4.0
 
-- Corrigida a faixa clara e a composição quebrada da central de Atualizações.
-- Atualizações de drivers e aplicativos agora se adaptam à largura da janela sem cortar colunas ou ações.
-- Armazenamento ganhou distribuição mais compacta, pesquisa persistente e indicação discreta para itens protegidos.
-- Locais críticos do Windows, como Recovery e System Volume Information, receberam proteção explícita contra exclusão.
-- Pesquisas de Inicialização, Armazenamento e Atualizações agora usam indicações nativas que não desaparecem ao trocar de aba.
-- Diagnóstico teve cabeçalho, cartões e histórico reorganizados para evitar sobreposição e textos desconexos.
-- Colunas, cartões e grupos das demais áreas foram revisados para manter alinhamento em diferentes larguras.
-- Textos, estados vazios e instruções administrativas foram padronizados em português.
+- Nova tela inicial de atendimento rápido com perfis para manutenção preventiva, PC lento, pouco espaço e inicialização lenta.
+- Central de pendências classifica problemas e ações como críticos, recomendados, opcionais, informativos ou de proteção.
+- Execução consolidada aplica somente as ações selecionadas e salva automaticamente o relatório técnico antes/depois.
+- Elevação administrativa é detectada antes da manutenção e solicitada uma única vez, preservando o perfil escolhido.
+- Comparação mostra memória, CPU, espaço em disco, operação realizada e tempo de inicialização quando disponível.
+- Novo executável portátil mantém relatórios, logs, backups e configurações na própria pasta, sem usar o perfil do cliente.
+- Caminhos de dados foram centralizados e novas funções foram separadas em serviços e arquivos parciais menores.
+- Leituras de memória e processador ganharam alternativas quando o WMI estiver indisponível.
+- Testes agora cobrem planos guiados, modo portátil e layouts em 100%, 125%, 150%, 175% e 200% de escala.
+- Políticas corporativas de Registro e inventário são respeitadas sem tentar contornar as restrições do equipamento.

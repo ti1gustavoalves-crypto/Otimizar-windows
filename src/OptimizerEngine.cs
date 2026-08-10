@@ -57,9 +57,9 @@ namespace CodexPerformanceOptimizer
             "Microsoft.MicrosoftSolitaireCollection_8wekyb3d8bbwe",
             "Microsoft.YourPhone_8wekyb3d8bbwe"
         };
-        private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Codex", "PerformanceOptimizer");
-        public static readonly string SnapshotPath = Path.Combine(AppFolder, "state-v2.json");
-        private static readonly string ReportsFolder = Path.Combine(AppFolder, "Reports");
+        private static readonly string AppFolder = AppPaths.RootFolder;
+        public static readonly string SnapshotPath = AppPaths.SnapshotPath;
+        private static readonly string ReportsFolder = AppPaths.ReportsFolder;
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern uint GetCompressedFileSizeW(string fileName, out uint high);
@@ -110,6 +110,16 @@ namespace CodexPerformanceOptimizer
                 }
             }
             catch { }
+            if (m.TotalRamGb <= 0)
+            {
+                try
+                {
+                    var computer = new Microsoft.VisualBasic.Devices.ComputerInfo();
+                    m.TotalRamGb = computer.TotalPhysicalMemory / 1073741824.0;
+                    m.FreeRamGb = computer.AvailablePhysicalMemory / 1073741824.0;
+                }
+                catch { }
+            }
             try
             {
                 using (var searcher = new ManagementObjectSearcher("SELECT NumberOfCores,NumberOfLogicalProcessors FROM Win32_Processor"))
@@ -123,6 +133,8 @@ namespace CodexPerformanceOptimizer
                     m.CpuUsagePercent = Math.Max(0, Math.Min(100, Convert.ToDouble(cpu["PercentProcessorTime"] ?? 0, CultureInfo.InvariantCulture)));
             }
             catch { }
+            if (m.CpuThreads <= 0) m.CpuThreads = Math.Max(1, Environment.ProcessorCount);
+            if (m.CpuCores <= 0) m.CpuCores = m.CpuThreads;
             try
             {
                 var d = new DriveInfo("C");
@@ -432,8 +444,11 @@ namespace CodexPerformanceOptimizer
                 else log.AppendLine("! Ponto de restauração ignorado: reabra como administrador.");
             }
             token.ThrowIfCancellationRequested();
-            progress.Report("Configurando energia...");
-            log.AppendLine(ApplyPowerProfile(options.Profile));
+            if (options.ConfigurePower)
+            {
+                progress.Report("Configurando energia...");
+                log.AppendLine(ApplyPowerProfile(options.Profile));
+            }
             token.ThrowIfCancellationRequested();
             if (options.DarkMode)
             {
@@ -471,11 +486,14 @@ namespace CodexPerformanceOptimizer
                 if (Optimizer.IsAdministrator()) freed += DeleteOldFiles(@"C:\Windows\Temp", DateTime.Now.AddDays(-7), token);
                 log.AppendLine("✓ Temporários antigos removidos: " + FormatBytes(freed));
             }
-            progress.Report("Otimizando unidade do sistema...");
-            string volumeOptimization = WindowsMaintenance.OptimizeVolume("C:", token, progress);
-            log.AppendLine(volumeOptimization.IndexOf("Resultado: concluído", StringComparison.OrdinalIgnoreCase) >= 0
-                ? "✓ Otimização correta para o tipo de unidade concluída."
-                : "! " + OneLine(volumeOptimization));
+            if (options.OptimizeVolume)
+            {
+                progress.Report("Otimizando unidade do sistema...");
+                string volumeOptimization = WindowsMaintenance.OptimizeVolume("C:", token, progress);
+                log.AppendLine(volumeOptimization.IndexOf("Resultado: concluído", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? "✓ Otimização correta para o tipo de unidade concluída."
+                    : "! " + OneLine(volumeOptimization));
+            }
             SystemMetrics after = ReadMetrics();
             AdvancedEngine.SaveComparison(before, after, "Perfil " + ProfileName(options.Profile));
             log.AppendLine();

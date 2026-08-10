@@ -17,7 +17,7 @@ namespace CodexPerformanceOptimizer
     {
         private const int SearchTimeout = 10 * 60 * 1000;
         private const int InstallTimeout = 60 * 60 * 1000;
-        private static readonly string DriverBackupFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Codex", "PerformanceOptimizer", "DriverBackups");
+        private static readonly string DriverBackupFolder = AppPaths.DriverBackupsFolder;
         private static readonly string[] OfficialSupportDomains =
         {
             "intel.com", "nvidia.com", "amd.com", "dell.com", "hp.com", "lenovo.com", "asus.com", "acer.com",

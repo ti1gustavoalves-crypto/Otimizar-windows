@@ -29,17 +29,9 @@ namespace CodexPerformanceOptimizer
         private Button[] _navigationButtons;
         private Image _brandImage;
         private readonly string _displayVersion;
-        private ComboBox _profile;
-        private CheckBox _dark;
-        private CheckBox _visuals;
-        private CheckBox _startup;
-        private CheckBox _cleanup;
-        private CheckBox _restorePoint;
-        private CheckBox _backgroundEfficiency;
         private Label _overviewStatus;
         private Label _overviewNote;
         private Label _environmentBadge;
-        private Label _profileDescription;
         private Label _memoryValue;
         private Label _memoryDetail;
         private Label _diskValue;
@@ -116,9 +108,19 @@ namespace CodexPerformanceOptimizer
         private List<ProcessActivity> _lastProcessActivities = new List<ProcessActivity>();
         private bool _managedEnvironment;
         private int _liveMetricTicks;
+        private readonly int? _initialServiceProfile;
+        private ComboBox _serviceProfile;
+        private DataGridView _issueGrid;
+        private Label _planSummary;
+        private Label _comparisonSummary;
+        private Button _runPlanButton;
+        private Button _elevatePlanButton;
+        private MaintenancePlan _maintenancePlan;
+        private bool _planLoading;
 
-        public MainFormV2()
+        public MainFormV2(int? initialServiceProfile = null)
         {
+            _initialServiceProfile = initialServiceProfile;
             Version version = GetType().Assembly.GetName().Version;
             _displayVersion = version.Major + "." + version.Minor;
             Text = "Otimizador de Desempenho " + _displayVersion;
@@ -137,7 +139,7 @@ namespace CodexPerformanceOptimizer
             _toolTip = new ToolTip { AutoPopDelay = 8000, InitialDelay = 350, ReshowDelay = 100 };
 
             _tabs = new TabControl { Location = new Point(-4, -28), SizeMode = TabSizeMode.Fixed, ItemSize = new Size(1, 24), Appearance = TabAppearance.FlatButtons };
-            _tabs.TabPages.Add(BuildDashboard());
+            _tabs.TabPages.Add(BuildGuidedDashboard());
             _tabs.TabPages.Add(BuildDiagnosticsTab());
             _tabs.TabPages.Add(BuildStorageTab());
             _tabs.TabPages.Add(BuildStartupTab());
@@ -271,121 +273,6 @@ namespace CodexPerformanceOptimizer
                 _navigationButtons[i].FlatAppearance.BorderColor = selected ? Theme.Primary : Theme.Navigation;
                 _navigationButtons[i].FlatAppearance.BorderSize = selected ? 1 : 0;
             }
-        }
-
-        private TabPage BuildDashboard()
-        {
-            var page = NewPage("Visão geral");
-            var healthCard = DashboardCard(20, 18, 640, 142);
-            healthCard.Controls.Add(new Label { Text = "Estado do PC", Location = new Point(20, 15), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
-            _overviewStatus = new Label { Text = "Analisando...", Location = new Point(18, 39), Size = new Size(590, 38), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 20f) };
-            _overviewNote = new Label { Text = "Lendo os indicadores principais", Location = new Point(21, 79), Size = new Size(590, 22), AutoEllipsis = true, ForeColor = Theme.Muted };
-            _environmentBadge = new Label { Text = "Preparando ambiente", Location = new Point(20, 107), Size = new Size(374, 23), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, Padding = new Padding(8, 3, 8, 3), AutoEllipsis = true };
-            var analyze = ButtonFactory("Atualizar diagnóstico", 446, 103, 172, Theme.Secondary);
-            analyze.Size = new Size(172, 30);
-            analyze.Click += async delegate { await RefreshAudit(); };
-            healthCard.Controls.Add(_overviewStatus);
-            healthCard.Controls.Add(_overviewNote);
-            healthCard.Controls.Add(_environmentBadge);
-            healthCard.Controls.Add(analyze);
-
-            var profileCard = DashboardCard(676, 18, 360, 142);
-            profileCard.Controls.Add(new Label { Text = "Perfil de desempenho", Location = new Point(20, 15), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
-            _profile = new ComboBox { Location = new Point(20, 39), Width = 320, DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
-            _profile.Items.AddRange(new object[] { "Máximo desempenho", "Equilibrado", "Notebook / eficiência" });
-            _profile.SelectedIndex = 0;
-            _profileDescription = new Label { Location = new Point(21, 70), Size = new Size(318, 19), AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) };
-            _profile.SelectedIndexChanged += delegate { UpdateProfileDescription(); };
-            var apply = ButtonFactory("Executar otimização", 20, 98, 320, Theme.Primary);
-            apply.Size = new Size(320, 31);
-            profileCard.Controls.Add(_profile);
-            profileCard.Controls.Add(_profileDescription);
-            profileCard.Controls.Add(apply);
-            UpdateProfileDescription();
-
-            var memoryCard = MetricCard("Memória disponível", 20, 176, out _memoryValue, out _memoryDetail, out _memoryGauge, out _memoryChart);
-            var diskCard = MetricCard("Espaço no disco C:", 356, 176, out _diskValue, out _diskDetail, out _diskGauge, out _diskChart);
-            var cpuCard = MetricCard("Uso do processador", 692, 176, out _cpuValue, out _cpuDetail, out _cpuGauge, out _cpuChart);
-
-            var optionsCard = DashboardCard(20, 306, 1016, 174);
-            optionsCard.Controls.Add(new Label { Text = "Otimização recomendada", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11.5f) });
-            optionsCard.Controls.Add(new Label { Text = "Revise somente se precisar personalizar o atendimento", Location = new Point(20, 41), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
-
-            _dark = Option("Modo escuro", 20, 82, true);
-            _visuals = Option("Reduzir animações", 20, 122, true);
-            _startup = Option("Otimizar inicialização", 350, 82, true);
-            _backgroundEfficiency = Option("Reduzir segundo plano", 350, 122, true);
-            _cleanup = Option("Limpar temporários", 680, 82, true);
-            _restorePoint = Option("Criar ponto de restauração", 680, 122, true);
-            optionsCard.Controls.Add(_dark);
-            optionsCard.Controls.Add(_visuals);
-            optionsCard.Controls.Add(_restorePoint);
-            optionsCard.Controls.Add(_startup);
-            optionsCard.Controls.Add(_cleanup);
-            optionsCard.Controls.Add(_backgroundEfficiency);
-
-            var activityCard = DashboardCard(20, 498, 1016, 142);
-            activityCard.Controls.Add(new Label { Text = "Processos em destaque", Location = new Point(18, 14), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8.5f) });
-            _liveAlert = new Label { Text = "Monitorando em tempo real", Location = new Point(664, 12), Size = new Size(330, 23), TextAlign = ContentAlignment.MiddleRight, AutoEllipsis = true, ForeColor = Theme.Success, Font = new Font("Segoe UI Semibold", 8.5f) };
-            activityCard.Controls.Add(_liveAlert);
-
-            _processCards = new DashboardPanel[3];
-            _processNames = new Label[3];
-            _processStats = new Label[3];
-            _processTags = new Label[3];
-            for (int i = 0; i < 3; i++)
-            {
-                var processCard = DashboardCard(14 + (i * 332), 46, 324, 80);
-                processCard.BackColor = Theme.SurfaceAlt;
-                processCard.BorderColor = Color.Transparent;
-                var processName = new Label { Text = "Calculando...", Location = new Point(14, 10), Size = new Size(190, 22), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 10f) };
-                var processTag = new Label { Text = "", Location = new Point(205, 10), Size = new Size(103, 20), TextAlign = ContentAlignment.MiddleRight, AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 8f) };
-                var processStats = new Label { Text = "Aguardando amostra", Location = new Point(14, 42), Size = new Size(294, 22), AutoEllipsis = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.8f) };
-                processCard.Controls.Add(processName);
-                processCard.Controls.Add(processTag);
-                processCard.Controls.Add(processStats);
-                AttachClick(processCard, delegate { _tabs.SelectedIndex = (int)AppSection.Diagnostics; });
-                _processCards[i] = processCard;
-                _processNames[i] = processName;
-                _processTags[i] = processTag;
-                _processStats[i] = processStats;
-                activityCard.Controls.Add(processCard);
-            }
-
-            apply.Click += async delegate
-            {
-                var options = new ApplyOptions
-                {
-                    Profile = _profile.SelectedIndex,
-                    DarkMode = _dark.Checked,
-                    ReduceVisuals = _visuals.Checked,
-                    OptimizeStartup = _startup.Checked,
-                    CleanupTemp = _cleanup.Checked,
-                    CreateRestorePoint = _restorePoint.Checked,
-                    BackgroundEfficiency = _backgroundEfficiency.Checked
-                };
-                await RunWork("Aplicando perfil...", delegate(CancellationToken t, IProgress<string> p) { return V2Engine.Apply(options, t, p); });
-                await RefreshAudit();
-            };
-            page.Controls.Add(healthCard);
-            page.Controls.Add(profileCard);
-            page.Controls.Add(memoryCard);
-            page.Controls.Add(diskCard);
-            page.Controls.Add(cpuCard);
-            page.Controls.Add(optionsCard);
-            page.Controls.Add(activityCard);
-            page.Resize += delegate
-            {
-                int left = Math.Max(20, (page.ClientSize.Width - 1016) / 2);
-                healthCard.Left = left;
-                profileCard.Left = left + 656;
-                memoryCard.Left = left;
-                diskCard.Left = left + 336;
-                cpuCard.Left = left + 672;
-                optionsCard.Left = left;
-                activityCard.Left = left;
-            };
-            return page;
         }
 
         private TabPage BuildHardwareTab()
@@ -1008,6 +895,8 @@ namespace CodexPerformanceOptimizer
             _managedEnvironment = environment.IndexOf("Gerenciado", StringComparison.OrdinalIgnoreCase) >= 0 || environment.IndexOf("corporativo", StringComparison.OrdinalIgnoreCase) >= 0;
             UpdateMetricCards(_liveMetrics);
             UpdateSustainedAlert(_liveMetrics);
+            await LoadDiagnostics(false);
+            await RefreshMaintenancePlanAsync();
         }
 
         private void RefreshLiveMetrics()
@@ -1081,8 +970,7 @@ namespace CodexPerformanceOptimizer
             _cpuChart.LineColor = cpuColor;
             _cpuChart.AddValue(m.CpuUsagePercent);
 
-            string power = m.PowerScheme.IndexOf("Desempenho Máximo", StringComparison.OrdinalIgnoreCase) >= 0 ? "Máximo desempenho ativo" : "Perfil de energia ativo";
-            _environmentBadge.Text = power + "  •  " + (_managedEnvironment ? "Corporativo" : "Pessoal") + "  •  " + (Optimizer.IsAdministrator() ? "Administrador" : "Padrão");
+            _environmentBadge.Text = (_managedEnvironment ? "Corporativo" : "Pessoal") + "  •  " + (Optimizer.IsAdministrator() ? "Administrador" : "Acesso padrão") + "  •  " + (AppPaths.IsPortable ? "Portátil" : "Instalado");
             if (m.FreeDiskPercent < 10 && freeRamPercent < 15)
             {
                 _overviewStatus.Text = "Otimizado, com recursos no limite";
@@ -1184,54 +1072,6 @@ namespace CodexPerformanceOptimizer
                 cardIndex++;
             }
             _hardwareCards.ResumeLayout();
-        }
-
-        private async Task<string> RunWork(string initialStatus, Func<CancellationToken, IProgress<string>, string> worker, bool saveReport = true)
-        {
-            if (_cts != null) return "Outra operação está em andamento. Aguarde a conclusão ou cancele a operação atual.";
-            _cts = new CancellationTokenSource();
-            _progress.Visible = true;
-            _status.Location = new Point(194, 12);
-            _progress.Style = ProgressBarStyle.Marquee;
-            _cancel.Enabled = true;
-            _status.Text = initialStatus;
-            var progress = new Progress<string>(delegate(string s) { _status.Text = s; });
-            try
-            {
-                string result = await Task.Run(delegate { return worker(_cts.Token, progress); }, _cts.Token);
-                _status.Text = "Concluído em " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
-                if (saveReport)
-                {
-                    V2Engine.SaveReport(result);
-                }
-                return result;
-            }
-            catch (OperationCanceledException)
-            {
-                _status.Text = "Operação cancelada";
-                return "Operação cancelada pelo usuário.";
-            }
-            catch (Exception ex)
-            {
-                string result = "Falha: " + ex.Message + Environment.NewLine + ex;
-                _status.Text = "Falha";
-                if (saveReport)
-                {
-                    V2Engine.SaveReport(result);
-                }
-                return result;
-            }
-            finally
-            {
-                _cts.Dispose();
-                _cts = null;
-                _progress.Style = ProgressBarStyle.Continuous;
-                _progress.Value = 0;
-                _progress.Visible = false;
-                _status.Location = new Point(20, 12);
-                _cancel.Enabled = false;
-                UpdateStorageSelection();
-            }
         }
 
         private async Task LoadStartupAsync()
@@ -1565,7 +1405,8 @@ namespace CodexPerformanceOptimizer
         private void RunAsAdmin(object sender, EventArgs e)
         {
             if (Optimizer.IsAdministrator()) { MessageBox.Show(this, "O programa já está elevado."); return; }
-            try { Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--wait-for-instance") { UseShellExecute = true, Verb = "runas" }); Close(); }
+            string arguments = "--wait-for-instance" + (AppPaths.IsPortable ? " --portable" : string.Empty);
+            try { Process.Start(new ProcessStartInfo(Application.ExecutablePath, arguments) { UseShellExecute = true, Verb = "runas" }); Close(); }
             catch (Exception ex) { MessageBox.Show(this, "Elevação cancelada: " + ex.Message); }
         }
 
@@ -1722,14 +1563,6 @@ namespace CodexPerformanceOptimizer
         private CheckBox Option(string text, int x, int y, bool value)
         {
             return new CheckBox { Text = text, AutoSize = true, Location = new Point(x, y), Checked = value, ForeColor = Theme.Text, FlatStyle = FlatStyle.Flat, AccessibleName = text };
-        }
-
-        private void UpdateProfileDescription()
-        {
-            if (_profileDescription == null || _profile == null) return;
-            if (_profile.SelectedIndex == 1) _profileDescription.Text = "Bom equilíbrio para o uso diário";
-            else if (_profile.SelectedIndex == 2) _profileDescription.Text = "Menor consumo quando estiver na bateria";
-            else _profileDescription.Text = "Prioriza velocidade e resposta do sistema";
         }
 
         private static string FirstResultLine(string result, string fallback)

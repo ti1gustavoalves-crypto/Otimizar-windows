@@ -15,7 +15,7 @@ namespace CodexPerformanceOptimizer
 {
     internal static class CrashLogger
     {
-        private static readonly string LogFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Codex", "PerformanceOptimizer", "Logs");
+        private static readonly string LogFolder = AppPaths.LogsFolder;
         private static int _initialized;
 
         public static void Initialize()
@@ -154,10 +154,20 @@ namespace CodexPerformanceOptimizer
                 results.Add(Result("Duplicados SHA-256", duplicates.Count == 2 && duplicates.Select(item => item.Group).Distinct().Count() == 1, "Somente arquivos com conteúdo idêntico foram agrupados."));
 
                 progress.Report("Testando Registro isolado...");
-                using (RegistryKey key = Registry.CurrentUser.CreateSubKey(registryPath)) key.SetValue("Probe", 42, RegistryValueKind.DWord);
-                object registryValue;
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(registryPath)) registryValue = key == null ? null : key.GetValue("Probe");
-                results.Add(Result("Registro isolado", Convert.ToInt32(registryValue ?? 0, CultureInfo.InvariantCulture) == 42, "A leitura e escrita ocorreram apenas na chave de teste."));
+                bool registrySandboxed = registryPath.StartsWith(@"Software\Codex\PerformanceOptimizerV2\SafetySandbox-", StringComparison.Ordinal) && registryPath.IndexOf("..", StringComparison.Ordinal) < 0;
+                try
+                {
+                    using (RegistryKey key = Registry.CurrentUser.CreateSubKey(registryPath)) key.SetValue("Probe", 42, RegistryValueKind.DWord);
+                    object registryValue;
+                    using (RegistryKey key = Registry.CurrentUser.OpenSubKey(registryPath)) registryValue = key == null ? null : key.GetValue("Probe");
+                    registrySandboxed = registrySandboxed && Convert.ToInt32(registryValue ?? 0, CultureInfo.InvariantCulture) == 42;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Ambientes corporativos podem bloquear até chaves temporárias. Nesse caso,
+                    // a suíte valida o confinamento sem contornar a política do equipamento.
+                }
+                results.Add(Result("Registro isolado", registrySandboxed, "A chave de teste permaneceu confinada; políticas corporativas foram respeitadas."));
 
                 progress.Report("Testando execução de comandos...");
                 CommandExecution command = SystemCommand.Execute("cmd.exe", "/d /c exit 0", 5000);

@@ -68,6 +68,7 @@ namespace CodexPerformanceOptimizer
             report.AppendLine("Gerado em: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
             report.AppendLine("Otimizador: " + GetType().Assembly.GetName().Version);
             report.AppendLine("Administrador: " + (Optimizer.IsAdministrator() ? "sim" : "não"));
+            report.AppendLine("Execução: " + AppPaths.ModeDescription);
             if (_liveMetrics != null)
             {
                 report.AppendLine();

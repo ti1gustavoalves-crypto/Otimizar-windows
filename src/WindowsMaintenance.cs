@@ -10,9 +10,7 @@ namespace CodexPerformanceOptimizer
 {
     internal static class WindowsMaintenance
     {
-        private static readonly string EnergyReportsFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Codex", "PerformanceOptimizer", "EnergyReports");
+        private static readonly string EnergyReportsFolder = AppPaths.EnergyReportsFolder;
 
         public static string LatestEnergyReportPath { get; private set; }
 
@@ -20,7 +18,7 @@ namespace CodexPerformanceOptimizer
         {
             string normalized = NormalizeDrive(drive);
             if (string.IsNullOrEmpty(normalized)) return "A unidade selecionada não é válida.";
-            if (!Optimizer.IsAdministrator()) return "A otimização da unidade exige privilégios de administrador. Use 'Executar como admin'.";
+            if (!Optimizer.IsAdministrator()) return "A otimização da unidade exige privilégios de administrador. Reabra o Otimizador como administrador.";
 
             progress.Report("Otimizando " + normalized + " conforme o tipo de mídia...");
             CommandExecution result = SystemCommand.Execute("defrag.exe", normalized + " /O /U /V", 30 * 60 * 1000, token);
@@ -34,7 +32,7 @@ namespace CodexPerformanceOptimizer
 
         public static string CleanupComponentStore(CancellationToken token, IProgress<string> progress)
         {
-            if (!Optimizer.IsAdministrator()) return "A limpeza de componentes exige privilégios de administrador. Use 'Executar como admin'.";
+            if (!Optimizer.IsAdministrator()) return "A limpeza de componentes exige privilégios de administrador. Reabra o Otimizador como administrador.";
 
             double before = FreeSystemDriveGb();
             progress.Report("Analisando componentes do Windows...");
@@ -62,7 +60,7 @@ namespace CodexPerformanceOptimizer
 
         public static string GenerateEnergyReport(CancellationToken token, IProgress<string> progress)
         {
-            if (!Optimizer.IsAdministrator()) return "O diagnóstico de energia exige privilégios de administrador. Use 'Executar como admin'.";
+            if (!Optimizer.IsAdministrator()) return "O diagnóstico de energia exige privilégios de administrador. Reabra o Otimizador como administrador.";
 
             Directory.CreateDirectory(EnergyReportsFolder);
             string path = Path.Combine(EnergyReportsFolder, "energia-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".html");

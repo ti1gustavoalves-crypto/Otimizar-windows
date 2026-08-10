@@ -35,8 +35,8 @@ namespace CodexPerformanceOptimizer
     {
         private const string RunOnceKey = @"Software\Microsoft\Windows\CurrentVersion\RunOnce";
         private const string RunOnceName = "CodexPerformanceOptimizerBenchmark";
-        private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Codex", "PerformanceOptimizer");
-        private static readonly string SessionPath = Path.Combine(AppFolder, "benchmark-session.json");
+        private static readonly string AppFolder = AppPaths.RootFolder;
+        private static readonly string SessionPath = AppPaths.BenchmarkPath;
 
         [DllImport("kernel32.dll")]
         private static extern ulong GetTickCount64();

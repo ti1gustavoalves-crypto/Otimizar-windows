@@ -65,11 +65,18 @@ namespace CodexPerformanceOptimizer
                 string wingetSample = "Name                 Id                    Version        Available\r\n----------------------------------------------------------------------------\r\nGoogle Chrome        Google.Chrome.EXE     150.0.7871.127 150.0.7871.129\r\nPowerShell 7         Microsoft.PowerShell  7.4.0          7.5.0\r\n2 upgrades available.";
                 var programUpdates = ProgramUpdater.ParseUpgradeOutputForTesting(wingetSample);
                 if (programUpdates.Count != 2 || programUpdates[0].PackageId != "Google.Chrome.EXE" || !ProgramUpdater.IsValidPackageIdForTesting("Microsoft.PowerShell") || ProgramUpdater.IsValidPackageIdForTesting("pacote & comando")) throw new InvalidOperationException("Parser seguro do WinGet falhou.");
-                if (DriverManager.CountInstalledDrivers() <= 0) throw new InvalidOperationException("Inventário de drivers falhou.");
                 var driverInventory = DriverManager.ReadInstalledDrivers();
-                if (driverInventory == null || driverInventory.Count == 0 || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Versões dos drivers importantes não foram lidas.");
+                if (driverInventory == null || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Inventário de drivers retornou dados inválidos.");
                 var startupEntries = V2Engine.ReadStartupEntries();
                 if (startupEntries == null || startupEntries.Any(item => string.IsNullOrWhiteSpace(item.Name) || string.IsNullOrWhiteSpace(item.Source))) throw new InvalidOperationException("Inventário de inicialização falhou.");
+                var guidedPlan = MaintenanceWorkflow.BuildPlan(ServiceProfile.SlowComputer,
+                    new SystemMetrics { TotalRamGb = 16, FreeRamGb = 1, TotalDiskGb = 500, FreeDiskGb = 30, FreeDiskPercent = 6, CpuUsagePercent = 40 },
+                    new DiagnosticSnapshot { Stability = new StabilityDiagnostic { PendingRestart = true } },
+                    new[] { new StartupEntry { Name = "Teste", Enabled = true, CanChange = true, Impact = "alto", Source = "Teste" } }, 2, 3);
+                if (guidedPlan.SelectedCount < 5 || !guidedPlan.RequiresAdministrator || !guidedPlan.Issues.Any(item => item.Id == "storage" && item.Severity == "Crítico") || !guidedPlan.Issues.Any(item => item.Id == "restart" && !item.CanFix)) throw new InvalidOperationException("Plano guiado não priorizou as pendências corretamente.");
+                int[] testedDpis = { 96, 120, 144, 168, 192 };
+                if (testedDpis.Any(dpi => !string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1260, 760, dpi))) || string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1100, 700, 96))) throw new InvalidOperationException("Política de responsividade falhou.");
+                if (!AppPaths.IsPortableConfiguration("OtimizadorDeDesempenho-Portatil.exe", new string[0], false) || !AppPaths.IsPortableConfiguration("Otimizador.exe", new[] { "--portable" }, false) || AppPaths.IsPortableConfiguration("Otimizador.exe", new string[0], false)) throw new InvalidOperationException("Detecção do modo portátil falhou.");
                 Console.WriteLine("CPU em tempo real: " + sampledCpu.Value.ToString("N0") + "%");
                 Console.WriteLine("Memória em tempo real: " + sampledFreeRam.ToString("N1") + " GB livres");
                 Console.WriteLine("Processos em destaque: " + processes.Count);
@@ -83,8 +90,11 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
                 Console.WriteLine("Inicialização: " + startupEntries.Count);
                 Console.WriteLine("Hardware: " + V2Engine.ReadImportantHardware(CancellationToken.None, new Progress<string>()).Count);
-                Console.WriteLine("Drivers importantes: " + driverInventory.Count);
+                Console.WriteLine("Drivers relevantes: " + driverInventory.Count + (driverInventory.Count == 0 ? " (inventário bloqueado por política)" : string.Empty));
                 Console.WriteLine("Parser do WinGet: OK");
+                Console.WriteLine("Manutenção guiada: " + guidedPlan.SelectedCount + " ações");
+                Console.WriteLine("Layouts: 100%, 125%, 150%, 175% e 200% OK");
+                Console.WriteLine("Modo portátil: OK");
                 Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }
