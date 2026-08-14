@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.4.0 adiciona uma central segura de correções gerais, fila de execução e modo compacto para atendimentos técnicos mais rápidos.
+A versão 2.0 reúne a central segura de correções gerais, fila de execução e modo compacto para atendimentos técnicos mais rápidos.
 
 ## Recursos principais
 
