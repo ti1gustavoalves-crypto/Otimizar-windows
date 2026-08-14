@@ -1,5 +1,7 @@
 OTIMIZADOR DE DESEMPENHO 2.0
 
+- As cinco guias laterais agora usam os ícones fornecidos para Painel, Manutenção, Atualizações, Sistema e Ajustes.
+- Os desenhos são redimensionados em alta qualidade e recebem automaticamente a cor adequada ao tema escuro.
 - O manifesto agora aponta para o instalador imutável da própria tag, evitando misturas de versões causadas por cache do GitHub.
 - Corrigida a migração de instalações antigas 5.x para a nova numeração 2.0.
 - O instalador agora valida o executável incorporado contra sua própria versão, sem depender de uma faixa numérica antiga.

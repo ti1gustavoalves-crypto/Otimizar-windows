@@ -352,6 +352,41 @@ namespace CodexPerformanceOptimizer
 
         private static Image CreateNavigationIcon(int kind)
         {
+            string[] resources = { "NavigationPanelPng", "NavigationMaintenancePng", "NavigationUpdatesPng", "NavigationSystemPng", "NavigationSettingsPng" };
+            if (kind >= 0 && kind < resources.Length)
+            {
+                try
+                {
+                    using (Stream stream = typeof(MainFormV2).Assembly.GetManifestResourceStream(resources[kind]))
+                    using (Image source = stream == null ? null : Image.FromStream(stream))
+                    {
+                        if (source != null)
+                        {
+                            var icon = new Bitmap(20, 20, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                            using (Graphics graphics = Graphics.FromImage(icon))
+                            using (var attributes = new System.Drawing.Imaging.ImageAttributes())
+                            {
+                                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                float red = Theme.Muted.R / 255f;
+                                float green = Theme.Muted.G / 255f;
+                                float blue = Theme.Muted.B / 255f;
+                                attributes.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix(new[]
+                                {
+                                    new[] { 0f, 0f, 0f, 0f, 0f },
+                                    new[] { 0f, 0f, 0f, 0f, 0f },
+                                    new[] { 0f, 0f, 0f, 0f, 0f },
+                                    new[] { 0f, 0f, 0f, 1f, 0f },
+                                    new[] { red, green, blue, 0f, 1f }
+                                }));
+                                graphics.DrawImage(source, new Rectangle(1, 1, 18, 18), 0, 0, source.Width, source.Height, GraphicsUnit.Pixel, attributes);
+                            }
+                            return icon;
+                        }
+                    }
+                }
+                catch { }
+            }
             var image = new Bitmap(18, 18);
             using (Graphics graphics = Graphics.FromImage(image))
             using (var pen = new Pen(Theme.Muted, 1.7f))
