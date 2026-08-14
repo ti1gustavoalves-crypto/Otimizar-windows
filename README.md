@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.2.0 adiciona uma central de integridade para localizar falhas gerais, verificar arquivos e componentes do Windows e oferecer reparo controlado quando necessário.
+A versão 5.2.1 adota uma nova identidade visual para o aplicativo e preserva a central de integridade introduzida na série 5.2.
 
 ## Recursos principais
 

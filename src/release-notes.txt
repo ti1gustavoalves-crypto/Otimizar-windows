@@ -1,5 +1,7 @@
-OTIMIZADOR DE DESEMPENHO 5.2.0
+OTIMIZADOR DE DESEMPENHO 5.2.1
 
+- Novo ícone próprio inspirado em manutenção de computadores, com monitor e chave em alto contraste.
+- O ícone foi preparado em múltiplas resoluções para janela, barra de tarefas, atalhos, bandeja e instalador.
 - Nova seção Integridade dentro de Sistema, voltada à localização de falhas gerais do computador.
 - A verificação rápida analisa espaço, saúde física dos discos, estabilidade, reinicialização pendente, dispositivos e serviços essenciais.
 - A verificação profunda usa DISM, SFC e CHKDSK em modo de diagnóstico, sem alterar o Windows.
