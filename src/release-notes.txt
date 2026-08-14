@@ -1,5 +1,10 @@
-OTIMIZADOR DE DESEMPENHO 5.2.2
+OTIMIZADOR DE DESEMPENHO 5.3.0
 
+- Nome e versão repetidos foram removidos da navegação lateral; a versão permanece em Ajustes.
+- O ícone agora funciona como atalho discreto para o Painel.
+- A navegação ficou mais estreita e ganhou mais espaço útil para tabelas e diagnósticos.
+- O rodapé lateral informa apenas o contexto relevante: administrador ou usuário padrão.
+- O modo compacto recebeu símbolos consistentes e dicas de contexto em todos os itens.
 - A verificação e o download de atualizações agora usam uma rota alternativa oficial quando `raw.githubusercontent.com` não resolve.
 - O pacote continua sendo aceito somente depois da validação HTTPS e SHA-256.
 - Mensagens de falha de rede agora indicam diretamente DNS, proxy ou filtro corporativo.

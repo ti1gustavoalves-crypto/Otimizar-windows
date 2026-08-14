@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.2.2 torna o atualizador resistente a bloqueios de DNS do GitHub, usando automaticamente uma segunda rota oficial sem reduzir a validação SHA-256.
+A versão 5.3.0 simplifica a navegação durante o atendimento: remove identificação repetida, amplia a área útil e mantém somente contexto operacional relevante.
 
 ## Recursos principais
 

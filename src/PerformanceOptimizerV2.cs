@@ -28,12 +28,10 @@ namespace CodexPerformanceOptimizer
         private TabControl _systemTabs;
         private Button[] _navigationButtons;
         private Panel _navigationPanel;
-        private PictureBox _brandPicture;
-        private Label _brandTitle;
-        private Label _brandVersion;
+        private Button _homeButton;
+        private Label _privilegeStatus;
         private Panel _operationBar;
         private Image _brandImage;
-        private readonly string _displayVersion;
         private Label _overviewStatus;
         private Label _overviewNote;
         private Label _environmentBadge;
@@ -145,9 +143,7 @@ namespace CodexPerformanceOptimizer
             _startFullService = startFullService;
             _suppressStartup = suppressStartup;
             _startIntegrityScan = startIntegrityScan;
-            Version version = GetType().Assembly.GetName().Version;
-            _displayVersion = version.Major + "." + version.Minor;
-            Text = "Otimizador de Desempenho " + _displayVersion;
+            Text = "Otimizador";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1024, 680);
             Size = new Size(1280, 800);
@@ -156,7 +152,7 @@ namespace CodexPerformanceOptimizer
             Font = new Font("Segoe UI", 9.5f);
             NativeWindowTheme.Apply(this);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AccessibleName = "Otimizador de Desempenho " + _displayVersion;
+            AccessibleName = "Otimizador de Desempenho";
             try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             _advancedSettings = AdvancedEngine.ReadSettings();
             _processHistory = new ProcessHistoryTracker();
@@ -251,17 +247,39 @@ namespace CodexPerformanceOptimizer
 
         private Panel BuildNavigation()
         {
-            _navigationPanel = new Panel { Dock = DockStyle.Left, Width = 184, BackColor = Theme.Navigation, Padding = new Padding(14, 18, 14, 14) };
+            _navigationPanel = new Panel { Dock = DockStyle.Left, Width = 172, BackColor = Theme.Navigation, Padding = new Padding(10, 16, 10, 12) };
             _brandImage = LoadBrandImage();
-            if (_brandImage != null)
+            _homeButton = new Button
             {
-                _brandPicture = new PictureBox { Image = _brandImage, Location = new Point(18, 18), Size = new Size(42, 42), SizeMode = PictureBoxSizeMode.Zoom, AccessibleName = "Ícone do Otimizador" };
-                _navigationPanel.Controls.Add(_brandPicture);
-            }
-            _brandTitle = new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true };
-            _brandVersion = new Label { Text = "Versão " + _displayVersion, Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) };
-            _navigationPanel.Controls.Add(_brandTitle);
-            _navigationPanel.Controls.Add(_brandVersion);
+                BackgroundImage = _brandImage,
+                BackgroundImageLayout = ImageLayout.Zoom,
+                Location = new Point(10, 14),
+                Size = new Size(44, 44),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Theme.Navigation,
+                Cursor = Cursors.Hand,
+                AccessibleName = "Ir para o Painel",
+                TabIndex = 0
+            };
+            _homeButton.FlatAppearance.BorderSize = 0;
+            _homeButton.FlatAppearance.MouseOverBackColor = Theme.SurfaceAlt;
+            _homeButton.Click += delegate { _tabs.SelectedIndex = (int)AppSection.Dashboard; };
+            _toolTip.SetToolTip(_homeButton, "Painel");
+            _navigationPanel.Controls.Add(_homeButton);
+
+            _privilegeStatus = new Label
+            {
+                Text = Optimizer.IsAdministrator() ? "●  Administrador" : "●  Usuário padrão",
+                Dock = DockStyle.Bottom,
+                Height = 38,
+                Padding = new Padding(8, 0, 0, 0),
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoEllipsis = true,
+                ForeColor = Optimizer.IsAdministrator() ? Theme.Success : Theme.Muted,
+                Font = new Font("Segoe UI", 8.5f),
+                AccessibleName = Optimizer.IsAdministrator() ? "Executando como administrador" : "Executando como usuário padrão"
+            };
+            _navigationPanel.Controls.Add(_privilegeStatus);
 
             string[] labels = { "Painel", "Manutenção", "Atualizações", "Sistema", "Ajustes" };
             _navigationButtons = new Button[labels.Length];
@@ -271,8 +289,8 @@ namespace CodexPerformanceOptimizer
                 var button = new Button
                 {
                     Text = labels[i],
-                    Location = new Point(12, 86 + (i * 48)),
-                    Size = new Size(160, 40),
+                    Location = new Point(10, 70 + (i * 48)),
+                    Size = new Size(152, 40),
                     TextAlign = ContentAlignment.MiddleLeft,
                     Padding = new Padding(16, 0, 0, 0),
                     FlatStyle = FlatStyle.Flat,
@@ -285,6 +303,7 @@ namespace CodexPerformanceOptimizer
                 button.FlatAppearance.BorderSize = 0;
                 button.FlatAppearance.MouseOverBackColor = Theme.SurfaceAlt;
                 button.Click += delegate { _tabs.SelectedIndex = tabIndex; };
+                _toolTip.SetToolTip(button, labels[i]);
                 _navigationButtons[i] = button;
                 _navigationPanel.Controls.Add(button);
             }
@@ -297,18 +316,21 @@ namespace CodexPerformanceOptimizer
         {
             if (_navigationPanel == null || _navigationButtons == null) return;
             bool compact = ClientSize.Width < 1180;
-            _navigationPanel.Width = compact ? 76 : 184;
-            if (_brandPicture != null) _brandPicture.Location = compact ? new Point(17, 18) : new Point(18, 18);
-            if (_brandTitle != null) _brandTitle.Visible = !compact;
-            if (_brandVersion != null) _brandVersion.Visible = !compact;
+            _navigationPanel.Width = compact ? 68 : 172;
+            if (_homeButton != null)
+            {
+                _homeButton.Location = compact ? new Point(12, 14) : new Point(10, 14);
+                _homeButton.Size = new Size(44, 44);
+            }
+            if (_privilegeStatus != null) _privilegeStatus.Visible = !compact;
             string[] full = { "Painel", "Manutenção", "Atualizações", "Sistema", "Ajustes" };
-            string[] compactText = { "⌂", "◆", "↻", "▣", "⚙" };
+            string[] compactText = { "⌂", "⚒", "↻", "▣", "⚙" };
             for (int index = 0; index < _navigationButtons.Length; index++)
             {
                 Button button = _navigationButtons[index];
                 button.Text = compact ? compactText[index] : full[index];
-                button.Location = new Point(compact ? 8 : 12, 86 + (index * 48));
-                button.Size = new Size(compact ? 60 : 160, 40);
+                button.Location = new Point(compact ? 8 : 10, 70 + (index * 48));
+                button.Size = new Size(compact ? 52 : 152, 40);
                 button.Padding = compact ? Padding.Empty : new Padding(16, 0, 0, 0);
                 button.TextAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
             }
