@@ -71,6 +71,7 @@ function Sign-Artifact([string]$Path) {
 $appSigned = Sign-Artifact $app
 Copy-Item -LiteralPath $app -Destination $portableApp -Force
 $version = [Reflection.AssemblyName]::GetAssemblyName($app).Version.ToString()
+$semanticVersion = ([Version]$version).ToString(3)
 $channelObject = @{ ManifestUrl = if ([string]::IsNullOrWhiteSpace($UpdateBaseUrl)) { '' } else { $UpdateBaseUrl.TrimEnd('/') + '/update-manifest.public.json' } }
 [IO.File]::WriteAllText($channel, ($channelObject | ConvertTo-Json -Compress), $utf8NoBom)
 [IO.File]::WriteAllText($localManifest, (@{ Version=$version; InstallerUrl=''; Sha256=''; Notes='Versao instalada e pronta para uso.' } | ConvertTo-Json -Compress), $utf8NoBom)
@@ -86,9 +87,13 @@ $installerSigned = Sign-Artifact $installer
 $appHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $app).Hash
 $portableHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $portableApp).Hash
 $installerHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash
+$immutableBaseUrl = $UpdateBaseUrl
+if (-not [string]::IsNullOrWhiteSpace($immutableBaseUrl) -and $immutableBaseUrl -match '^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/main/releases/?$') {
+    $immutableBaseUrl = "https://raw.githubusercontent.com/$($Matches[1])/$($Matches[2])/refs/tags/v$semanticVersion/releases"
+}
 $publicManifest = [ordered]@{
     Version = $version
-    InstallerUrl = if ([string]::IsNullOrWhiteSpace($UpdateBaseUrl)) { '' } else { $UpdateBaseUrl.TrimEnd('/') + '/InstalarOtimizadorDeDesempenho.exe' }
+    InstallerUrl = if ([string]::IsNullOrWhiteSpace($immutableBaseUrl)) { '' } else { $immutableBaseUrl.TrimEnd('/') + '/InstalarOtimizadorDeDesempenho.exe' }
     Sha256 = $installerHash
     Notes = 'Nova versao disponivel no GitHub. Download protegido por HTTPS e SHA-256.'
 }
@@ -103,6 +108,7 @@ $summary = @(
     "SHA-256 do aplicativo portátil: $portableHash"
     "SHA-256 do instalador: $installerHash"
     "Canal: $($channelObject.ManifestUrl)"
+    "Pacote imutável: $($publicManifest.InstallerUrl)"
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $output 'release-summary.txt'), $summary + [Environment]::NewLine, $utf8NoBom)
 
