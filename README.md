@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.1.0 consolida Windows, drivers e aplicativos em uma fila de atualizações, adiciona estados vazios claros, torna o último resultado expansível e reduz código duplicado da interface.
+A versão 5.2.0 adiciona uma central de integridade para localizar falhas gerais, verificar arquivos e componentes do Windows e oferecer reparo controlado quando necessário.
 
 ## Recursos principais
 
@@ -17,6 +17,8 @@ A versão 5.1.0 consolida Windows, drivers e aplicativos em uma fila de atualiza
 - Elevação administrativa antecipada e única para o conjunto selecionado.
 - Comparação automática de CPU, memória e espaço antes e depois do atendimento.
 - Diagnóstico acionável de discos, estabilidade, inicialização, energia e recomendações.
+- Verificação rápida de espaço, saúde dos discos, estabilidade, reinicialização pendente, dispositivos e serviços essenciais.
+- Verificação profunda somente para diagnóstico com DISM, SFC e CHKDSK, seguida de reparo opcional e confirmado pelos mecanismos oficiais do Windows.
 - Inicialização completa com entradas do usuário, computador, pastas e aplicativos da Microsoft Store.
 - Inventário de versões de vídeo, BIOS, firmware, chipset e demais drivers importantes.
 - Busca e instalação de drivers oficiais pelo Windows Update.

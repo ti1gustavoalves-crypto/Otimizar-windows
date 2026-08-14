@@ -32,31 +32,35 @@ namespace CodexPerformanceOptimizer
         {
             TabPage page = NewPage("Sistema");
             Button status = ButtonFactory("Saúde e processos", 20, 10, 170, Theme.Primary);
-            Button hardware = ButtonFactory("Hardware", 202, 10, 120, Theme.Secondary);
-            Button drivers = ButtonFactory("Drivers instalados", 334, 10, 155, Theme.Secondary);
-            _systemTabs = HiddenTabs(BuildDiagnosticsTab(), BuildHardwareTab(), BuildDriverInventoryTab());
+            Button integrity = ButtonFactory("Integridade", 202, 10, 120, Theme.Secondary);
+            Button hardware = ButtonFactory("Hardware", 334, 10, 120, Theme.Secondary);
+            Button drivers = ButtonFactory("Drivers instalados", 466, 10, 155, Theme.Secondary);
+            _systemTabs = HiddenTabs(BuildDiagnosticsTab(), BuildIntegrityTab(), BuildHardwareTab(), BuildDriverInventoryTab());
             Panel content = WorkspaceContent(_systemTabs, 54);
             Action update = delegate
             {
                 SetButtonColor(status, _systemTabs.SelectedIndex == 0 ? Theme.Primary : Theme.Secondary);
-                SetButtonColor(hardware, _systemTabs.SelectedIndex == 1 ? Theme.Primary : Theme.Secondary);
-                SetButtonColor(drivers, _systemTabs.SelectedIndex == 2 ? Theme.Primary : Theme.Secondary);
+                SetButtonColor(integrity, _systemTabs.SelectedIndex == 1 ? Theme.Primary : Theme.Secondary);
+                SetButtonColor(hardware, _systemTabs.SelectedIndex == 2 ? Theme.Primary : Theme.Secondary);
+                SetButtonColor(drivers, _systemTabs.SelectedIndex == 3 ? Theme.Primary : Theme.Secondary);
             };
             status.Click += async delegate { _systemTabs.SelectedIndex = 0; update(); if (!_suppressStartup) await LoadDiagnostics(false); };
+            integrity.Click += async delegate { _systemTabs.SelectedIndex = 1; update(); if (!_suppressStartup) await LoadIntegrityAsync(false); };
             hardware.Click += async delegate
             {
-                _systemTabs.SelectedIndex = 1;
+                _systemTabs.SelectedIndex = 2;
                 update();
                 if (!_hardwareLoaded && _cts == null) await LoadHardware(false);
             };
             drivers.Click += async delegate
             {
-                _systemTabs.SelectedIndex = 2;
+                _systemTabs.SelectedIndex = 3;
                 update();
                 await LoadDriverInventoryAsync(false);
             };
             page.Controls.Add(content);
             page.Controls.Add(status);
+            page.Controls.Add(integrity);
             page.Controls.Add(hardware);
             page.Controls.Add(drivers);
             page.Resize += delegate { LayoutWorkspaceContent(page, content, 54); };

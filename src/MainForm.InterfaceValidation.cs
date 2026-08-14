@@ -47,6 +47,7 @@ namespace CodexPerformanceOptimizer
                 finally { _tabs.SelectedIndex = selected; }
             }
             if (_fullServiceButton == null || _fullServiceButton.Width < 180 || _fullServiceButton.Text.IndexOf("atendimento", StringComparison.OrdinalIgnoreCase) < 0) problems.Add("A ação principal do atendimento não está acessível no painel.");
+            if (_integrityGrid == null || _integrityEmpty == null || _systemTabs == null || _systemTabs.TabPages.Count != 4) problems.Add("Sistema: área de integridade ou navegação interna indisponível.");
             return string.Join(" ", problems.Distinct().ToArray());
         }
 

@@ -22,7 +22,6 @@ namespace CodexPerformanceOptimizer
         public static string SnapshotPath { get { return Path.Combine(Root, "state-v2.json"); } }
         public static string ComparisonPath { get { return Path.Combine(Root, "comparison-v2.json"); } }
         public static string SettingsPath { get { return Path.Combine(Root, "advanced-settings.json"); } }
-        public static string BenchmarkPath { get { return Path.Combine(Root, "benchmark-session.json"); } }
         public static string ModeDescription { get { return Portable ? "Portátil • dados nesta pasta" : "Instalado • dados no perfil local"; } }
 
         private static bool DetectPortableMode()

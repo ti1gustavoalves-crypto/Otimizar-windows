@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
 [assembly: AssemblyCopyright("2026")]
-[assembly: AssemblyVersion("5.1.0.0")]
-[assembly: AssemblyFileVersion("5.1.0.0")]
+[assembly: AssemblyVersion("5.2.0.0")]
+[assembly: AssemblyFileVersion("5.2.0.0")]
 [assembly: ComVisible(false)]
 
 namespace CodexPerformanceOptimizer
@@ -49,7 +49,7 @@ namespace CodexPerformanceOptimizer
                     MessageBox.Show("O Otimizador já está aberto.", "Otimizador de Desempenho", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                try { Application.Run(new MainFormV2(ReadGuidedProfile(args), HasArgument(args, "--full-service"))); }
+                try { Application.Run(new MainFormV2(ReadGuidedProfile(args), HasArgument(args, "--full-service"), false, HasArgument(args, "--integrity-scan"))); }
                 finally { instance.ReleaseMutex(); }
             }
         }
@@ -66,7 +66,7 @@ namespace CodexPerformanceOptimizer
             {
                 int profile;
                 if (string.Equals(args[i], "--guided", StringComparison.OrdinalIgnoreCase) && int.TryParse(args[i + 1], out profile))
-                    return Math.Max(0, Math.Min(3, profile));
+                    return Math.Max(0, Math.Min(4, profile));
             }
             return null;
         }

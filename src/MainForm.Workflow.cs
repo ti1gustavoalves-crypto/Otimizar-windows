@@ -23,11 +23,9 @@ namespace CodexPerformanceOptimizer
 
             Button verify = ButtonFactory("Verificar atualizações", 0, 0, 185, Theme.Primary);
             _installUpdatesButton = ButtonFactory("Instalar selecionadas", 0, 0, 190, Theme.Success);
-            Button windows = ButtonFactory("Windows Update", 0, 0, 155, Theme.Secondary);
             var actions = new ResponsiveActionBar();
             actions.AddAction(verify);
             actions.AddAction(_installUpdatesButton);
-            actions.AddAction(windows);
 
             _updateQueueGrid = Grid(0, 0, 1000, 500);
             _updateQueueGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Instalar", Width = 65 });
@@ -67,7 +65,6 @@ namespace CodexPerformanceOptimizer
 
             verify.Click += async delegate { await SearchAllUpdatesAsync(true); };
             _installUpdatesButton.Click += async delegate { await InstallSelectedUpdatesAsync(); };
-            windows.Click += delegate { DriverManager.OpenWindowsUpdate(); };
             _updateQueueFilter.SelectedIndexChanged += delegate { ApplyUnifiedUpdateFilter(); };
             _updateQueueSearch.TextChanged += delegate { ApplyUnifiedUpdateFilter(); };
 
@@ -105,11 +102,6 @@ namespace CodexPerformanceOptimizer
             bool wingetAvailable = await Task.Run(delegate { return ProgramUpdater.IsAvailable(); });
             await RunWork("Consultando atualizações...", delegate(CancellationToken token, IProgress<string> progress)
             {
-                Task driverTask = Task.Run(delegate
-                {
-                    try { drivers = CachedAnalysis.SearchDriverUpdates(force, token, progress); }
-                    catch (Exception ex) { driverError = ex.Message; }
-                }, token);
                 Task programTask = Task.Run(delegate
                 {
                     if (!wingetAvailable) { programError = "WinGet não disponível"; return; }
@@ -120,8 +112,11 @@ namespace CodexPerformanceOptimizer
                 {
                     try { windowsUpdates = WindowsUpdateInventory.Search(token, progress); }
                     catch (Exception ex) { windowsError = ex.Message; }
+                    token.ThrowIfCancellationRequested();
+                    try { drivers = CachedAnalysis.SearchDriverUpdates(force, token, progress); }
+                    catch (Exception ex) { driverError = ex.Message; }
                 }, token);
-                try { Task.WaitAll(driverTask, programTask, windowsTask); }
+                try { Task.WaitAll(programTask, windowsTask); }
                 catch (AggregateException) { token.ThrowIfCancellationRequested(); throw; }
                 token.ThrowIfCancellationRequested();
                 if (drivers == null && programs == null && windowsUpdates == null) throw new InvalidOperationException("Nenhuma origem respondeu. " + windowsError + " " + driverError + " " + programError);
@@ -219,6 +214,7 @@ namespace CodexPerformanceOptimizer
             if (_installUpdatesButton == null) return;
             bool hasSelection = _driverUpdates.Any(item => item.Selected) || _programUpdates.Any(item => item.Selected);
             _installUpdatesButton.Enabled = hasSelection;
+            _installUpdatesButton.Visible = hasSelection;
             SetButtonColor(_installUpdatesButton, hasSelection ? Theme.Success : Theme.Secondary);
         }
 

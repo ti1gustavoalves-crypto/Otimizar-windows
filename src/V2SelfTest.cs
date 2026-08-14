@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -61,13 +62,6 @@ namespace CodexPerformanceOptimizer
                     if (!AdvancedEngine.IsVerifiedUpdateFileForTesting(cachedUpdate, cachedHash) || AdvancedEngine.IsVerifiedUpdateFileForTesting(cachedUpdate, new string('0', 64))) throw new InvalidOperationException("Cache verificado do atualizador falhou.");
                 }
                 finally { try { if (File.Exists(cachedUpdate)) File.Delete(cachedUpdate); } catch { } }
-                string benchmark = BenchmarkManager.BuildComparison(new BenchmarkSession
-                {
-                    PendingRestart = false,
-                    Before = new BenchmarkSample { AverageCpuPercent = 20, AverageFreeRamGb = 4, FreeDiskGb = 30, BootDurationMilliseconds = 60000 },
-                    After = new BenchmarkSample { AverageCpuPercent = 10, AverageFreeRamGb = 5, FreeDiskGb = 35, BootDurationMilliseconds = 45000 }
-                });
-                if (benchmark.IndexOf("BENCHMARK CONCLUÍDO", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Comparativo pós-reinicialização falhou.");
                 string safety = SafetyTestSuite.Run(CancellationToken.None, new Progress<string>());
                 if (safety.IndexOf("11 de 11 testes aprovados", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Suíte de segurança falhou.\r\n" + safety);
                 if (!DriverManager.IsValidUpdateIdForTesting("11111111-2222-3333-4444-555555555555") || DriverManager.IsValidUpdateIdForTesting("driver-inválido")) throw new InvalidOperationException("Validação segura de drivers falhou.");
@@ -84,6 +78,11 @@ namespace CodexPerformanceOptimizer
                 string windowsTitle = Convert.ToBase64String(Encoding.UTF8.GetBytes("Atualização cumulativa de teste"));
                 var windowsUpdates = WindowsUpdateInventory.ParseForTesting(windowsTitle + "|00000000-0000-0000-0000-000000000001|1024|True|False");
                 if (windowsUpdates.Count != 1 || !windowsUpdates[0].Mandatory || windowsUpdates[0].Title.IndexOf("cumulativa", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Parser do Windows Update falhou.");
+                IntegrityCheckResult healthyIntegrity = SystemIntegrityEngine.ClassifyCommandForTesting("dism", 0, "No component store corruption detected.");
+                IntegrityCheckResult damagedIntegrity = SystemIntegrityEngine.ClassifyCommandForTesting("sfc", 1, "Windows Resource Protection found integrity violations.");
+                if (healthyIntegrity.Warning || !damagedIntegrity.Warning || !damagedIntegrity.CanRepair) throw new InvalidOperationException("Classificação de integridade falhou.");
+                List<IntegrityCheckResult> quickIntegrity = SystemIntegrityEngine.QuickScan();
+                if (quickIntegrity.Count < 5 || quickIntegrity.Any(item => string.IsNullOrWhiteSpace(item.Area) || string.IsNullOrWhiteSpace(item.Check) || string.IsNullOrWhiteSpace(item.Status))) throw new InvalidOperationException("Verificação rápida de integridade falhou.");
                 var driverInventory = DriverManager.ReadInstalledDrivers();
                 if (driverInventory == null || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Inventário de drivers retornou dados inválidos.");
                 var startupEntries = V2Engine.ReadStartupEntries();
@@ -124,7 +123,6 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Medições de inicialização: " + diagnostics.Startup.Count);
                 Console.WriteLine("Estabilidade e atualizações: OK");
                 Console.WriteLine("Cache SHA-256 do atualizador: OK");
-                Console.WriteLine("Benchmark pós-reinicialização: OK");
                 Console.WriteLine("Testes de segurança isolados: 11/11");
                 Console.WriteLine("Volumes: " + V2Engine.ReadVolumes().Count);
                 Console.WriteLine("Inicialização: " + startupEntries.Count);

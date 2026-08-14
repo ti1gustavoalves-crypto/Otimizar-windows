@@ -60,6 +60,12 @@ namespace CodexPerformanceOptimizer
         private Label _diagnosticStatus;
         private DiagnosticSnapshot _diagnosticSnapshot;
         private bool _diagnosticsLoaded;
+        private DataGridView _integrityGrid;
+        private Label _integritySummary;
+        private EmptyStatePanel _integrityEmpty;
+        private Button _integrityRepairButton;
+        private List<IntegrityCheckResult> _integrityResults = new List<IntegrityCheckResult>();
+        private bool _integrityLoaded;
         private CheckBox _minimizeToTray;
         private CheckBox _automaticProfiles;
         private Label _updateStatus;
@@ -131,12 +137,14 @@ namespace CodexPerformanceOptimizer
         private bool _fullServiceRunning;
         private readonly bool _startFullService;
         private readonly bool _suppressStartup;
+        private readonly bool _startIntegrityScan;
 
-        public MainFormV2(int? initialServiceProfile = null, bool startFullService = false, bool suppressStartup = false)
+        public MainFormV2(int? initialServiceProfile = null, bool startFullService = false, bool suppressStartup = false, bool startIntegrityScan = false)
         {
             _initialServiceProfile = initialServiceProfile;
             _startFullService = startFullService;
             _suppressStartup = suppressStartup;
+            _startIntegrityScan = startIntegrityScan;
             Version version = GetType().Assembly.GetName().Version;
             _displayVersion = version.Major + "." + version.Minor;
             Text = "Otimizador de Desempenho " + _displayVersion;
@@ -172,8 +180,9 @@ namespace CodexPerformanceOptimizer
                 else if (_tabs.SelectedIndex == (int)AppSection.System && _systemTabs != null)
                 {
                     if (_systemTabs.SelectedIndex == 0) await LoadDiagnostics(false);
-                    else if (_systemTabs.SelectedIndex == 1 && !_hardwareLoaded) await LoadHardware(false);
-                    else if (_systemTabs.SelectedIndex == 2) await LoadDriverInventoryAsync(false);
+                    else if (_systemTabs.SelectedIndex == 1) await LoadIntegrityAsync(false);
+                    else if (_systemTabs.SelectedIndex == 2 && !_hardwareLoaded) await LoadHardware(false);
+                    else if (_systemTabs.SelectedIndex == 3) await LoadDriverInventoryAsync(false);
                 }
             };
 
@@ -221,8 +230,12 @@ namespace CodexPerformanceOptimizer
                 _processSampler.Prime();
                 _liveMetricsTimer.Start();
                 await RefreshAudit();
-                await TryCompletePendingBenchmark();
                 BeginAutomaticUpdateCheck();
+                if (_startIntegrityScan && !IsDisposed)
+                {
+                    NavigateToSystem(1);
+                    await RunDeepIntegrityAsync(true);
+                }
                 if (_startFullService && !IsDisposed) await ExecuteCompleteTechnicalServiceAsync(true);
             };
             FormClosed += delegate

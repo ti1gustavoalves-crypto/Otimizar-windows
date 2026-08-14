@@ -90,40 +90,13 @@ namespace CodexPerformanceOptimizer
             _diagnosticStatus.Text = warnings == 0 ? "• Nenhum alerta importante" : "• " + warnings + (warnings == 1 ? " alerta encontrado" : " alertas encontrados");
         }
 
-        private async Task TryCompletePendingBenchmark()
-        {
-            BenchmarkSession session = BenchmarkManager.ReadSession();
-            if (session == null || !session.PendingRestart) return;
-            string result = await RunWork("Verificando benchmark pendente...", delegate(CancellationToken t, IProgress<string> p) { return BenchmarkManager.TryComplete(t, p); }, false);
-            if (result.IndexOf("BENCHMARK CONCLUÍDO", StringComparison.OrdinalIgnoreCase) < 0) return;
-            V2Engine.SaveReport(result);
-            _diagnosticsLoaded = false;
-            ShowTextDialog("Benchmark concluído", result);
-        }
-
         private void PopulateDiagnostics(DiagnosticSnapshot snapshot)
         {
             _diagnosticCards.SuspendLayout();
             _diagnosticCards.Controls.Clear();
-            BenchmarkSession benchmark = BenchmarkManager.ReadSession();
             PerformanceComparison comparison = snapshot.Comparison;
-            string comparisonMain;
-            string comparisonDetail;
-            if (benchmark != null && benchmark.PendingRestart)
-            {
-                comparisonMain = "Aguardando reinicialização";
-                comparisonDetail = "A linha de base está salva e será comparada no próximo login";
-            }
-            else if (benchmark != null && benchmark.Before != null && benchmark.After != null)
-            {
-                comparisonMain = string.Format(CultureInfo.CurrentCulture, "CPU {0:N1}% → {1:N1}%", benchmark.Before.AverageCpuPercent, benchmark.After.AverageCpuPercent);
-                comparisonDetail = string.Format(CultureInfo.CurrentCulture, "RAM livre {0:N1} → {1:N1} GB  •  Disco {2:+0.0;-0.0;0.0} GB", benchmark.Before.AverageFreeRamGb, benchmark.After.AverageFreeRamGb, benchmark.After.FreeDiskGb - benchmark.Before.FreeDiskGb);
-            }
-            else
-            {
-                comparisonMain = comparison == null ? "Aguardando medição" : string.Format(CultureInfo.CurrentCulture, "RAM {0:+0.0;-0.0;0.0} GB  •  Disco {1:+0.0;-0.0;0.0} GB", comparison.AfterFreeRamGb - comparison.BeforeFreeRamGb, comparison.AfterFreeDiskGb - comparison.BeforeFreeDiskGb);
-                comparisonDetail = comparison == null ? "Execute um atendimento para criar o comparativo" : comparison.Operation + "  •  CPU " + comparison.BeforeCpuPercent.ToString("N0") + "% → " + comparison.AfterCpuPercent.ToString("N0") + "%";
-            }
+            string comparisonMain = comparison == null ? "Aguardando medição" : string.Format(CultureInfo.CurrentCulture, "RAM {0:+0.0;-0.0;0.0} GB  •  Disco {1:+0.0;-0.0;0.0} GB", comparison.AfterFreeRamGb - comparison.BeforeFreeRamGb, comparison.AfterFreeDiskGb - comparison.BeforeFreeDiskGb);
+            string comparisonDetail = comparison == null ? "Execute um atendimento para criar o comparativo" : comparison.Operation + "  •  CPU " + comparison.BeforeCpuPercent.ToString("N0") + "% → " + comparison.AfterCpuPercent.ToString("N0") + "%";
             _diagnosticCards.Controls.Add(DiagnosticCard("ANTES E DEPOIS", comparisonMain, comparisonDetail, false, null));
 
             TemperatureReading hottest = snapshot.Temperatures.OrderByDescending(item => item.Celsius).FirstOrDefault();

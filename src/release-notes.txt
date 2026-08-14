@@ -1,12 +1,12 @@
-OTIMIZADOR DE DESEMPENHO 5.1.0
+OTIMIZADOR DE DESEMPENHO 5.2.0
 
-- Windows, drivers e aplicativos agora aparecem em uma única fila de atualizações com pesquisa e filtro por origem.
-- As consultas de atualização são executadas em paralelo para reduzir o tempo de espera.
-- Atualizações de sistema pendentes são identificadas e encaminhadas ao mecanismo oficial do Windows Update.
-- Telas sem resultados exibem uma mensagem clara em vez de uma tabela preta vazia.
-- O último resultado do atendimento aparece apenas quando existe e permanece recolhido até ser solicitado.
-- Atendimento completo agora pode ser escolhido diretamente como perfil.
-- Backup e restauração de drivers foram movidos para Recuperação em Ajustes.
-- Novos componentes reutilizáveis padronizam estados vazios e barras de ações responsivas.
-- Código antigo das duas tabelas de atualização foi removido e o arquivo principal foi reduzido.
-- Responsividade e navegação interna continuam validadas automaticamente em três resoluções.
+- Nova seção Integridade dentro de Sistema, voltada à localização de falhas gerais do computador.
+- A verificação rápida analisa espaço, saúde física dos discos, estabilidade, reinicialização pendente, dispositivos e serviços essenciais.
+- A verificação profunda usa DISM, SFC e CHKDSK em modo de diagnóstico, sem alterar o Windows.
+- O reparo aparece somente quando uma falha reparável é encontrada, exige confirmação e tenta criar um ponto de restauração.
+- A elevação administrativa ocorre somente ao iniciar uma operação que realmente precisa dela.
+- Resultados são apresentados em uma única lista com estado, detalhe e destaque para pontos de atenção.
+- O antigo benchmark pós-reinicialização foi removido por duplicar o comparativo já exibido no atendimento.
+- A interface e as novas classificações de integridade passam pelos autotestes da versão.
+- As consultas do Windows Update e de drivers compartilham uma sessão sequencial, enquanto o WinGet continua em paralelo, reduzindo contenção e travamentos.
+- A ação de instalar só aparece quando há itens selecionados; o atalho redundante do Windows Update foi retirado.
