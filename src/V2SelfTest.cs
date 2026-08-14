@@ -86,6 +86,8 @@ namespace CodexPerformanceOptimizer
                 if (healthyIntegrity.Warning || !damagedIntegrity.Warning || !damagedIntegrity.CanRepair) throw new InvalidOperationException("Classificação de integridade falhou.");
                 List<IntegrityCheckResult> quickIntegrity = SystemIntegrityEngine.QuickScan();
                 if (quickIntegrity.Count < 5 || quickIntegrity.Any(item => string.IsNullOrWhiteSpace(item.Area) || string.IsNullOrWhiteSpace(item.Check) || string.IsNullOrWhiteSpace(item.Status))) throw new InvalidOperationException("Verificação rápida de integridade falhou.");
+                List<RepairFinding> repairFindings = GeneralRepairEngine.Scan(CancellationToken.None, new Progress<string>());
+                if (repairFindings.Count < 6 || repairFindings.Any(item => string.IsNullOrWhiteSpace(item.Id) || string.IsNullOrWhiteSpace(item.Area) || string.IsNullOrWhiteSpace(item.Title))) throw new InvalidOperationException("Central de correções gerais falhou.");
                 var driverInventory = DriverManager.ReadInstalledDrivers();
                 if (driverInventory == null || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Inventário de drivers retornou dados inválidos.");
                 var startupEntries = V2Engine.ReadStartupEntries();

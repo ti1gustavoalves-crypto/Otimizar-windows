@@ -35,8 +35,8 @@ namespace CodexPerformanceOptimizer
             var cpu = MetricCard("Uso do processador", 692, 130, out _cpuValue, out _cpuDetail, out _cpuGauge, out _cpuChart);
 
             var service = DashboardCard(20, 260, 1016, 422);
-            service.Controls.Add(new Label { Text = "Atendimento rápido", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
-            service.Controls.Add(new Label { Text = "Escolha o objetivo; o Otimizador prepara somente ações coerentes com o caso.", Location = new Point(20, 44), Size = new Size(590, 22), AutoEllipsis = true, ForeColor = Theme.Muted });
+            service.Controls.Add(new Label { Text = "Fila de atendimento", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
+            service.Controls.Add(new Label { Text = "Escolha o objetivo e revise as ações que serão executadas em ordem.", Location = new Point(20, 44), Size = new Size(590, 22), AutoEllipsis = true, ForeColor = Theme.Muted });
 
             _serviceProfile = new ComboBox { Location = new Point(20, 78), Size = new Size(270, 29), DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
             _serviceProfile.Items.AddRange(new object[] { "Manutenção preventiva", "PC lento", "Pouco espaço", "Inicialização lenta", "Atendimento completo" });
@@ -55,7 +55,7 @@ namespace CodexPerformanceOptimizer
             };
             _issueGrid = Grid(316, 78, 680, 278);
             _issueGrid.RowTemplate.Height = 30;
-            _issueGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Fazer", Width = 55 });
+            _issueGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Executar", Width = 70 });
             _issueGrid.Columns.Add("Severity", "Prioridade");
             _issueGrid.Columns[1].Width = 110;
             _issueGrid.Columns[1].ReadOnly = true;
@@ -228,7 +228,7 @@ namespace CodexPerformanceOptimizer
             }
             if (!alreadyConfirmed)
             {
-                string message = "Executar o atendimento completo?\r\n\r\nO fluxo registrará o estado inicial, aplicará as ações selecionadas, consultará atualizações e verificará o resultado final. Drivers e programas não serão instalados sem uma nova confirmação.";
+                string message = "Executar o atendimento?\r\n\r\nO fluxo registrará o estado inicial, aplicará as ações selecionadas, verificará problemas gerais, consultará atualizações e medirá o resultado. Atualizações não serão instaladas sem confirmação.";
                 if (MessageBox.Show(this, message, "Atendimento técnico completo", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             }
 
@@ -251,6 +251,9 @@ namespace CodexPerformanceOptimizer
             PopulateDriverUpdates(service.DriverUpdates);
             string wingetVersion = await Task.Run(delegate { return ProgramUpdater.ReadVersion(); });
             PopulateProgramUpdates(service.ProgramUpdates, wingetVersion);
+            _repairFindings = service.RepairFindings ?? new List<RepairFinding>();
+            _repairsLoaded = true;
+            if (_repairGrid != null) PopulateRepairFindings();
             _liveMetrics = V2Engine.ReadMetrics();
             _diagnosticSnapshot = CachedAnalysis.ReadDiagnostics(false);
             _diagnosticsLoaded = true;

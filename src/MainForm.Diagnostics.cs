@@ -20,6 +20,15 @@ namespace CodexPerformanceOptimizer
             var refresh = ButtonFactory("↻", 985, 10, 38, Theme.Secondary);
             _toolTip.SetToolTip(refresh, "Atualizar diagnóstico");
             refresh.Click += async delegate { await LoadDiagnostics(true); };
+            _processHistoryToggle = ButtonFactory("Processos recentes  ▾", 790, 10, 185, Theme.Secondary);
+            _processHistoryToggle.Click += delegate
+            {
+                bool show = !_processHistoryGrid.Visible;
+                _processHistoryGrid.Visible = show;
+                _processHistoryLabel.Visible = show;
+                _processHistoryToggle.Text = show ? "Processos recentes  ▴" : "Processos recentes  ▾";
+                LayoutDiagnosticsPage(page, refresh);
+            };
             _diagnosticCards = new FlowLayoutPanel
             {
                 Location = new Point(20, 58),
@@ -32,7 +41,7 @@ namespace CodexPerformanceOptimizer
                 WrapContents = true
             };
             _diagnosticCards.Anchor = AnchorStyles.Top | AnchorStyles.Left;
-            page.Controls.Add(new Label { Text = "Histórico de processos — últimos 5 minutos", Location = new Point(20, 405), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 9f) });
+            _processHistoryLabel = new Label { Text = "Histórico de processos — últimos 5 minutos", Location = new Point(20, 405), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI Semibold", 9f), Visible = false };
             _processHistoryGrid = Grid(20, 432, 1000, 160);
             _processHistoryGrid.Columns.Add("Name", "Aplicativo");
             _processHistoryGrid.Columns[0].Width = 390;
@@ -46,19 +55,15 @@ namespace CodexPerformanceOptimizer
             _processHistoryGrid.Columns[4].Width = 100;
             _processHistoryGrid.ReadOnly = true;
             _processHistoryGrid.Anchor = AnchorStyles.None;
+            _processHistoryGrid.Visible = false;
             page.Controls.Add(_diagnosticStatus);
             page.Controls.Add(refresh);
+            page.Controls.Add(_processHistoryToggle);
             page.Controls.Add(_diagnosticCards);
+            page.Controls.Add(_processHistoryLabel);
             page.Controls.Add(_processHistoryGrid);
-            page.Resize += delegate
-            {
-                int right = page.ClientSize.Width - 20;
-                refresh.Left = right - refresh.Width;
-                _diagnosticStatus.Size = new Size(Math.Max(250, refresh.Left - _diagnosticStatus.Left - 10), 24);
-                _diagnosticCards.Size = new Size(Math.Max(700, page.ClientSize.Width - 40), 330);
-                _processHistoryGrid.Location = new Point(20, 432);
-                _processHistoryGrid.Size = new Size(Math.Max(700, page.ClientSize.Width - 40), Math.Max(150, page.ClientSize.Height - _processHistoryGrid.Top - 20));
-            };
+            page.Resize += delegate { LayoutDiagnosticsPage(page, refresh); };
+            LayoutDiagnosticsPage(page, refresh);
             page.Enter += async delegate
             {
                 if (_suppressStartup) return;
@@ -67,6 +72,22 @@ namespace CodexPerformanceOptimizer
                 if (!IsDisposed) await LoadDiagnostics(false);
             };
             return page;
+        }
+
+        private void LayoutDiagnosticsPage(TabPage page, Button refresh)
+        {
+            int right = page.ClientSize.Width - 20;
+            refresh.Left = right - refresh.Width;
+            _processHistoryToggle.Left = refresh.Left - _processHistoryToggle.Width - 10;
+            _diagnosticStatus.Size = new Size(Math.Max(180, _processHistoryToggle.Left - _diagnosticStatus.Left - 10), 24);
+            int width = Math.Max(700, page.ClientSize.Width - 40);
+            if (_processHistoryGrid.Visible)
+            {
+                _diagnosticCards.Size = new Size(width, 330);
+                _processHistoryLabel.Location = new Point(20, 405);
+                _processHistoryGrid.SetBounds(20, 432, width, Math.Max(150, page.ClientSize.Height - 452));
+            }
+            else _diagnosticCards.Size = new Size(width, Math.Max(330, page.ClientSize.Height - 78));
         }
 
         private async Task LoadDiagnostics(bool force)

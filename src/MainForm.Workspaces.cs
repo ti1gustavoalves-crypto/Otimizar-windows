@@ -35,7 +35,8 @@ namespace CodexPerformanceOptimizer
             Button integrity = ButtonFactory("Integridade", 202, 10, 120, Theme.Secondary);
             Button hardware = ButtonFactory("Hardware", 334, 10, 120, Theme.Secondary);
             Button drivers = ButtonFactory("Drivers instalados", 466, 10, 155, Theme.Secondary);
-            _systemTabs = HiddenTabs(BuildDiagnosticsTab(), BuildIntegrityTab(), BuildHardwareTab(), BuildDriverInventoryTab());
+            Button repairs = ButtonFactory("Correções", 633, 10, 120, Theme.Secondary);
+            _systemTabs = HiddenTabs(BuildDiagnosticsTab(), BuildIntegrityTab(), BuildHardwareTab(), BuildDriverInventoryTab(), BuildRepairsTab());
             Panel content = WorkspaceContent(_systemTabs, 54);
             Action update = delegate
             {
@@ -43,6 +44,7 @@ namespace CodexPerformanceOptimizer
                 SetButtonColor(integrity, _systemTabs.SelectedIndex == 1 ? Theme.Primary : Theme.Secondary);
                 SetButtonColor(hardware, _systemTabs.SelectedIndex == 2 ? Theme.Primary : Theme.Secondary);
                 SetButtonColor(drivers, _systemTabs.SelectedIndex == 3 ? Theme.Primary : Theme.Secondary);
+                SetButtonColor(repairs, _systemTabs.SelectedIndex == 4 ? Theme.Primary : Theme.Secondary);
             };
             status.Click += async delegate { _systemTabs.SelectedIndex = 0; update(); if (!_suppressStartup) await LoadDiagnostics(false); };
             integrity.Click += async delegate { _systemTabs.SelectedIndex = 1; update(); if (!_suppressStartup) await LoadIntegrityAsync(false); };
@@ -58,11 +60,13 @@ namespace CodexPerformanceOptimizer
                 update();
                 await LoadDriverInventoryAsync(false);
             };
+            repairs.Click += async delegate { _systemTabs.SelectedIndex = 4; update(); await LoadRepairsAsync(false); };
             page.Controls.Add(content);
             page.Controls.Add(status);
             page.Controls.Add(integrity);
             page.Controls.Add(hardware);
             page.Controls.Add(drivers);
+            page.Controls.Add(repairs);
             page.Resize += delegate { LayoutWorkspaceContent(page, content, 54); };
             LayoutWorkspaceContent(page, content, 54);
             return page;

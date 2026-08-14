@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.3.0 simplifica a navegação durante o atendimento: remove identificação repetida, amplia a área útil e mantém somente contexto operacional relevante.
+A versão 5.4.0 adiciona uma central segura de correções gerais, fila de execução e modo compacto para atendimentos técnicos mais rápidos.
 
 ## Recursos principais
 
@@ -12,7 +12,10 @@ A versão 5.3.0 simplifica a navegação durante o atendimento: remove identific
 - Índice de saúde de 0 a 100 calculado a partir de recursos, estabilidade, armazenamento, inicialização e atualizações pendentes.
 - Identificação da causa mais provável de lentidão com base nas métricas atuais e no histórico disponível.
 - Atendimento guiado para manutenção preventiva, PC lento, pouco espaço e inicialização lenta.
-- Atendimento técnico em quatro etapas: diagnóstico inicial, correções selecionadas, busca de atualizações e verificação final.
+- Atendimento técnico em cinco etapas: diagnóstico inicial, correções selecionadas, falhas gerais, atualizações e verificação final.
+- Central de correções gerais para DNS, proxy, Winsock, pasta temporária, serviços de rede e caches dos navegadores.
+- Correções individuais ou em lote, com backup reversível de caches e proteção de políticas corporativas.
+- Modo compacto opcional para exibir mais linhas nas tabelas durante o atendimento.
 - Central de pendências com ações críticas, recomendadas, opcionais e informativas.
 - Elevação administrativa antecipada e única para o conjunto selecionado.
 - Comparação automática de CPU, memória e espaço antes e depois do atendimento.

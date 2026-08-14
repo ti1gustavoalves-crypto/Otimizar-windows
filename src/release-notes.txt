@@ -1,4 +1,14 @@
-OTIMIZADOR DE DESEMPENHO 5.3.0
+OTIMIZADOR DE DESEMPENHO 5.4.0
+
+- Nova área Correções em Sistema para diagnosticar rede, proxy, DNS, Winsock, pasta temporária, serviços essenciais e caches de navegadores.
+- Correções podem ser executadas individualmente ou em fila, com seleção clara e confirmação única.
+- A limpeza de caches fecha o ciclo com backup reversível e não força o encerramento de navegadores.
+- Configurações corporativas, Defender, AppLocker e outras políticas são somente detectadas ou encaminhadas; nunca são contornadas automaticamente.
+- O atendimento técnico agora inclui integridade e problemas gerais em um fluxo de cinco etapas.
+- Novo modo compacto reduz a altura das tabelas para técnicos que precisam visualizar mais itens.
+- Histórico de processos fica recolhido até ser necessário, liberando espaço para o diagnóstico principal.
+- A navegação usa um conjunto próprio e consistente de ícones vetoriais em larguras normal e compacta.
+- A central de correções e os novos layouts fazem parte da validação automatizada da interface.
 
 - Nome e versão repetidos foram removidos da navegação lateral; a versão permanece em Ajustes.
 - O ícone agora funciona como atalho discreto para o Painel.

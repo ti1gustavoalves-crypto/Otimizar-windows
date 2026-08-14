@@ -54,6 +54,8 @@ namespace CodexPerformanceOptimizer
         private Label[] _processTags;
         private ProcessHistoryTracker _processHistory;
         private DataGridView _processHistoryGrid;
+        private Label _processHistoryLabel;
+        private Button _processHistoryToggle;
         private FlowLayoutPanel _diagnosticCards;
         private Label _diagnosticStatus;
         private DiagnosticSnapshot _diagnosticSnapshot;
@@ -64,8 +66,15 @@ namespace CodexPerformanceOptimizer
         private Button _integrityRepairButton;
         private List<IntegrityCheckResult> _integrityResults = new List<IntegrityCheckResult>();
         private bool _integrityLoaded;
+        private DataGridView _repairGrid;
+        private Label _repairSummary;
+        private EmptyStatePanel _repairEmpty;
+        private Button _repairRunButton;
+        private List<RepairFinding> _repairFindings = new List<RepairFinding>();
+        private bool _repairsLoaded;
         private CheckBox _minimizeToTray;
         private CheckBox _automaticProfiles;
+        private CheckBox _compactMode;
         private Label _updateStatus;
         private bool _applicationUpdateInProgress;
         private NotifyIcon _trayIcon;
@@ -164,6 +173,7 @@ namespace CodexPerformanceOptimizer
             _tabs.TabPages.Add(BuildUpdatesTab());
             _tabs.TabPages.Add(BuildSystemWorkspace());
             _tabs.TabPages.Add(BuildSettingsTab());
+            ApplyDensity();
             _tabs.SelectedIndexChanged += async delegate
             {
                 UpdateNavigationState();
@@ -179,6 +189,7 @@ namespace CodexPerformanceOptimizer
                     else if (_systemTabs.SelectedIndex == 1) await LoadIntegrityAsync(false);
                     else if (_systemTabs.SelectedIndex == 2 && !_hardwareLoaded) await LoadHardware(false);
                     else if (_systemTabs.SelectedIndex == 3) await LoadDriverInventoryAsync(false);
+                    else if (_systemTabs.SelectedIndex == 4) await LoadRepairsAsync(false);
                 }
             };
 
@@ -289,10 +300,13 @@ namespace CodexPerformanceOptimizer
                 var button = new Button
                 {
                     Text = labels[i],
+                    Image = CreateNavigationIcon(i),
+                    ImageAlign = ContentAlignment.MiddleLeft,
+                    TextImageRelation = TextImageRelation.ImageBeforeText,
                     Location = new Point(10, 70 + (i * 48)),
                     Size = new Size(152, 40),
                     TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = new Padding(16, 0, 0, 0),
+                    Padding = new Padding(12, 0, 0, 0),
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Theme.Navigation,
                     ForeColor = Theme.Muted,
@@ -324,16 +338,49 @@ namespace CodexPerformanceOptimizer
             }
             if (_privilegeStatus != null) _privilegeStatus.Visible = !compact;
             string[] full = { "Painel", "Manutenção", "Atualizações", "Sistema", "Ajustes" };
-            string[] compactText = { "⌂", "⚒", "↻", "▣", "⚙" };
             for (int index = 0; index < _navigationButtons.Length; index++)
             {
                 Button button = _navigationButtons[index];
-                button.Text = compact ? compactText[index] : full[index];
+                button.Text = compact ? string.Empty : full[index];
                 button.Location = new Point(compact ? 8 : 10, 70 + (index * 48));
                 button.Size = new Size(compact ? 52 : 152, 40);
-                button.Padding = compact ? Padding.Empty : new Padding(16, 0, 0, 0);
+                button.Padding = compact ? Padding.Empty : new Padding(12, 0, 0, 0);
+                button.ImageAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
                 button.TextAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
             }
+        }
+
+        private static Image CreateNavigationIcon(int kind)
+        {
+            var image = new Bitmap(18, 18);
+            using (Graphics graphics = Graphics.FromImage(image))
+            using (var pen = new Pen(Theme.Muted, 1.7f))
+            {
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                if (kind == 0)
+                {
+                    graphics.DrawRectangle(pen, 2, 2, 5, 5); graphics.DrawRectangle(pen, 11, 2, 5, 5);
+                    graphics.DrawRectangle(pen, 2, 11, 5, 5); graphics.DrawRectangle(pen, 11, 11, 5, 5);
+                }
+                else if (kind == 1)
+                {
+                    graphics.DrawLine(pen, 3, 15, 14, 4); graphics.DrawEllipse(pen, 11, 1, 5, 5); graphics.DrawEllipse(pen, 1, 12, 5, 5);
+                }
+                else if (kind == 2)
+                {
+                    graphics.DrawArc(pen, 2, 2, 14, 14, 35, 285); graphics.DrawLine(pen, 13, 2, 16, 2); graphics.DrawLine(pen, 16, 2, 16, 5);
+                }
+                else if (kind == 3)
+                {
+                    graphics.DrawRectangle(pen, 2, 3, 14, 11); graphics.DrawLine(pen, 6, 17, 12, 17); graphics.DrawLine(pen, 9, 14, 9, 17);
+                }
+                else
+                {
+                    graphics.DrawEllipse(pen, 5, 5, 8, 8); graphics.DrawEllipse(pen, 8, 8, 2, 2);
+                    graphics.DrawLine(pen, 9, 1, 9, 4); graphics.DrawLine(pen, 9, 14, 9, 17); graphics.DrawLine(pen, 1, 9, 4, 9); graphics.DrawLine(pen, 14, 9, 17, 9);
+                }
+            }
+            return image;
         }
 
         private Image LoadBrandImage()
@@ -1171,6 +1218,7 @@ namespace CodexPerformanceOptimizer
             AdvancedSettings settings = AdvancedEngine.ReadSettings();
             settings.MinimizeToTray = _minimizeToTray != null && _minimizeToTray.Checked;
             settings.AutomaticPowerProfiles = _automaticProfiles != null && _automaticProfiles.Checked;
+            settings.CompactMode = _compactMode != null && _compactMode.Checked;
             AdvancedEngine.SaveSettings(settings);
             _advancedSettings = settings;
         }
@@ -1377,7 +1425,7 @@ namespace CodexPerformanceOptimizer
                 BorderStyle = BorderStyle.None,
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
                 ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
-                ColumnHeadersHeight = 38,
+                ColumnHeadersHeight = _advancedSettings != null && _advancedSettings.CompactMode ? 32 : 38,
                 ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing,
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
@@ -1387,7 +1435,7 @@ namespace CodexPerformanceOptimizer
                 EnableHeadersVisualStyles = false,
                 AccessibleName = "Tabela de dados"
             };
-            grid.RowTemplate.Height = 34;
+            grid.RowTemplate.Height = _advancedSettings != null && _advancedSettings.CompactMode ? 28 : 34;
             grid.ColumnHeadersDefaultCellStyle.BackColor = Theme.Surface;
             grid.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Text;
             grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Theme.Surface;
@@ -1397,6 +1445,27 @@ namespace CodexPerformanceOptimizer
             grid.DefaultCellStyle.SelectionForeColor = Theme.Text;
             NativeWindowTheme.ApplyTree(grid);
             return grid;
+        }
+
+        private void ApplyDensity()
+        {
+            bool compact = _advancedSettings != null && _advancedSettings.CompactMode;
+            foreach (DataGridView grid in FindControls<DataGridView>(this))
+            {
+                grid.ColumnHeadersHeight = compact ? 32 : 38;
+                grid.RowTemplate.Height = compact ? 28 : 34;
+                foreach (DataGridViewRow row in grid.Rows) row.Height = compact ? 28 : 34;
+            }
+        }
+
+        private static IEnumerable<T> FindControls<T>(Control root) where T : Control
+        {
+            foreach (Control child in root.Controls)
+            {
+                T match = child as T;
+                if (match != null) yield return match;
+                foreach (T nested in FindControls<T>(child)) yield return nested;
+            }
         }
 
         private static Button ButtonFactory(string text, int x, int y, int width, Color color)

@@ -19,6 +19,7 @@ namespace CodexPerformanceOptimizer
         public static string DriverBackupsFolder { get { return Path.Combine(Root, "DriverBackups"); } }
         public static string EnergyReportsFolder { get { return Path.Combine(Root, "EnergyReports"); } }
         public static string QuarantineFolder { get { return Path.Combine(Root, "Quarantine"); } }
+        public static string RepairBackupsFolder { get { return Path.Combine(Root, "RepairBackups"); } }
         public static string SnapshotPath { get { return Path.Combine(Root, "state-v2.json"); } }
         public static string ComparisonPath { get { return Path.Combine(Root, "comparison-v2.json"); } }
         public static string SettingsPath { get { return Path.Combine(Root, "advanced-settings.json"); } }

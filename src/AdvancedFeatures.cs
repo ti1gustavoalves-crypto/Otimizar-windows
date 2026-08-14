@@ -103,6 +103,7 @@ namespace CodexPerformanceOptimizer
     {
         public bool MinimizeToTray { get; set; }
         public bool AutomaticPowerProfiles { get; set; }
+        public bool CompactMode { get; set; }
         public string LastTemporaryPowerScheme { get; set; }
         public string UpdateManifestUrl { get; set; }
     }

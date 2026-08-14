@@ -13,6 +13,8 @@ namespace CodexPerformanceOptimizer
         public BottleneckCause Cause { get; set; }
         public List<DriverUpdate> DriverUpdates { get; set; }
         public List<ProgramUpdate> ProgramUpdates { get; set; }
+        public List<IntegrityCheckResult> IntegrityResults { get; set; }
+        public List<RepairFinding> RepairFindings { get; set; }
         public string Report { get; set; }
     }
 
@@ -20,7 +22,7 @@ namespace CodexPerformanceOptimizer
     {
         public static TechnicalServiceResult Execute(MaintenancePlan plan, IEnumerable<ProcessActivity> processes, CancellationToken token, IProgress<string> progress)
         {
-            progress.Report("Etapa 1 de 4 • registrando diagnóstico inicial...");
+            progress.Report("Etapa 1 de 5 • registrando diagnóstico inicial...");
             SystemMetrics before = V2Engine.ReadMetrics();
             DiagnosticSnapshot beforeDiagnostics = CachedAnalysis.ReadDiagnostics(false);
             token.ThrowIfCancellationRequested();
@@ -28,12 +30,17 @@ namespace CodexPerformanceOptimizer
             string maintenance = "Nenhuma correção selecionada.";
             if (plan != null && plan.SelectedCount > 0)
             {
-                progress.Report("Etapa 2 de 4 • aplicando correções selecionadas...");
+                progress.Report("Etapa 2 de 5 • aplicando correções selecionadas...");
                 maintenance = MaintenanceWorkflow.Execute(plan, token, progress);
                 CachedAnalysis.InvalidateStorage();
             }
 
-            progress.Report("Etapa 3 de 4 • consultando atualizações...");
+            progress.Report("Etapa 3 de 5 • procurando falhas gerais...");
+            List<IntegrityCheckResult> integrity = SystemIntegrityEngine.QuickScan();
+            List<RepairFinding> repairs = GeneralRepairEngine.Scan(token, progress);
+            token.ThrowIfCancellationRequested();
+
+            progress.Report("Etapa 4 de 5 • consultando atualizações...");
             var drivers = new List<DriverUpdate>();
             var programs = new List<ProgramUpdate>();
             string driverError = string.Empty;
@@ -51,7 +58,7 @@ namespace CodexPerformanceOptimizer
             catch (Exception ex) { programError = ex.Message; }
             token.ThrowIfCancellationRequested();
 
-            progress.Report("Etapa 4 de 4 • verificando o resultado final...");
+            progress.Report("Etapa 5 de 5 • verificando o resultado final...");
             SystemMetrics after = V2Engine.ReadMetrics();
             DiagnosticSnapshot afterDiagnostics = CachedAnalysis.ReadDiagnostics(true);
             HealthAssessment beforeHealth = SystemHealthEngine.Assess(before, beforeDiagnostics, processes, drivers.Count, programs.Count);
@@ -64,6 +71,8 @@ namespace CodexPerformanceOptimizer
             report.AppendLine("Causa provável: " + cause.Title + " — " + cause.Detail);
             report.AppendLine("Atualizações de drivers pendentes: " + drivers.Count);
             report.AppendLine("Atualizações de programas pendentes: " + programs.Count);
+            report.AppendLine("Alertas de integridade: " + integrity.Count(item => item.Warning));
+            report.AppendLine("Correções gerais sugeridas: " + repairs.Count(item => item.Warning));
             if (!string.IsNullOrWhiteSpace(driverError)) report.AppendLine("Consulta de drivers: " + driverError);
             if (!string.IsNullOrWhiteSpace(programError)) report.AppendLine("Consulta de programas: " + programError);
             report.AppendLine("\r\nAÇÕES EXECUTADAS");
@@ -76,6 +85,8 @@ namespace CodexPerformanceOptimizer
                 Cause = cause,
                 DriverUpdates = drivers,
                 ProgramUpdates = programs,
+                IntegrityResults = integrity,
+                RepairFindings = repairs,
                 Report = report.ToString()
             };
         }
