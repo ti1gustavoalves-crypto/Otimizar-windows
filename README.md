@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.2.1 adota uma nova identidade visual para o aplicativo e preserva a central de integridade introduzida na série 5.2.
+A versão 5.2.2 torna o atualizador resistente a bloqueios de DNS do GitHub, usando automaticamente uma segunda rota oficial sem reduzir a validação SHA-256.
 
 ## Recursos principais
 
@@ -38,6 +38,7 @@ A versão 5.2.1 adota uma nova identidade visual para o aplicativo e preserva a 
 - Recuperação centralizada das configurações alteradas, restauração por seção e quarentena reversível.
 - Quarentena reversível para arquivos duplicados.
 - Atualização rápida pelo GitHub, com cache SHA-256, progresso de download, troca atômica, reinicialização automática e rollback.
+- Rota alternativa automática pela API oficial do GitHub quando o domínio de conteúdo bruto não estiver acessível pela rede.
 - Executável portátil que mantém dados e relatórios na própria pasta.
 
 ## Requisitos

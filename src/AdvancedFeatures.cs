@@ -611,7 +611,7 @@ namespace CodexPerformanceOptimizer
                     var uri = new Uri(source);
                     if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return new UpdateCheckResult { Message = "O canal de atualização deve usar HTTPS." };
                     ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-                    using (var client = new UpdateWebClient(8000)) json = client.DownloadString(uri);
+                    json = DownloadUpdateText(uri);
                 }
                 else
                 {
@@ -630,7 +630,7 @@ namespace CodexPerformanceOptimizer
                     return new UpdateCheckResult { Message = "A atualização publicada está incompleta ou não passou na validação de segurança." };
                 return new UpdateCheckResult { Available = available, Manifest = manifest, Message = available ? "Versão " + remote + " disponível." : "Você já está na versão mais recente (" + current + ")." };
             }
-            catch (Exception ex) { return new UpdateCheckResult { Message = "Não foi possível verificar: " + ex.Message }; }
+            catch (Exception ex) { return new UpdateCheckResult { Message = FriendlyUpdateError("Não foi possível verificar", ex) }; }
         }
 
         public static string DownloadVerifiedUpdate(UpdateManifest manifest)
@@ -665,42 +665,21 @@ namespace CodexPerformanceOptimizer
                     if (File.Exists(destination)) File.Delete(destination);
                     if (File.Exists(partial)) File.Delete(partial);
                     ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
-                    request.Timeout = 15000;
-                    request.ReadWriteTimeout = 30000;
-                    request.CachePolicy = new RequestCachePolicy(RequestCacheLevel.NoCacheNoStore);
-                    request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-                    request.UserAgent = "OtimizadorDeDesempenho/" + typeof(AdvancedEngine).Assembly.GetName().Version;
-                    string actual;
-                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    string actual = null;
+                    Exception downloadError = null;
+                    foreach (Uri candidate in UpdateDownloadCandidates(uri))
                     {
-                        long total = response.ContentLength;
-                        if (total > 262144000) throw new InvalidOperationException("O pacote excede o limite de 250 MB.");
-                        using (Stream source = response.GetResponseStream())
-                        using (FileStream target = new FileStream(partial, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.SequentialScan))
-                        using (SHA256 sha = SHA256.Create())
+                        try
                         {
-                            byte[] buffer = new byte[131072];
-                            long received = 0;
-                            int read;
-                            int lastPercent = -1;
-                            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                            {
-                                token.ThrowIfCancellationRequested();
-                                target.Write(buffer, 0, read);
-                                sha.TransformBlock(buffer, 0, read, buffer, 0);
-                                received += read;
-                                int percent = total > 0 ? (int)Math.Min(100, received * 100 / total) : 0;
-                                if (progress != null && percent != lastPercent)
-                                {
-                                    lastPercent = percent;
-                                    progress.Report(new UpdateDownloadProgress { ReceivedBytes = received, TotalBytes = total, Percent = percent });
-                                }
-                            }
-                            sha.TransformFinalBlock(new byte[0], 0, 0);
-                            actual = BitConverter.ToString(sha.Hash).Replace("-", string.Empty);
+                            if (File.Exists(partial)) File.Delete(partial);
+                            actual = DownloadUpdatePackage(candidate, partial, token, progress);
+                            downloadError = null;
+                            break;
                         }
+                        catch (OperationCanceledException) { throw; }
+                        catch (Exception ex) { downloadError = ex; }
                     }
+                    if (downloadError != null) throw downloadError;
                     if (!actual.Equals(manifest.Sha256, StringComparison.OrdinalIgnoreCase))
                     {
                         File.Delete(partial);
@@ -718,9 +697,130 @@ namespace CodexPerformanceOptimizer
                 catch (Exception ex)
                 {
                     try { if (File.Exists(partial)) File.Delete(partial); } catch { }
-                    return DownloadFailure("Não foi possível baixar a atualização: " + ex.Message);
+                    return DownloadFailure(FriendlyUpdateError("Não foi possível baixar a atualização", ex));
                 }
             }
+        }
+
+        private static string DownloadUpdateText(Uri source)
+        {
+            Exception lastError = null;
+            foreach (Uri candidate in UpdateDownloadCandidates(source))
+            {
+                try
+                {
+                    using (var client = new UpdateWebClient(8000))
+                    {
+                        if (candidate.Host.Equals("api.github.com", StringComparison.OrdinalIgnoreCase))
+                        {
+                            client.Headers[HttpRequestHeader.Accept] = "application/vnd.github.raw+json";
+                            client.Headers["X-GitHub-Api-Version"] = "2022-11-28";
+                        }
+                        return client.DownloadString(candidate);
+                    }
+                }
+                catch (Exception ex) { lastError = ex; }
+            }
+            if (lastError != null) throw lastError;
+            throw new InvalidOperationException("Nenhuma rota de atualização foi encontrada.");
+        }
+
+        private static string DownloadUpdatePackage(Uri source, string destination, CancellationToken token, IProgress<UpdateDownloadProgress> progress)
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(source);
+            request.Timeout = 15000;
+            request.ReadWriteTimeout = 30000;
+            request.CachePolicy = new RequestCachePolicy(RequestCacheLevel.NoCacheNoStore);
+            request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+            request.UserAgent = "OtimizadorDeDesempenho/" + typeof(AdvancedEngine).Assembly.GetName().Version;
+            if (source.Host.Equals("api.github.com", StringComparison.OrdinalIgnoreCase))
+            {
+                request.Accept = "application/vnd.github.raw+json";
+                request.Headers["X-GitHub-Api-Version"] = "2022-11-28";
+            }
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                long total = response.ContentLength;
+                if (total > 262144000) throw new InvalidOperationException("O pacote excede o limite de 250 MB.");
+                using (Stream input = response.GetResponseStream())
+                using (FileStream target = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 131072, FileOptions.SequentialScan))
+                using (SHA256 sha = SHA256.Create())
+                {
+                    byte[] buffer = new byte[131072];
+                    long received = 0;
+                    int read;
+                    int lastPercent = -1;
+                    while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        received += read;
+                        if (received > 262144000) throw new InvalidOperationException("O pacote excede o limite de 250 MB.");
+                        target.Write(buffer, 0, read);
+                        sha.TransformBlock(buffer, 0, read, buffer, 0);
+                        int percent = total > 0 ? (int)Math.Min(100, received * 100 / total) : 0;
+                        if (progress != null && percent != lastPercent)
+                        {
+                            lastPercent = percent;
+                            progress.Report(new UpdateDownloadProgress { ReceivedBytes = received, TotalBytes = total, Percent = percent });
+                        }
+                    }
+                    sha.TransformFinalBlock(new byte[0], 0, 0);
+                    return BitConverter.ToString(sha.Hash).Replace("-", string.Empty);
+                }
+            }
+        }
+
+        private static IEnumerable<Uri> UpdateDownloadCandidates(Uri source)
+        {
+            Uri fallback;
+            if (TryBuildGitHubApiFallback(source, out fallback)) yield return fallback;
+            yield return source;
+        }
+
+        private static bool TryBuildGitHubApiFallback(Uri source, out Uri fallback)
+        {
+            fallback = null;
+            if (source == null || !source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) || !source.Host.Equals("raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase)) return false;
+            string[] parts = source.AbsolutePath.Trim('/').Split('/');
+            if (parts.Length < 4) return false;
+            string owner = parts[0];
+            string repository = parts[1];
+            string reference;
+            int pathStart;
+            if (parts.Length >= 6 && parts[2].Equals("refs", StringComparison.OrdinalIgnoreCase) && parts[3].Equals("heads", StringComparison.OrdinalIgnoreCase))
+            {
+                reference = parts[4];
+                pathStart = 5;
+            }
+            else
+            {
+                reference = parts[2];
+                pathStart = 3;
+            }
+            if (pathStart >= parts.Length) return false;
+            string path = string.Join("/", parts.Skip(pathStart).Select(Uri.EscapeDataString));
+            fallback = new Uri("https://api.github.com/repos/" + Uri.EscapeDataString(owner) + "/" + Uri.EscapeDataString(repository) + "/contents/" + path + "?ref=" + Uri.EscapeDataString(reference));
+            return true;
+        }
+
+        private static string FriendlyUpdateError(string prefix, Exception error)
+        {
+            Exception current = error;
+            while (current != null)
+            {
+                WebException web = current as WebException;
+                if (web != null && web.Status == WebExceptionStatus.NameResolutionFailure)
+                    return prefix + ": a rede não conseguiu localizar os servidores do GitHub. Verifique o DNS, proxy ou filtro corporativo e tente novamente.";
+                current = current.InnerException;
+            }
+            return prefix + ": " + (error == null ? "falha de rede não identificada." : error.Message);
+        }
+
+        internal static string GetGitHubApiFallbackForTesting(string source)
+        {
+            Uri parsed;
+            Uri fallback;
+            return Uri.TryCreate(source, UriKind.Absolute, out parsed) && TryBuildGitHubApiFallback(parsed, out fallback) ? fallback.AbsoluteUri : string.Empty;
         }
 
         public static void LaunchVerifiedUpdate(string installerPath, int applicationProcessId)

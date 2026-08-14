@@ -52,6 +52,9 @@ namespace CodexPerformanceOptimizer
                 if (diagnostics.Stability == null || diagnostics.Stability.Uptime <= TimeSpan.Zero) throw new InvalidOperationException("Diagnóstico de estabilidade falhou.");
                 UpdateCheckResult update = AdvancedEngine.CheckForUpdates();
                 if (update == null || string.IsNullOrWhiteSpace(update.Message)) throw new InvalidOperationException("Verificação de atualização falhou.");
+                string apiFallback = AdvancedEngine.GetGitHubApiFallbackForTesting("https://raw.githubusercontent.com/empresa/projeto/main/releases/update-manifest.public.json");
+                string refsFallback = AdvancedEngine.GetGitHubApiFallbackForTesting("https://raw.githubusercontent.com/empresa/projeto/refs/heads/main/releases/pacote.exe");
+                if (apiFallback != "https://api.github.com/repos/empresa/projeto/contents/releases/update-manifest.public.json?ref=main" || refsFallback != "https://api.github.com/repos/empresa/projeto/contents/releases/pacote.exe?ref=main" || !string.IsNullOrEmpty(AdvancedEngine.GetGitHubApiFallbackForTesting("https://example.invalid/arquivo"))) throw new InvalidOperationException("Rota alternativa do atualizador falhou.");
                 string cachedUpdate = Path.Combine(Path.GetTempPath(), "OtimizadorUpdateCacheTest-" + Guid.NewGuid().ToString("N") + ".bin");
                 try
                 {

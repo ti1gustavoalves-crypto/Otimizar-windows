@@ -1,5 +1,8 @@
-OTIMIZADOR DE DESEMPENHO 5.2.1
+OTIMIZADOR DE DESEMPENHO 5.2.2
 
+- A verificação e o download de atualizações agora usam uma rota alternativa oficial quando `raw.githubusercontent.com` não resolve.
+- O pacote continua sendo aceito somente depois da validação HTTPS e SHA-256.
+- Mensagens de falha de rede agora indicam diretamente DNS, proxy ou filtro corporativo.
 - Novo ícone próprio inspirado em manutenção de computadores, com monitor e chave em alto contraste.
 - O ícone foi preparado em múltiplas resoluções para janela, barra de tarefas, atalhos, bandeja e instalador.
 - Nova seção Integridade dentro de Sistema, voltada à localização de falhas gerais do computador.
