@@ -21,7 +21,8 @@ namespace CodexPerformanceOptimizer
             _overviewNote = new Label { Text = "Lendo os indicadores principais", Location = new Point(20, 68), Size = new Size(490, 20), AutoEllipsis = true, ForeColor = Theme.Muted };
             _environmentBadge = new Label { Text = AppPaths.ModeDescription, Location = new Point(520, 34), Size = new Size(300, 28), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, Padding = new Padding(9, 5, 9, 4), AutoEllipsis = true };
             _liveAlert = new Label { Text = "Monitorando em tempo real", Location = new Point(520, 67), Size = new Size(300, 20), TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true, ForeColor = Theme.Success, Font = new Font("Segoe UI Semibold", 8.5f) };
-            var refresh = ButtonFactory("Atualizar diagnóstico", 826, 34, 170, Theme.Secondary);
+            var refresh = ButtonFactory("↻", 954, 34, 42, Theme.Secondary);
+            _toolTip.SetToolTip(refresh, "Atualizar diagnóstico");
             refresh.Click += async delegate { await RefreshAudit(); };
             health.Controls.Add(_overviewStatus);
             health.Controls.Add(_overviewNote);
@@ -33,7 +34,7 @@ namespace CodexPerformanceOptimizer
             var disk = MetricCard("Espaço no disco C:", 356, 130, out _diskValue, out _diskDetail, out _diskGauge, out _diskChart);
             var cpu = MetricCard("Uso do processador", 692, 130, out _cpuValue, out _cpuDetail, out _cpuGauge, out _cpuChart);
 
-            var service = DashboardCard(20, 260, 1016, 372);
+            var service = DashboardCard(20, 260, 1016, 422);
             service.Controls.Add(new Label { Text = "Atendimento rápido", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
             service.Controls.Add(new Label { Text = "Escolha o objetivo; o Otimizador prepara somente ações coerentes com o caso.", Location = new Point(20, 44), Size = new Size(590, 22), AutoEllipsis = true, ForeColor = Theme.Muted });
 
@@ -44,11 +45,8 @@ namespace CodexPerformanceOptimizer
 
             _planSummary = new Label { Text = "Preparando o plano...", Location = new Point(20, 124), Size = new Size(270, 66), AutoEllipsis = true, ForeColor = Theme.Muted };
             _comparisonSummary = new Label { Text = ComparisonSummary(), Location = new Point(20, 204), Size = new Size(270, 90), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 9f) };
-            _elevatePlanButton = ButtonFactory("Reabrir como administrador", 20, 305, 270, Theme.Secondary);
-            _elevatePlanButton.Visible = false;
-            _elevatePlanButton.Click += delegate { RequestPlanElevation(); };
-
-            _issueGrid = Grid(316, 78, 680, 228);
+            _issueGrid = Grid(316, 78, 680, 278);
+            _issueGrid.RowTemplate.Height = 30;
             _issueGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Fazer", Width = 55 });
             _issueGrid.Columns.Add("Severity", "Prioridade");
             _issueGrid.Columns[1].Width = 110;
@@ -73,24 +71,18 @@ namespace CodexPerformanceOptimizer
                 if (e.RowIndex < 0) return;
                 MaintenanceIssue issue = _issueGrid.Rows[e.RowIndex].Tag as MaintenanceIssue;
                 if (issue == null) return;
-                if (issue.Id == "drivers" || issue.Id == "programs") _tabs.SelectedIndex = (int)AppSection.Updates;
-                else if (issue.Id == "restart") _tabs.SelectedIndex = (int)AppSection.Diagnostics;
+                if (issue.Id == "drivers" || issue.Id == "programs") NavigateTo(AppSection.Updates);
+                else if (issue.Id == "restart") NavigateToSystem(0);
             };
 
-            _runPlanButton = ButtonFactory("Executar ações selecionadas", 776, 319, 220, Theme.Success);
-            _runPlanButton.Click += async delegate { await ExecuteMaintenancePlanAsync(); };
-            var selectSafe = ButtonFactory("Selecionar recomendadas", 566, 319, 198, Theme.Secondary);
-            selectSafe.Click += delegate { SelectRecommendedPlanItems(); };
-            _fullServiceButton = ButtonFactory("Atendimento completo", 316, 319, 238, Theme.Primary);
-            _fullServiceButton.Click += async delegate { await ExecuteCompleteTechnicalServiceAsync(false); };
+            _runPlanButton = ButtonFactory("Executar atendimento", 756, 369, 240, Theme.Primary);
+            _runPlanButton.Click += async delegate { await ExecuteCompleteTechnicalServiceAsync(false); };
+            _fullServiceButton = _runPlanButton;
 
             service.Controls.Add(_serviceProfile);
             service.Controls.Add(_planSummary);
             service.Controls.Add(_comparisonSummary);
-            service.Controls.Add(_elevatePlanButton);
             service.Controls.Add(_issueGrid);
-            service.Controls.Add(_fullServiceButton);
-            service.Controls.Add(selectSafe);
             service.Controls.Add(_runPlanButton);
 
             _processCards = new DashboardPanel[0];
@@ -102,16 +94,64 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(disk);
             page.Controls.Add(cpu);
             page.Controls.Add(service);
-            page.Resize += delegate
-            {
-                int left = Math.Max(20, (page.ClientSize.Width - 1016) / 2);
-                health.Left = left;
-                memory.Left = left;
-                disk.Left = left + 336;
-                cpu.Left = left + 672;
-                service.Left = left;
-            };
+            page.Resize += delegate { LayoutGuidedDashboard(page, health, memory, disk, cpu, service, refresh); };
+            LayoutGuidedDashboard(page, health, memory, disk, cpu, service, refresh);
             return page;
+        }
+
+        private void LayoutGuidedDashboard(TabPage page, DashboardPanel health, DashboardPanel memory, DashboardPanel disk, DashboardPanel cpu, DashboardPanel service, Button refresh)
+        {
+            int available = Math.Max(780, Math.Min(1160, page.ClientSize.Width - 40));
+            int left = Math.Max(20, (page.ClientSize.Width - available) / 2);
+            health.Location = new Point(left, 18);
+            health.Size = new Size(available, 98);
+            int rightZone = Math.Max(430, available / 2);
+            int rightLeft = available - rightZone + 20;
+            _overviewStatus.Size = new Size(Math.Max(280, rightLeft - 38), 32);
+            _overviewNote.Size = new Size(Math.Max(280, rightLeft - 36), 20);
+            refresh.Location = new Point(available - 62, 34);
+            _environmentBadge.Location = new Point(rightLeft, 34);
+            _environmentBadge.Size = new Size(Math.Max(230, rightZone - 82), 28);
+            _liveAlert.Location = new Point(rightLeft, 67);
+            _liveAlert.Size = new Size(Math.Max(230, rightZone - 40), 20);
+
+            int gap = 12;
+            int metricWidth = (available - (gap * 2)) / 3;
+            ResizeMetricCard(memory, metricWidth);
+            ResizeMetricCard(disk, metricWidth);
+            ResizeMetricCard(cpu, metricWidth);
+            LayoutMetricText(_memoryValue, _memoryDetail, metricWidth);
+            LayoutMetricText(_diskValue, _diskDetail, metricWidth);
+            LayoutMetricText(_cpuValue, _cpuDetail, metricWidth);
+            memory.Location = new Point(left, 130);
+            disk.Location = new Point(left + metricWidth + gap, 130);
+            cpu.Location = new Point(left + (metricWidth + gap) * 2, 130);
+
+            service.Location = new Point(left, 260);
+            service.Size = new Size(available, 422);
+            _issueGrid.Location = new Point(316, 78);
+            _issueGrid.Size = new Size(Math.Max(430, available - 336), 278);
+            _runPlanButton.Location = new Point(available - 260, 369);
+            _runPlanButton.Size = new Size(240, 38);
+        }
+
+        private static void ResizeMetricCard(DashboardPanel card, int width)
+        {
+            card.Width = width;
+            foreach (Control control in card.Controls)
+            {
+                var chart = control as SparklineChart;
+                var gauge = control as ModernProgressBar;
+                if (chart != null || gauge != null) control.Width = Math.Max(120, width - 36);
+            }
+        }
+
+        private static void LayoutMetricText(Label value, Label detail, int width)
+        {
+            int detailWidth = Math.Min(155, Math.Max(105, width / 2));
+            detail.Location = new Point(width - detailWidth - 17, 25);
+            detail.Size = new Size(detailWidth, 38);
+            value.Size = new Size(Math.Max(90, detail.Left - 28), 30);
         }
 
         private async Task RefreshMaintenancePlanAsync()
@@ -158,51 +198,14 @@ namespace CodexPerformanceOptimizer
             UpdatePlanSummary();
         }
 
-        private void SelectRecommendedPlanItems()
-        {
-            if (_issueGrid == null) return;
-            _planLoading = true;
-            foreach (DataGridViewRow row in _issueGrid.Rows)
-            {
-                MaintenanceIssue issue = row.Tag as MaintenanceIssue;
-                if (issue != null && issue.CanFix) row.Cells["Selected"].Value = !string.Equals(issue.Severity, "Opcional", StringComparison.OrdinalIgnoreCase);
-            }
-            _planLoading = false;
-            SyncPlanSelection();
-        }
-
         private void UpdatePlanSummary()
         {
             if (_maintenancePlan == null || _planSummary == null) return;
             int selected = _maintenancePlan.SelectedCount;
             _planSummary.Text = selected == 0 ? "Nenhuma ação selecionada." : selected + (selected == 1 ? " ação pronta" : " ações prontas") + " para " + MaintenanceWorkflow.ProfileName(_maintenancePlan.Profile).ToLowerInvariant() + ".";
-            bool needsElevation = _maintenancePlan.RequiresAdministrator && !Optimizer.IsAdministrator();
-            _elevatePlanButton.Visible = needsElevation;
-            _runPlanButton.Enabled = selected > 0 && !needsElevation;
-            SetButtonColor(_runPlanButton, needsElevation ? Theme.Secondary : Theme.Success);
-            _runPlanButton.Text = needsElevation ? "Requer administrador" : selected == 0 ? "Selecione uma ação" : "Executar " + selected + (selected == 1 ? " ação" : " ações");
-            if (_fullServiceButton != null)
-            {
-                _fullServiceButton.Enabled = !_fullServiceRunning;
-                _fullServiceButton.Text = _fullServiceRunning ? "Atendimento em andamento..." : "Atendimento completo";
-            }
-        }
-
-        private async Task ExecuteMaintenancePlanAsync()
-        {
-            SyncPlanSelection();
-            if (_maintenancePlan == null || _maintenancePlan.SelectedCount == 0) return;
-            if (_maintenancePlan.RequiresAdministrator && !Optimizer.IsAdministrator())
-            {
-                RequestPlanElevation();
-                return;
-            }
-            string confirmation = "Executar " + _maintenancePlan.SelectedCount + (_maintenancePlan.SelectedCount == 1 ? " ação" : " ações") + " do perfil " + MaintenanceWorkflow.ProfileName(_maintenancePlan.Profile) + "?\r\n\r\nO relatório antes/depois será salvo automaticamente.";
-            if (MessageBox.Show(this, confirmation, "Confirmar manutenção", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            string result = await RunWork("Executando manutenção guiada...", delegate(CancellationToken token, IProgress<string> progress) { return MaintenanceWorkflow.Execute(_maintenancePlan, token, progress); });
-            _planSummary.Text = FirstResultLine(result, "Manutenção concluída");
-            await RefreshAudit();
-            _comparisonSummary.Text = ComparisonSummary();
+            _runPlanButton.Enabled = selected > 0 && !_fullServiceRunning;
+            SetButtonColor(_runPlanButton, selected > 0 ? Theme.Primary : Theme.Secondary);
+            _runPlanButton.Text = _fullServiceRunning ? "Atendimento em andamento..." : selected == 0 ? "Nenhuma ação disponível" : "Executar atendimento";
         }
 
         private async Task ExecuteCompleteTechnicalServiceAsync(bool alreadyConfirmed)
@@ -251,7 +254,7 @@ namespace CodexPerformanceOptimizer
             int pending = service.DriverUpdates.Count + service.ProgramUpdates.Count;
             string summary = "Atendimento concluído.\r\n\r\nSaúde: " + service.BeforeHealth.Score + " → " + service.AfterHealth.Score + "/100\r\nCausa provável: " + service.Cause.Title + "\r\nAtualizações para revisar: " + pending;
             if (pending > 0 && MessageBox.Show(this, summary + "\r\n\r\nAbrir a área de Atualizações?", "Resultado do atendimento", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                _tabs.SelectedIndex = (int)AppSection.Updates;
+                NavigateTo(AppSection.Updates);
             else if (pending == 0) MessageBox.Show(this, summary, "Resultado do atendimento", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

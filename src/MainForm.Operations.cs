@@ -12,6 +12,7 @@ namespace CodexPerformanceOptimizer
         {
             if (_cts != null) return "Outra operação está em andamento. Aguarde a conclusão ou cancele a operação atual.";
             _cts = new CancellationTokenSource();
+            if (_operationBar != null) _operationBar.Visible = true;
             _progress.Visible = true;
             _status.Location = new Point(194, 12);
             _progress.Style = ProgressBarStyle.Marquee;
@@ -46,6 +47,7 @@ namespace CodexPerformanceOptimizer
                 _progress.Visible = false;
                 _status.Location = new Point(20, 12);
                 _cancel.Enabled = false;
+                if (_operationBar != null && !_applicationUpdateInProgress) _operationBar.Visible = false;
                 UpdateStorageSelection();
             }
         }

@@ -16,14 +16,9 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Diagnóstico");
             page.Controls.Add(new Label { Text = "Diagnóstico do sistema", Location = new Point(20, 17), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 13f) });
-            _diagnosticStatus = new Label { Text = "• Temperaturas, discos, inicialização e estabilidade", Location = new Point(230, 20), Size = new Size(330, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
-            var benchmark = ButtonFactory("Benchmark", 570, 10, 115, Theme.Secondary);
-            var energy = ButtonFactory("Energia", 695, 10, 115, Theme.Secondary);
-            var details = ButtonFactory("Relatório técnico", 820, 10, 155, Theme.Primary);
+            _diagnosticStatus = new Label { Text = "• Temperaturas, discos, inicialização e estabilidade", Location = new Point(230, 20), Size = new Size(700, 24), AutoEllipsis = true, ForeColor = Theme.Muted };
             var refresh = ButtonFactory("↻", 985, 10, 38, Theme.Secondary);
-            benchmark.Click += async delegate { await StartBenchmark(); };
-            energy.Click += async delegate { await RunEnergyDiagnostic(); };
-            details.Click += delegate { ShowTechnicalServiceReport(); };
+            _toolTip.SetToolTip(refresh, "Atualizar diagnóstico");
             refresh.Click += async delegate { await LoadDiagnostics(true); };
             _diagnosticCards = new FlowLayoutPanel
             {
@@ -52,9 +47,6 @@ namespace CodexPerformanceOptimizer
             _processHistoryGrid.ReadOnly = true;
             _processHistoryGrid.Anchor = AnchorStyles.None;
             page.Controls.Add(_diagnosticStatus);
-            page.Controls.Add(benchmark);
-            page.Controls.Add(energy);
-            page.Controls.Add(details);
             page.Controls.Add(refresh);
             page.Controls.Add(_diagnosticCards);
             page.Controls.Add(_processHistoryGrid);
@@ -62,16 +54,14 @@ namespace CodexPerformanceOptimizer
             {
                 int right = page.ClientSize.Width - 20;
                 refresh.Left = right - refresh.Width;
-                details.Left = refresh.Left - 10 - details.Width;
-                energy.Left = details.Left - 10 - energy.Width;
-                benchmark.Left = energy.Left - 10 - benchmark.Width;
-                _diagnosticStatus.Size = new Size(Math.Max(250, benchmark.Left - _diagnosticStatus.Left - 10), 24);
+                _diagnosticStatus.Size = new Size(Math.Max(250, refresh.Left - _diagnosticStatus.Left - 10), 24);
                 _diagnosticCards.Size = new Size(Math.Max(700, page.ClientSize.Width - 40), 330);
                 _processHistoryGrid.Location = new Point(20, 432);
                 _processHistoryGrid.Size = new Size(Math.Max(700, page.ClientSize.Width - 40), Math.Max(150, page.ClientSize.Height - _processHistoryGrid.Top - 20));
             };
             page.Enter += async delegate
             {
+                if (_suppressStartup) return;
                 if (_diagnosticsLoaded) return;
                 while (_cts != null && !IsDisposed) await Task.Delay(200);
                 if (!IsDisposed) await LoadDiagnostics(false);
@@ -98,25 +88,6 @@ namespace CodexPerformanceOptimizer
             int warnings = snapshot.Recommendations.Count(item => item.Severity == "Alta") + snapshot.Disks.Count(item => item.Warning);
             if (snapshot.Stability.PendingRestart || snapshot.Stability.UnexpectedShutdowns > 0 || snapshot.Stability.SystemFailures > 0) warnings++;
             _diagnosticStatus.Text = warnings == 0 ? "• Nenhum alerta importante" : "• " + warnings + (warnings == 1 ? " alerta encontrado" : " alertas encontrados");
-        }
-
-        private async Task StartBenchmark()
-        {
-            BenchmarkSession existing = BenchmarkManager.ReadSession();
-            if (existing != null && existing.PendingRestart)
-            {
-                if (MessageBox.Show(this, "Já existe um benchmark aguardando reinicialização. Substituir a linha de base?", "Benchmark", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                {
-                    ShowTextDialog("Benchmark", BenchmarkManager.BuildComparison(existing));
-                    return;
-                }
-            }
-            else if (existing != null && existing.After != null && MessageBox.Show(this, "Iniciar um novo benchmark e substituir o comparativo anterior?", "Benchmark", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            if (MessageBox.Show(this, "O computador será medido por 10 segundos. Depois será necessário reiniciar o Windows normalmente. Continuar?", "Benchmark pós-reinicialização", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes) return;
-            string result = await RunWork("Medindo linha de base...", delegate(CancellationToken t, IProgress<string> p) { return BenchmarkManager.Start(t, p); });
-            _diagnosticsLoaded = false;
-            ShowTextDialog("Benchmark iniciado", result);
-            await LoadDiagnostics(true);
         }
 
         private async Task TryCompletePendingBenchmark()
@@ -151,9 +122,9 @@ namespace CodexPerformanceOptimizer
             else
             {
                 comparisonMain = comparison == null ? "Aguardando medição" : string.Format(CultureInfo.CurrentCulture, "RAM {0:+0.0;-0.0;0.0} GB  •  Disco {1:+0.0;-0.0;0.0} GB", comparison.AfterFreeRamGb - comparison.BeforeFreeRamGb, comparison.AfterFreeDiskGb - comparison.BeforeFreeDiskGb);
-                comparisonDetail = comparison == null ? "Use Benchmark para comparar após reiniciar" : comparison.Operation + "  •  CPU " + comparison.BeforeCpuPercent.ToString("N0") + "% → " + comparison.AfterCpuPercent.ToString("N0") + "%";
+                comparisonDetail = comparison == null ? "Execute um atendimento para criar o comparativo" : comparison.Operation + "  •  CPU " + comparison.BeforeCpuPercent.ToString("N0") + "% → " + comparison.AfterCpuPercent.ToString("N0") + "%";
             }
-            _diagnosticCards.Controls.Add(DiagnosticCard("BENCHMARK / ANTES E DEPOIS", comparisonMain, comparisonDetail, false, null));
+            _diagnosticCards.Controls.Add(DiagnosticCard("ANTES E DEPOIS", comparisonMain, comparisonDetail, false, null));
 
             TemperatureReading hottest = snapshot.Temperatures.OrderByDescending(item => item.Celsius).FirstOrDefault();
             string temperatureMain = hottest == null ? "Sensor não exposto" : hottest.Celsius.ToString("N0", CultureInfo.CurrentCulture) + " °C  •  " + hottest.Name;
@@ -163,13 +134,13 @@ namespace CodexPerformanceOptimizer
             bool diskWarning = snapshot.Disks.Any(item => item.Warning);
             string diskMain = snapshot.Disks.Count == 0 ? "Nenhum dado disponível" : snapshot.Disks.Count + (snapshot.Disks.Count == 1 ? " dispositivo" : " dispositivos") + "  •  " + (diskWarning ? "atenção" : "sem alertas");
             string diskDetail = snapshot.Disks.Count == 0 ? snapshot.TrimStatus : snapshot.Disks[0].Name + Environment.NewLine + snapshot.TrimStatus;
-            _diagnosticCards.Controls.Add(DiagnosticCard("SAÚDE DOS DISCOS", diskMain, diskDetail, diskWarning, delegate { _tabs.SelectedIndex = (int)AppSection.Storage; }));
+            _diagnosticCards.Controls.Add(DiagnosticCard("SAÚDE DOS DISCOS", diskMain, diskDetail, diskWarning, delegate { NavigateToMaintenance(0); }));
 
             StartupMeasurement boot = snapshot.Startup.FirstOrDefault(item => item.Name == "Inicialização do Windows");
             StartupMeasurement slowest = snapshot.Startup.FirstOrDefault(item => item.Name != "Inicialização do Windows");
             string bootMain = boot == null ? "Medição não disponível" : TimeSpan.FromMilliseconds(boot.DurationMilliseconds).TotalSeconds.ToString("N1", CultureInfo.CurrentCulture) + " s para iniciar";
             string bootDetail = slowest == null ? (Optimizer.IsAdministrator() ? "O Windows ainda não registrou impacto por aplicativo" : "Reabra como administrador para acessar os eventos") : slowest.Name + "  •  " + (slowest.DurationMilliseconds / 1000.0).ToString("N1", CultureInfo.CurrentCulture) + " s de impacto";
-            _diagnosticCards.Controls.Add(DiagnosticCard("INICIALIZAÇÃO MEDIDA", bootMain, bootDetail, boot != null && boot.DurationMilliseconds > 60000, delegate { _tabs.SelectedIndex = (int)AppSection.Startup; }));
+            _diagnosticCards.Controls.Add(DiagnosticCard("INICIALIZAÇÃO MEDIDA", bootMain, bootDetail, boot != null && boot.DurationMilliseconds > 60000, delegate { NavigateToMaintenance(1); }));
 
             StabilityDiagnostic stability = snapshot.Stability;
             string stabilityMain = stability.UnexpectedShutdowns + " desligamentos  •  " + stability.SystemFailures + " falhas";

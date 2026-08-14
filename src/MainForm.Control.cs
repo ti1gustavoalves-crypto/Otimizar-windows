@@ -62,32 +62,49 @@ namespace CodexPerformanceOptimizer
             recovery.Controls.Add(restoreQuarantine);
             recovery.Controls.Add(restoreAll);
 
-            var application = DashboardCard(20, 300, 1016, 190);
+            var application = DashboardCard(20, 300, 1016, 155);
             application.Controls.Add(new Label { Text = "Aplicativo e suporte", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
             _updateStatus = new Label { Text = "Versão " + GetType().Assembly.GetName().Version + "  •  " + AppPaths.ModeDescription + "  •  " + AdvancedEngine.ReadSignatureStatus(Application.ExecutablePath), Location = new Point(20, 49), Size = new Size(965, 28), AutoEllipsis = true, ForeColor = Theme.Muted };
-            var check = ButtonFactory("Verificar atualização", 20, 94, 190, Theme.Primary);
-            var report = ButtonFactory("Relatório técnico", 222, 94, 175, Theme.Secondary);
-            var reports = ButtonFactory("Relatórios salvos", 409, 94, 175, Theme.Secondary);
-            var logs = ButtonFactory("Logs técnicos", 596, 94, 155, Theme.Secondary);
+            var check = ButtonFactory("Verificar novamente", 20, 94, 175, Theme.Secondary);
+            var technicalFiles = ButtonFactory("Arquivos técnicos", 207, 94, 165, Theme.Secondary);
             check.Click += async delegate { await CheckForUpdates(); };
-            report.Click += delegate { ShowTechnicalServiceReport(); };
+            var filesMenu = new ContextMenuStrip { BackColor = Theme.Surface, ForeColor = Theme.Text, ShowImageMargin = false };
+            var reports = new ToolStripMenuItem("Abrir relatórios");
+            var logs = new ToolStripMenuItem("Abrir logs de falha");
             reports.Click += delegate { V2Engine.OpenReportsFolder(); };
             logs.Click += delegate { CrashLogger.OpenFolder(); };
+            filesMenu.Items.Add(reports);
+            filesMenu.Items.Add(logs);
+            technicalFiles.Click += delegate { filesMenu.Show(technicalFiles, new Point(0, technicalFiles.Height)); };
             application.Controls.Add(_updateStatus);
             application.Controls.Add(check);
-            application.Controls.Add(report);
-            application.Controls.Add(reports);
-            application.Controls.Add(logs);
+            application.Controls.Add(technicalFiles);
 
             page.Controls.Add(automatic);
             page.Controls.Add(recovery);
             page.Controls.Add(application);
             page.Resize += delegate
             {
-                int left = Math.Max(20, (page.ClientSize.Width - 1016) / 2);
-                automatic.Left = left;
-                recovery.Left = left + 510;
-                application.Left = left;
+                int available = Math.Max(700, Math.Min(1100, page.ClientSize.Width - 40));
+                int left = Math.Max(20, (page.ClientSize.Width - available) / 2);
+                if (available >= 1016)
+                {
+                    automatic.Location = new Point(left, 20);
+                    automatic.Size = new Size((available - 20) / 2, 260);
+                    recovery.Location = new Point(automatic.Right + 20, 20);
+                    recovery.Size = new Size(available - automatic.Width - 20, 260);
+                    application.Location = new Point(left, 300);
+                }
+                else
+                {
+                    automatic.Location = new Point(left, 20);
+                    automatic.Size = new Size(available, 260);
+                    recovery.Location = new Point(left, 300);
+                    recovery.Size = new Size(available, 260);
+                    application.Location = new Point(left, 580);
+                }
+                application.Size = new Size(available, 155);
+                _updateStatus.Size = new Size(Math.Max(300, application.Width - 40), 28);
             };
             return page;
         }

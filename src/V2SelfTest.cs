@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace CodexPerformanceOptimizer
 {
@@ -90,7 +91,7 @@ namespace CodexPerformanceOptimizer
                     new[] { new StartupEntry { Name = "Teste", Enabled = true, CanChange = true, Impact = "alto", Source = "Teste" } }, 2, 3);
                 if (guidedPlan.SelectedCount < 5 || !guidedPlan.RequiresAdministrator || !guidedPlan.Issues.Any(item => item.Id == "storage" && item.Severity == "Crítico") || !guidedPlan.Issues.Any(item => item.Id == "restart" && !item.CanFix)) throw new InvalidOperationException("Plano guiado não priorizou as pendências corretamente.");
                 int[] testedDpis = { 96, 120, 144, 168, 192 };
-                if (testedDpis.Any(dpi => !string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1260, 760, dpi))) || string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1100, 700, 96))) throw new InvalidOperationException("Política de responsividade falhou.");
+                if (testedDpis.Any(dpi => !string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1024, 680, dpi))) || string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(900, 640, 96))) throw new InvalidOperationException("Política de responsividade falhou.");
                 if (!AppPaths.IsPortableConfiguration("OtimizadorDeDesempenho-Portatil.exe", new string[0], false) || !AppPaths.IsPortableConfiguration("Otimizador.exe", new[] { "--portable" }, false) || AppPaths.IsPortableConfiguration("Otimizador.exe", new string[0], false)) throw new InvalidOperationException("Detecção do modo portátil falhou.");
                 HealthAssessment healthy = SystemHealthEngine.Assess(new SystemMetrics { TotalRamGb = 16, FreeRamGb = 8, TotalDiskGb = 500, FreeDiskGb = 200, FreeDiskPercent = 40, CpuUsagePercent = 20 }, null, new ProcessActivity[0], 0, 0);
                 HealthAssessment limited = SystemHealthEngine.Assess(new SystemMetrics { TotalRamGb = 16, FreeRamGb = 1, TotalDiskGb = 500, FreeDiskGb = 20, FreeDiskPercent = 4, CpuUsagePercent = 92 }, null, new[] { new ProcessActivity { Name = "Browser", CpuPercent = 80, WorkingSetBytes = 2147483648 } }, 4, 3);
@@ -100,11 +101,14 @@ namespace CodexPerformanceOptimizer
                 string cachedValue;
                 if (!AnalysisCache.TryGet("self-test", "A", TimeSpan.FromMinutes(1), out cachedValue) || cachedValue != "valor" || AnalysisCache.TryGet("self-test", "B", TimeSpan.FromMinutes(1), out cachedValue)) throw new InvalidOperationException("Cache inteligente não respeitou validade e impressão digital.");
                 AnalysisCache.Invalidate("self-test");
-                using (var form = new MainFormV2())
+                using (var form = new MainFormV2(null, false, true))
                 {
+                    string compactLayout = form.ValidateInterfaceForTesting(new Size(1024, 680));
                     string minimumLayout = form.ValidateInterfaceForTesting(new Size(1260, 760));
                     string wideLayout = form.ValidateInterfaceForTesting(new Size(1600, 900));
-                    if (!string.IsNullOrEmpty(minimumLayout) || !string.IsNullOrEmpty(wideLayout)) throw new InvalidOperationException("Validação automatizada da interface falhou. " + minimumLayout + " " + wideLayout);
+                    if (!string.IsNullOrEmpty(compactLayout) || !string.IsNullOrEmpty(minimumLayout) || !string.IsNullOrEmpty(wideLayout)) throw new InvalidOperationException("Validação automatizada da interface falhou. " + compactLayout + " " + minimumLayout + " " + wideLayout);
+                    form.Close();
+                    Application.DoEvents();
                 }
                 Console.WriteLine("CPU em tempo real: " + sampledCpu.Value.ToString("N0") + "%");
                 Console.WriteLine("Memória em tempo real: " + sampledFreeRam.ToString("N1") + " GB livres");
@@ -127,7 +131,7 @@ namespace CodexPerformanceOptimizer
                 Console.WriteLine("Modo portátil: OK");
                 Console.WriteLine("Saúde e causa provável: " + healthy.Score + " → " + limited.Score + " OK");
                 Console.WriteLine("Cache inteligente: OK");
-                Console.WriteLine("Interface real em 1260x760 e 1600x900: OK");
+                Console.WriteLine("Interface real em 1024x680, 1260x760 e 1600x900: OK");
                 Console.WriteLine("SELF-TEST " + version + " OK");
                 return 0;
             }

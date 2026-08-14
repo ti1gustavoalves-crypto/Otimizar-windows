@@ -2,9 +2,9 @@
 
 Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador, aplicar perfis reversíveis de desempenho e executar manutenção controlada.
 
-A interface apresenta identidade visual própria, barra de título escura e sete áreas organizadas para reduzir cliques durante a manutenção técnica.
+A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 4.5.0 concentra o atendimento técnico em um único fluxo, apresenta a saúde do computador e a causa provável de lentidão, reutiliza análises recentes e testa a interface real durante a compilação.
+A versão 5.0.0 reorganiza o produto em Painel, Manutenção, Atualizações, Sistema e Ajustes, reduz ações redundantes e adapta a interface a janelas a partir de 1024 × 680.
 
 ## Recursos principais
 
@@ -12,10 +12,10 @@ A versão 4.5.0 concentra o atendimento técnico em um único fluxo, apresenta a
 - Índice de saúde de 0 a 100 calculado a partir de recursos, estabilidade, armazenamento, inicialização e atualizações pendentes.
 - Identificação da causa mais provável de lentidão com base nas métricas atuais e no histórico disponível.
 - Atendimento guiado para manutenção preventiva, PC lento, pouco espaço e inicialização lenta.
-- Atendimento técnico completo em quatro etapas: diagnóstico inicial, correções selecionadas, busca de atualizações e verificação final.
+- Atendimento técnico em quatro etapas: diagnóstico inicial, correções selecionadas, busca de atualizações e verificação final.
 - Central de pendências com ações críticas, recomendadas, opcionais e informativas.
 - Elevação administrativa antecipada e única para o conjunto selecionado.
-- Benchmark antes e depois, concluído após reiniciar o Windows.
+- Comparação automática de CPU, memória e espaço antes e depois do atendimento.
 - Diagnóstico acionável de discos, estabilidade, inicialização, energia e recomendações.
 - Inicialização completa com entradas do usuário, computador, pastas e aplicativos da Microsoft Store.
 - Inventário de versões de vídeo, BIOS, firmware, chipset e demais drivers importantes.
@@ -29,7 +29,7 @@ A versão 4.5.0 concentra o atendimento técnico em um único fluxo, apresenta a
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.
 - Limpeza do WinSxS sem `ResetBase` e diagnóstico energético oficial do Windows.
 - Acesso direto ao Sensor de Armazenamento para manutenção automática de espaço.
-- Relatório técnico consolidado com recursos, diagnóstico, hardware e atualizações disponíveis.
+- Relatórios técnicos gerados automaticamente pelos fluxos de manutenção.
 - Pesquisa e filtros para inicialização, armazenamento, drivers e programas.
 - Cache inteligente para hardware, diagnósticos, armazenamento, drivers e programas, invalidado após alterações relevantes.
 - Perfis de energia, tema escuro, efeitos visuais e aplicativos em segundo plano.
@@ -72,7 +72,7 @@ O processo compila a suíte de autotestes, exige aprovação de todos os testes 
 - `outputs/InstalarOtimizadorDeDesempenho.exe`
 - manifestos, notas e resumo SHA-256 da versão
 
-Os testes incluem regras de saúde e diagnóstico, validade do cache e validação da interface real em diferentes tamanhos de janela.
+Os testes incluem regras de saúde e diagnóstico, validade do cache e validação da interface real em 1024 × 680, 1260 × 760 e 1600 × 900.
 
 Os artefatos gerados não são versionados.
 

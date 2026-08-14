@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -12,8 +11,8 @@ namespace CodexPerformanceOptimizer
         {
             var page = NewPage("Atualizações");
             page.AutoScroll = true;
-            var driversButton = ButtonFactory("Windows e drivers", 20, 12, 170, Theme.Primary);
-            var programsButton = ButtonFactory("Aplicativos", 202, 12, 135, Theme.Secondary);
+            var driversButton = ButtonFactory("Drivers", 20, 12, 120, Theme.Primary);
+            var programsButton = ButtonFactory("Aplicativos", 152, 12, 135, Theme.Secondary);
             var content = new Panel { Location = new Point(0, 58), BackColor = Theme.Background, Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
             Panel drivers = BuildDriversPanel();
             Panel programs = BuildProgramUpdatesPanel();
@@ -28,13 +27,12 @@ namespace CodexPerformanceOptimizer
                 SetButtonColor(driversButton, driversVisible ? Theme.Primary : Theme.Secondary);
                 SetButtonColor(programsButton, driversVisible ? Theme.Secondary : Theme.Primary);
             };
-            driversButton.Click += async delegate
+            driversButton.Click += delegate
             {
                 programs.Visible = false;
                 drivers.Visible = true;
                 drivers.BringToFront();
                 updateSelection();
-                await LoadDriverInventoryAsync(false);
             };
             programsButton.Click += async delegate
             {
@@ -42,7 +40,7 @@ namespace CodexPerformanceOptimizer
                 programs.Visible = true;
                 programs.BringToFront();
                 updateSelection();
-                if (!_programUpdatesLoaded) await SearchProgramUpdates();
+                if (!_programUpdatesLoaded && !_suppressStartup) await SearchProgramUpdates();
             };
             page.Controls.Add(content);
             page.Controls.Add(driversButton);
@@ -60,45 +58,5 @@ namespace CodexPerformanceOptimizer
                 WindowsMaintenance.OpenLatestEnergyReport();
         }
 
-        private string BuildTechnicalServiceReport()
-        {
-            var report = new StringBuilder();
-            report.AppendLine("RELATÓRIO TÉCNICO DO ATENDIMENTO");
-            report.AppendLine(new string('=', 72));
-            report.AppendLine("Gerado em: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
-            report.AppendLine("Otimizador: " + GetType().Assembly.GetName().Version);
-            report.AppendLine("Administrador: " + (Optimizer.IsAdministrator() ? "sim" : "não"));
-            report.AppendLine("Execução: " + AppPaths.ModeDescription);
-            if (_liveMetrics != null)
-            {
-                report.AppendLine();
-                report.AppendLine("RECURSOS");
-                report.AppendLine("CPU: " + _liveMetrics.CpuUsagePercent.ToString("N0") + "%");
-                report.AppendLine("Memória livre: " + _liveMetrics.FreeRamGb.ToString("N1") + " de " + _liveMetrics.TotalRamGb.ToString("N1") + " GB");
-                report.AppendLine("Disco C: " + _liveMetrics.FreeDiskGb.ToString("N1") + " de " + _liveMetrics.TotalDiskGb.ToString("N1") + " GB livres");
-                report.AppendLine("Energia: " + _liveMetrics.PowerScheme);
-            }
-            if (_diagnosticSnapshot != null)
-            {
-                report.AppendLine();
-                report.AppendLine(DetailedDiagnosticText(_diagnosticSnapshot));
-            }
-            if (_importantHardware != null && _importantHardware.Count > 0)
-            {
-                report.AppendLine();
-                report.AppendLine(V2Engine.ImportantHardwareReport(_importantHardware, V2Engine.BuildPerformanceRecommendations()));
-            }
-            report.AppendLine();
-            report.AppendLine("ATUALIZAÇÕES");
-            report.AppendLine("Drivers disponíveis: " + (_driverUpdates == null ? 0 : _driverUpdates.Count));
-            report.AppendLine("Aplicativos disponíveis: " + (_programUpdates == null ? 0 : _programUpdates.Count));
-            report.AppendLine("Os relatórios detalhados de cada operação permanecem na pasta de relatórios do aplicativo.");
-            return report.ToString();
-        }
-
-        private void ShowTechnicalServiceReport()
-        {
-            ShowTextDialog("Relatório técnico", BuildTechnicalServiceReport());
-        }
     }
 }

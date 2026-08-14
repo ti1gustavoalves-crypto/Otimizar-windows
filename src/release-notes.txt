@@ -1,9 +1,11 @@
-OTIMIZADOR DE DESEMPENHO 4.5.0
+OTIMIZADOR DE DESEMPENHO 5.0.0
 
-- Novo Atendimento completo reúne diagnóstico, ações selecionadas, busca de atualizações e conferência final em um único fluxo.
-- A tela inicial agora apresenta uma nota de saúde de 0 a 100 e o gargalo mais provável do computador.
-- Diagnósticos, hardware, drivers, programas e análises de armazenamento reutilizam resultados recentes quando nada mudou.
-- O cache é descartado automaticamente depois de limpezas, exclusões, quarentena e instalações.
-- A área de diagnósticos prioriza a causa provável do problema em vez de recomendações genéricas.
-- Autotestes agora abrem a interface real e verificam navegação, rolagem, botões e tabelas em diferentes tamanhos.
-- Corrigida a falta de rolagem na área de Atualizações em janelas menores.
+- Nova navegação com cinco áreas: Painel, Manutenção, Atualizações, Sistema e Ajustes.
+- Manutenção reúne armazenamento e inicialização; Sistema reúne saúde, processos, hardware e drivers instalados.
+- Painel simplificado para um único atendimento guiado, com métricas em tempo real e plano selecionável.
+- Armazenamento reduzido às ações essenciais, com análise por tipo e ferramentas avançadas em menu contextual.
+- Atualizações separa claramente drivers disponíveis e aplicativos, sem repetir o inventário instalado.
+- Operações de backup, restauração e suporte foram agrupadas onde são necessárias.
+- Navegação lateral compacta automaticamente em janelas menores e todas as áreas foram ajustadas para 1024 × 680.
+- A barra de progresso permanece oculta quando nenhuma operação está em execução.
+- Autotestes percorrem áreas principais, seções internas e modos de atualização em três resoluções.

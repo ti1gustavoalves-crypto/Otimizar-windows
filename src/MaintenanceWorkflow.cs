@@ -168,10 +168,11 @@ namespace CodexPerformanceOptimizer
     {
         public static string Validate(int width, int height, int dpi)
         {
-            if (width < 1260 || height < 760) return "A janela está abaixo do tamanho mínimo suportado.";
+            if (width < 1024 || height < 680) return "A janela está abaixo do tamanho mínimo suportado.";
             if (dpi < 96 || dpi > 240) return "Escala de DPI fora da faixa validada.";
-            int contentWidth = width - 184;
-            if (contentWidth < 1000) return "A área útil não comporta as tabelas técnicas.";
+            int navigationWidth = width < 1180 ? 76 : 184;
+            int contentWidth = width - navigationWidth;
+            if (contentWidth < 900) return "A área útil não comporta o layout compacto.";
             return string.Empty;
         }
     }

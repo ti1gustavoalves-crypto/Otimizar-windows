@@ -17,16 +17,21 @@ namespace CodexPerformanceOptimizer
         private enum AppSection
         {
             Dashboard,
-            Diagnostics,
-            Storage,
-            Startup,
+            Maintenance,
             Updates,
-            Hardware,
+            System,
             Settings
         }
 
         private TabControl _tabs;
+        private TabControl _maintenanceTabs;
+        private TabControl _systemTabs;
         private Button[] _navigationButtons;
+        private Panel _navigationPanel;
+        private PictureBox _brandPicture;
+        private Label _brandTitle;
+        private Label _brandVersion;
+        private Panel _operationBar;
         private Image _brandImage;
         private readonly string _displayVersion;
         private Label _overviewStatus;
@@ -79,6 +84,7 @@ namespace CodexPerformanceOptimizer
         private Button _deleteStorageItem;
         private Label _storageSelectionStatus;
         private TextBox _storageSearch;
+        private ComboBox _storageAnalysisMode;
         private ToolTip _toolTip;
         private ComboBox _schedule;
         private Label _maintenanceResult;
@@ -115,24 +121,25 @@ namespace CodexPerformanceOptimizer
         private Label _planSummary;
         private Label _comparisonSummary;
         private Button _runPlanButton;
-        private Button _elevatePlanButton;
         private MaintenancePlan _maintenancePlan;
         private bool _planLoading;
         private HealthAssessment _healthAssessment;
         private Button _fullServiceButton;
         private bool _fullServiceRunning;
         private readonly bool _startFullService;
+        private readonly bool _suppressStartup;
 
-        public MainFormV2(int? initialServiceProfile = null, bool startFullService = false)
+        public MainFormV2(int? initialServiceProfile = null, bool startFullService = false, bool suppressStartup = false)
         {
             _initialServiceProfile = initialServiceProfile;
             _startFullService = startFullService;
+            _suppressStartup = suppressStartup;
             Version version = GetType().Assembly.GetName().Version;
             _displayVersion = version.Major + "." + version.Minor;
             Text = "Otimizador de Desempenho " + _displayVersion;
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(1260, 760);
-            Size = new Size(1320, 820);
+            MinimumSize = new Size(1024, 680);
+            Size = new Size(1280, 800);
             BackColor = Theme.Background;
             ForeColor = Theme.Text;
             Font = new Font("Segoe UI", 9.5f);
@@ -146,16 +153,25 @@ namespace CodexPerformanceOptimizer
 
             _tabs = new TabControl { Location = new Point(-4, -28), SizeMode = TabSizeMode.Fixed, ItemSize = new Size(1, 24), Appearance = TabAppearance.FlatButtons };
             _tabs.TabPages.Add(BuildGuidedDashboard());
-            _tabs.TabPages.Add(BuildDiagnosticsTab());
-            _tabs.TabPages.Add(BuildStorageTab());
-            _tabs.TabPages.Add(BuildStartupTab());
+            _tabs.TabPages.Add(BuildMaintenanceWorkspace());
             _tabs.TabPages.Add(BuildUpdatesTab());
-            _tabs.TabPages.Add(BuildHardwareTab());
+            _tabs.TabPages.Add(BuildSystemWorkspace());
             _tabs.TabPages.Add(BuildSettingsTab());
             _tabs.SelectedIndexChanged += async delegate
             {
                 UpdateNavigationState();
-                if (_tabs.SelectedIndex == (int)AppSection.Updates) await LoadDriverInventoryAsync(false);
+                if (_suppressStartup || _cts != null) return;
+                if (_tabs.SelectedIndex == (int)AppSection.Maintenance)
+                {
+                    if (_maintenanceTabs != null && _maintenanceTabs.SelectedIndex == 1) await LoadStartupAsync();
+                    else LoadVolumes();
+                }
+                else if (_tabs.SelectedIndex == (int)AppSection.System && _systemTabs != null)
+                {
+                    if (_systemTabs.SelectedIndex == 0) await LoadDiagnostics(false);
+                    else if (_systemTabs.SelectedIndex == 1 && !_hardwareLoaded) await LoadHardware(false);
+                    else if (_systemTabs.SelectedIndex == 2) await LoadDriverInventoryAsync(false);
+                }
             };
 
             var content = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Background };
@@ -170,7 +186,7 @@ namespace CodexPerformanceOptimizer
             body.Controls.Add(content);
             body.Controls.Add(BuildNavigation());
 
-            var footer = new Panel { Dock = DockStyle.Bottom, Height = 44, BackColor = Theme.Header };
+            _operationBar = new Panel { Dock = DockStyle.Bottom, Height = 44, BackColor = Theme.Header, Visible = false };
             _progress = new ProgressBar { Location = new Point(20, 17), Size = new Size(155, 10), Style = ProgressBarStyle.Continuous, Visible = false };
             NativeWindowTheme.ApplyTree(_progress);
             _status = new Label { Text = "Pronto", AutoSize = true, Location = new Point(20, 12), ForeColor = Theme.Muted };
@@ -181,12 +197,14 @@ namespace CodexPerformanceOptimizer
             _cancel.Click += delegate { if (_cts != null) _cts.Cancel(); };
             var cancelArea = new Panel { Dock = DockStyle.Right, Width = 116, BackColor = Theme.Header };
             cancelArea.Controls.Add(_cancel);
-            footer.Controls.Add(_progress);
-            footer.Controls.Add(_status);
-            footer.Controls.Add(cancelArea);
+            _operationBar.Controls.Add(_progress);
+            _operationBar.Controls.Add(_status);
+            _operationBar.Controls.Add(cancelArea);
 
             Controls.Add(body);
-            Controls.Add(footer);
+            Controls.Add(_operationBar);
+            Resize += delegate { ApplyResponsiveShell(); };
+            ApplyResponsiveShell();
             _activitySampler = new SystemActivitySampler();
             _processSampler = new ProcessActivitySampler();
             _alertMonitor = new SustainedAlertMonitor(TimeSpan.FromSeconds(20));
@@ -195,6 +213,7 @@ namespace CodexPerformanceOptimizer
             _liveMetricsTimer.Tick += delegate { RefreshLiveMetrics(); };
             Shown += async delegate
             {
+                if (_suppressStartup) return;
                 _activitySampler.Prime();
                 _processSampler.Prime();
                 _liveMetricsTimer.Start();
@@ -216,16 +235,19 @@ namespace CodexPerformanceOptimizer
 
         private Panel BuildNavigation()
         {
-            var navigation = new Panel { Dock = DockStyle.Left, Width = 184, BackColor = Theme.Navigation, Padding = new Padding(14, 18, 14, 14) };
+            _navigationPanel = new Panel { Dock = DockStyle.Left, Width = 184, BackColor = Theme.Navigation, Padding = new Padding(14, 18, 14, 14) };
             _brandImage = LoadBrandImage();
             if (_brandImage != null)
             {
-                navigation.Controls.Add(new PictureBox { Image = _brandImage, Location = new Point(18, 18), Size = new Size(42, 42), SizeMode = PictureBoxSizeMode.Zoom, AccessibleName = "Ícone do Otimizador" });
+                _brandPicture = new PictureBox { Image = _brandImage, Location = new Point(18, 18), Size = new Size(42, 42), SizeMode = PictureBoxSizeMode.Zoom, AccessibleName = "Ícone do Otimizador" };
+                _navigationPanel.Controls.Add(_brandPicture);
             }
-            navigation.Controls.Add(new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true });
-            navigation.Controls.Add(new Label { Text = "Versão " + _displayVersion, Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
+            _brandTitle = new Label { Text = "Otimizador", Location = new Point(68, 19), Size = new Size(102, 24), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12.5f), AutoEllipsis = true };
+            _brandVersion = new Label { Text = "Versão " + _displayVersion, Location = new Point(69, 43), AutoSize = true, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) };
+            _navigationPanel.Controls.Add(_brandTitle);
+            _navigationPanel.Controls.Add(_brandVersion);
 
-            string[] labels = { "Início", "Diagnóstico", "Armazenamento", "Inicialização", "Atualizações", "Hardware", "Ajustes" };
+            string[] labels = { "Painel", "Manutenção", "Atualizações", "Sistema", "Ajustes" };
             _navigationButtons = new Button[labels.Length];
             for (int i = 0; i < labels.Length; i++)
             {
@@ -248,12 +270,32 @@ namespace CodexPerformanceOptimizer
                 button.FlatAppearance.MouseOverBackColor = Theme.SurfaceAlt;
                 button.Click += delegate { _tabs.SelectedIndex = tabIndex; };
                 _navigationButtons[i] = button;
-                navigation.Controls.Add(button);
+                _navigationPanel.Controls.Add(button);
             }
 
-            navigation.Controls.Add(new Label { Text = "Seguro e reversível", Dock = DockStyle.Bottom, Height = 28, TextAlign = ContentAlignment.MiddleCenter, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 8.5f) });
             UpdateNavigationState();
-            return navigation;
+            return _navigationPanel;
+        }
+
+        private void ApplyResponsiveShell()
+        {
+            if (_navigationPanel == null || _navigationButtons == null) return;
+            bool compact = ClientSize.Width < 1180;
+            _navigationPanel.Width = compact ? 76 : 184;
+            if (_brandPicture != null) _brandPicture.Location = compact ? new Point(17, 18) : new Point(18, 18);
+            if (_brandTitle != null) _brandTitle.Visible = !compact;
+            if (_brandVersion != null) _brandVersion.Visible = !compact;
+            string[] full = { "Painel", "Manutenção", "Atualizações", "Sistema", "Ajustes" };
+            string[] compactText = { "⌂", "◆", "↻", "▣", "⚙" };
+            for (int index = 0; index < _navigationButtons.Length; index++)
+            {
+                Button button = _navigationButtons[index];
+                button.Text = compact ? compactText[index] : full[index];
+                button.Location = new Point(compact ? 8 : 12, 86 + (index * 48));
+                button.Size = new Size(compact ? 60 : 160, 40);
+                button.Padding = compact ? Padding.Empty : new Padding(16, 0, 0, 0);
+                button.TextAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
+            }
         }
 
         private Image LoadBrandImage()
@@ -291,7 +333,7 @@ namespace CodexPerformanceOptimizer
             {
                 Location = new Point(20, 62),
                 Size = new Size(1000, 525),
-                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+                Anchor = AnchorStyles.None,
                 BackColor = Theme.SurfaceDark,
                 BorderStyle = BorderStyle.FixedSingle,
                 AutoScroll = true,
@@ -301,8 +343,13 @@ namespace CodexPerformanceOptimizer
 
             page.Controls.Add(_hardwareSummary);
             page.Controls.Add(_hardwareCards);
-            page.Resize += delegate { _hardwareSummary.Size = new Size(Math.Max(500, page.ClientSize.Width - 40), 32); };
-            page.Enter += async delegate { if (!_hardwareLoaded && _cts == null) await LoadHardware(false); };
+            page.Resize += delegate
+            {
+                _hardwareSummary.Size = new Size(Math.Max(500, page.ClientSize.Width - 40), 32);
+                _hardwareCards.Location = new Point(20, 62);
+                _hardwareCards.Size = new Size(Math.Max(600, page.ClientSize.Width - 40), Math.Max(300, page.ClientSize.Height - 82));
+            };
+            page.Enter += async delegate { if (!_suppressStartup && !_hardwareLoaded && _cts == null) await LoadHardware(false); };
             return page;
         }
 
@@ -341,8 +388,9 @@ namespace CodexPerformanceOptimizer
             _startupGrid.Columns.Add("ValueName", "Valor");
             _startupGrid.Columns.Add("StateKind", "Tipo");
             for (int i = 5; i < _startupGrid.Columns.Count; i++) { _startupGrid.Columns[i].Visible = false; _startupGrid.Columns[i].ReadOnly = true; }
-            var refresh = ButtonFactory("Atualizar", 20, 545, 125, Theme.Secondary);
-            _startupApplyButton = ButtonFactory("Nenhuma alteração", 157, 545, 190, Theme.Primary);
+            var refresh = ButtonFactory("↻", 20, 545, 42, Theme.Secondary);
+            _toolTip.SetToolTip(refresh, "Atualizar lista");
+            _startupApplyButton = ButtonFactory("Nenhuma alteração", 74, 545, 190, Theme.Primary);
             _startupApplyButton.Enabled = false;
             refresh.Click += async delegate { await LoadStartupAsync(); };
             _startupApplyButton.Click += async delegate { await ApplyStartupGrid(); };
@@ -361,7 +409,7 @@ namespace CodexPerformanceOptimizer
             _startupGrid.Anchor = AnchorStyles.None;
             page.Resize += delegate { LayoutStartupTab(page, title, refresh, _startupApplyButton); };
             LayoutStartupTab(page, title, refresh, _startupApplyButton);
-            page.Enter += async delegate { await LoadStartupAsync(); };
+            page.Enter += async delegate { if (!_suppressStartup) await LoadStartupAsync(); };
             return page;
         }
 
@@ -375,23 +423,24 @@ namespace CodexPerformanceOptimizer
             _startupGrid.Location = new Point(20, 56);
             _startupGrid.Size = new Size(width, Math.Max(180, buttonY - _startupGrid.Top - 12));
             refresh.Location = new Point(20, buttonY);
-            save.Location = new Point(157, buttonY);
+            save.Location = new Point(74, buttonY);
         }
 
         private TabPage BuildStorageTab()
         {
             var page = NewPage("Armazenamento");
             _storageSummary = new Label { Text = "Discos e volumes", AutoSize = false, Size = new Size(520, 30), Location = new Point(20, 20), ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 10.5f) };
-            var scan = ButtonFactory("Analisar pastas", 300, 12, 120, Theme.Primary);
-            var largeFiles = ButtonFactory("Arquivos grandes", 430, 12, 125, Theme.Secondary);
-            var duplicates = ButtonFactory("Duplicados", 565, 12, 100, Theme.Secondary);
-            var clean = ButtonFactory("Limpeza segura", 675, 12, 120, Theme.Warning);
-            var optimize = ButtonFactory("Otimizar disco", 805, 12, 120, Theme.Success);
-            var tools = ButtonFactory("Mais", 935, 12, 80, Theme.Secondary);
+            _storageAnalysisMode = new ComboBox { Location = new Point(425, 15), Size = new Size(170, 28), DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
+            _storageAnalysisMode.Items.AddRange(new object[] { "Pastas", "Arquivos grandes", "Duplicados" });
+            _storageAnalysisMode.SelectedIndex = 0;
+            var scan = ButtonFactory("Analisar", 607, 12, 110, Theme.Primary);
+            var clean = ButtonFactory("Limpar", 729, 12, 105, Theme.Warning);
+            var optimize = ButtonFactory("Otimizar", 846, 12, 110, Theme.Success);
             var toolsMenu = new ContextMenuStrip { BackColor = Theme.Surface, ForeColor = Theme.Text, ShowImageMargin = false };
             var advancedCleanup = new ToolStripMenuItem("Limpeza avançada");
             var componentsCleanup = new ToolStripMenuItem("Limpar componentes do Windows");
             var storageSense = new ToolStripMenuItem("Abrir Sensor de Armazenamento");
+            var energyDiagnostic = new ToolStripMenuItem("Diagnóstico de energia");
             advancedCleanup.Click += async delegate { await AdvancedCleanup(); };
             componentsCleanup.Click += async delegate
             {
@@ -400,10 +449,12 @@ namespace CodexPerformanceOptimizer
                 LoadVolumes();
             };
             storageSense.Click += delegate { WindowsMaintenance.OpenStorageSenseSettings(); };
+            energyDiagnostic.Click += async delegate { await RunEnergyDiagnostic(); };
             toolsMenu.Items.Add(advancedCleanup);
             toolsMenu.Items.Add(componentsCleanup);
             toolsMenu.Items.Add(storageSense);
-            tools.Click += delegate { toolsMenu.Show(tools, new Point(0, tools.Height)); };
+            toolsMenu.Items.Add(new ToolStripSeparator());
+            toolsMenu.Items.Add(energyDiagnostic);
 
             _volumeGrid = Grid(20, 58, 1000, 120);
             _volumeGrid.Columns.Add("Drive", "Disco");
@@ -423,13 +474,15 @@ namespace CodexPerformanceOptimizer
             _volumeGrid.Columns.Add("Health", "Saúde");
             _volumeGrid.Columns[7].Width = 95;
             _volumeGrid.ReadOnly = true;
+            _volumeGrid.ContextMenuStrip = toolsMenu;
+            _toolTip.SetToolTip(_volumeGrid, "Clique com o botão direito para ações avançadas do disco");
             _volumeGrid.SelectionChanged += delegate
             {
                 if (_volumeGrid.SelectedRows.Count > 0) _selectedDrive = Convert.ToString(_volumeGrid.SelectedRows[0].Cells["Drive"].Value);
             };
 
             _folderSummary = new Label { Text = "Selecione um disco e escolha uma análise", AutoSize = false, AutoEllipsis = true, Size = new Size(490, 28), Location = new Point(20, 194), ForeColor = Theme.Muted };
-            _storageSearch = new TextBox { Location = new Point(520, 188), Size = new Size(210, 27), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Pesquisar resultados do armazenamento" };
+            _storageSearch = new TextBox { Location = new Point(520, 188), Size = new Size(210, 27), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Pesquisar resultados do armazenamento", Visible = false };
             NativeWindowTheme.SetCueBanner(_storageSearch, "Pesquisar resultados");
             _storageSearch.TextChanged += delegate { ApplyStorageFilter(); };
             _deleteStorageItem = ButtonFactory("Mover para a Lixeira", 836, 184, 180, Theme.Warning);
@@ -448,10 +501,13 @@ namespace CodexPerformanceOptimizer
             _storageGrid.SelectionChanged += delegate { UpdateStorageSelection(); };
             _storageGrid.CellDoubleClick += delegate(object sender, DataGridViewCellEventArgs e) { if (e.RowIndex >= 0) OpenStorageItemLocation(Convert.ToString(_storageGrid.Rows[e.RowIndex].Cells["Path"].Value)); };
 
-            scan.Click += async delegate { await ScanSelectedVolume(); };
-            largeFiles.Click += async delegate { await ScanLargeFiles(); };
+            scan.Click += async delegate
+            {
+                if (_storageAnalysisMode.SelectedIndex == 1) await ScanLargeFiles();
+                else if (_storageAnalysisMode.SelectedIndex == 2) await ScanDuplicates();
+                else await ScanSelectedVolume();
+            };
             clean.Click += async delegate { await OpenSafeCleanup(); };
-            duplicates.Click += async delegate { await ScanDuplicates(); };
             optimize.Click += async delegate { await OptimizeSelectedVolume(); };
             _deleteStorageItem.Click += async delegate { await DeleteSelectedStorageItem(); };
             page.Controls.Add(_storageSummary);
@@ -459,36 +515,32 @@ namespace CodexPerformanceOptimizer
             page.Controls.Add(_folderSummary);
             page.Controls.Add(_storageSearch);
             page.Controls.Add(_storageGrid);
+            page.Controls.Add(_storageAnalysisMode);
             page.Controls.Add(scan);
-            page.Controls.Add(largeFiles);
             page.Controls.Add(clean);
-            page.Controls.Add(duplicates);
             page.Controls.Add(optimize);
-            page.Controls.Add(tools);
             page.Controls.Add(_deleteStorageItem);
             page.Controls.Add(_storageSelectionStatus);
             _volumeGrid.Anchor = AnchorStyles.None;
             _storageGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutStorageTab(page, scan, largeFiles, duplicates, clean, optimize, tools); };
-            LayoutStorageTab(page, scan, largeFiles, duplicates, clean, optimize, tools);
-            page.Enter += delegate { LoadVolumes(); };
+            page.Resize += delegate { LayoutStorageTab(page, scan, clean, optimize); };
+            LayoutStorageTab(page, scan, clean, optimize);
+            page.Enter += delegate { if (!_suppressStartup) LoadVolumes(); };
             return page;
         }
 
-        private void LayoutStorageTab(TabPage page, Button scan, Button largeFiles, Button duplicates, Button clean, Button optimize, Button tools)
+        private void LayoutStorageTab(TabPage page, Button scan, Button clean, Button optimize)
         {
             int width = Math.Max(600, page.ClientSize.Width - 40);
             _volumeGrid.Location = new Point(20, 58);
             _volumeGrid.Size = new Size(width, 120);
             _storageGrid.Location = new Point(20, 228);
             _storageGrid.Size = new Size(width, Math.Max(210, page.ClientSize.Height - _storageGrid.Top - 20));
-            int actionsLeft = Math.Max(250, page.ClientSize.Width - 790);
-            scan.Location = new Point(actionsLeft, 12);
-            largeFiles.Location = new Point(actionsLeft + 130, 12);
-            duplicates.Location = new Point(actionsLeft + 265, 12);
-            clean.Location = new Point(actionsLeft + 375, 12);
-            optimize.Location = new Point(actionsLeft + 505, 12);
-            tools.Location = new Point(actionsLeft + 635, 12);
+            int actionsLeft = Math.Max(300, page.ClientSize.Width - 590);
+            _storageAnalysisMode.Location = new Point(actionsLeft, 15);
+            scan.Location = new Point(actionsLeft + 182, 12);
+            clean.Location = new Point(actionsLeft + 304, 12);
+            optimize.Location = new Point(actionsLeft + 421, 12);
             _deleteStorageItem.Location = new Point(page.ClientSize.Width - 200, 184);
             _storageSelectionStatus.Location = new Point(page.ClientSize.Width - 200, 192);
             _storageSearch.Location = new Point(Math.Max(360, page.ClientSize.Width - 510), 188);
@@ -499,37 +551,9 @@ namespace CodexPerformanceOptimizer
 
         private Panel BuildDriversPanel()
         {
-            var page = NewContentPanel("Drivers instalados e disponíveis");
-            _driverInventorySummary = new Label { Text = "Drivers instalados • verificando hardware...", Location = new Point(20, 18), Size = new Size(420, 28), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
-            _driverFilter = new ComboBox { Location = new Point(470, 14), Size = new Size(155, 28), DropDownStyle = ComboBoxStyle.DropDownList };
-            _driverFilter.Items.AddRange(new object[] { "Todos", "Vídeo", "BIOS", "Firmware", "Chipset / sistema", "Áudio", "Rede", "Armazenamento", "Bluetooth", "USB", "Problema", "Sem assinatura" });
-            _driverFilter.SelectedIndex = 0;
-            _driverSearch = new TextBox { Location = new Point(637, 15), Size = new Size(190, 26), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Pesquisar drivers instalados" };
-            _driverProblemsOnly = new CheckBox { Text = "Somente problemas", Location = new Point(841, 16), AutoSize = true, ForeColor = Theme.Muted };
-            NativeWindowTheme.SetCueBanner(_driverSearch, "Pesquisar drivers");
-            _driverFilter.SelectedIndexChanged += delegate { ApplyDriverInventoryFilter(); };
-            _driverSearch.TextChanged += delegate { ApplyDriverInventoryFilter(); };
-            _driverProblemsOnly.CheckedChanged += delegate { ApplyDriverInventoryFilter(); };
-            _installedDriverGrid = Grid(20, 52, 1000, 217);
-            _installedDriverGrid.Columns.Add("Category", "Componente");
-            _installedDriverGrid.Columns[0].Width = 125;
-            _installedDriverGrid.Columns.Add("Device", "Dispositivo");
-            _installedDriverGrid.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            _installedDriverGrid.Columns.Add("Provider", "Fornecedor");
-            _installedDriverGrid.Columns[2].Width = 135;
-            _installedDriverGrid.Columns.Add("Version", "Versão instalada");
-            _installedDriverGrid.Columns[3].Width = 125;
-            _installedDriverGrid.Columns.Add("Date", "Data");
-            _installedDriverGrid.Columns[4].Width = 105;
-            _installedDriverGrid.Columns.Add("Status", "Status");
-            _installedDriverGrid.Columns[5].Width = 90;
-            _installedDriverGrid.Columns.Add("InfName", "Pacote");
-            _installedDriverGrid.Columns[6].Width = 95;
-            _installedDriverGrid.Columns[6].Visible = false;
-            _installedDriverGrid.ReadOnly = true;
-
-            _driverSummary = new Label { Text = "Atualizações disponíveis • verificação ainda não executada", Location = new Point(20, 281), Size = new Size(760, 28), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
-            _driverGrid = Grid(20, 311, 1000, 231);
+            var page = NewContentPanel("Atualizações de drivers");
+            _driverSummary = new Label { Text = "Drivers • verificação ainda não executada", Location = new Point(20, 18), Size = new Size(760, 28), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
+            _driverGrid = Grid(20, 56, 1000, 486);
             _driverGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Instalar", Width = 60 });
             _driverGrid.Columns.Add("Classification", "Tipo");
             _driverGrid.Columns[1].Width = 125;
@@ -568,76 +592,29 @@ namespace CodexPerformanceOptimizer
             };
 
             var search = ButtonFactory("Verificar atualizações", 20, 554, 185, Theme.Primary);
-            var selectAll = ButtonFactory("Selecionar recomendadas", 217, 554, 190, Theme.Secondary);
-            var install = ButtonFactory("Instalar selecionadas", 419, 554, 190, Theme.Success);
-            var protection = ButtonFactory("Proteção", 621, 554, 135, Theme.Secondary);
+            var install = ButtonFactory("Instalar selecionadas", 217, 554, 190, Theme.Success);
             search.Click += async delegate { await SearchDriverUpdates(); };
-            selectAll.Click += delegate
-            {
-                foreach (DataGridViewRow row in _driverGrid.Rows)
-                {
-                    if (row.IsNewRow) continue;
-                    string id = Convert.ToString(row.Cells["UpdateId"].Value);
-                    DriverUpdate update = _driverUpdates.FirstOrDefault(item => string.Equals(item.UpdateId, id, StringComparison.OrdinalIgnoreCase));
-                    row.Cells["Selected"].Value = update != null && !update.IsFirmware && !update.IsOlderRisk && (update.Classification == "Recomendada" || update.Classification == "Obrigatória");
-                }
-            };
             install.Click += async delegate { await InstallSelectedDrivers(); };
-            var protectionMenu = new ContextMenuStrip { BackColor = Theme.Surface, ForeColor = Theme.Text, ShowImageMargin = false };
-            var backup = new ToolStripMenuItem("Criar backup de drivers");
-            var restore = new ToolStripMenuItem("Restaurar backup mais recente");
-            var backups = new ToolStripMenuItem("Abrir pasta de backups");
-            var windowsUpdate = new ToolStripMenuItem("Abrir Windows Update");
-            backup.Click += async delegate { await CreateDriverBackup(); };
-            restore.Click += async delegate { await RestoreDriverBackup(); };
-            backups.Click += delegate { DriverManager.OpenDriverBackups(); };
-            windowsUpdate.Click += delegate { DriverManager.OpenWindowsUpdate(); };
-            protectionMenu.Items.Add(backup);
-            protectionMenu.Items.Add(restore);
-            protectionMenu.Items.Add(backups);
-            protectionMenu.Items.Add(new ToolStripSeparator());
-            protectionMenu.Items.Add(windowsUpdate);
-            protection.Click += delegate { protectionMenu.Show(protection, new Point(0, protection.Height)); };
-            page.Controls.Add(_driverInventorySummary);
-            page.Controls.Add(_driverFilter);
-            page.Controls.Add(_driverSearch);
-            page.Controls.Add(_driverProblemsOnly);
-            page.Controls.Add(_installedDriverGrid);
             page.Controls.Add(_driverSummary);
             page.Controls.Add(_driverGrid);
             page.Controls.Add(search);
-            page.Controls.Add(selectAll);
             page.Controls.Add(install);
-            page.Controls.Add(protection);
-            _installedDriverGrid.Anchor = AnchorStyles.None;
             _driverGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutDriverPanel(page, search, selectAll, install, protection); };
-            LayoutDriverPanel(page, search, selectAll, install, protection);
+            page.Resize += delegate { LayoutDriverPanel(page, search, install); };
+            LayoutDriverPanel(page, search, install);
             return page;
         }
 
-        private void LayoutDriverPanel(Panel page, Button search, Button selectAll, Button install, Button protection)
+        private void LayoutDriverPanel(Panel page, Button search, Button install)
         {
             int width = Math.Max(720, page.ClientSize.Width - 40);
-            int right = page.ClientSize.Width - 20;
-            _driverProblemsOnly.Location = new Point(right - 160, 16);
-            _driverSearch.Location = new Point(_driverProblemsOnly.Left - 204, 15);
-            _driverFilter.Location = new Point(_driverSearch.Left - 167, 14);
-            _driverInventorySummary.Size = new Size(Math.Max(260, _driverFilter.Left - 40), 28);
-
             int buttonY = Math.Max(500, page.ClientSize.Height - 50);
-            int availableHeight = Math.Max(390, buttonY - 52);
-            int installedHeight = Math.Max(180, Math.Min(250, (availableHeight - 48) * 44 / 100));
-            _installedDriverGrid.Location = new Point(20, 52);
-            _installedDriverGrid.Size = new Size(width, installedHeight);
-            _driverSummary.Location = new Point(20, _installedDriverGrid.Bottom + 10);
+            _driverSummary.Location = new Point(20, 18);
             _driverSummary.Size = new Size(width, 28);
-            _driverGrid.Location = new Point(20, _driverSummary.Bottom + 2);
-            _driverGrid.Size = new Size(width, Math.Max(145, buttonY - _driverGrid.Top - 12));
+            _driverGrid.Location = new Point(20, 56);
+            _driverGrid.Size = new Size(width, Math.Max(300, buttonY - 68));
             search.Location = new Point(20, buttonY);
-            selectAll.Location = new Point(217, buttonY);
-            install.Location = new Point(419, buttonY);
-            protection.Location = new Point(621, buttonY);
+            install.Location = new Point(217, buttonY);
         }
 
         private Panel BuildProgramUpdatesPanel()
@@ -665,30 +642,22 @@ namespace CodexPerformanceOptimizer
             for (int index = 1; index < _programUpdateGrid.Columns.Count; index++) _programUpdateGrid.Columns[index].ReadOnly = true;
 
             var refresh = ButtonFactory("Verificar atualizações", 20, 574, 185, Theme.Primary);
-            var selectAll = ButtonFactory("Selecionar todas", 217, 574, 160, Theme.Secondary);
-            var install = ButtonFactory("Atualizar selecionados", 389, 574, 190, Theme.Success);
+            var install = ButtonFactory("Atualizar selecionados", 217, 574, 190, Theme.Success);
             refresh.Click += async delegate { await SearchProgramUpdates(); };
-            selectAll.Click += delegate
-            {
-                SyncProgramUpdateSelection();
-                foreach (ProgramUpdate item in _programUpdates) item.Selected = true;
-                ApplyProgramUpdateFilter();
-            };
             install.Click += async delegate { await InstallSelectedPrograms(); };
 
             page.Controls.Add(_programUpdateSummary);
             page.Controls.Add(_programUpdateSearch);
             page.Controls.Add(_programUpdateGrid);
             page.Controls.Add(refresh);
-            page.Controls.Add(selectAll);
             page.Controls.Add(install);
             _programUpdateGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutProgramUpdatesPanel(page, refresh, selectAll, install); };
-            LayoutProgramUpdatesPanel(page, refresh, selectAll, install);
+            page.Resize += delegate { LayoutProgramUpdatesPanel(page, refresh, install); };
+            LayoutProgramUpdatesPanel(page, refresh, install);
             return page;
         }
 
-        private void LayoutProgramUpdatesPanel(Panel page, Button refresh, Button selectAll, Button install)
+        private void LayoutProgramUpdatesPanel(Panel page, Button refresh, Button install)
         {
             int width = Math.Max(720, page.ClientSize.Width - 40);
             int buttonY = Math.Max(500, page.ClientSize.Height - 50);
@@ -697,8 +666,7 @@ namespace CodexPerformanceOptimizer
             _programUpdateGrid.Location = new Point(20, 56);
             _programUpdateGrid.Size = new Size(width, Math.Max(300, buttonY - 68));
             refresh.Location = new Point(20, buttonY);
-            selectAll.Location = new Point(217, buttonY);
-            install.Location = new Point(389, buttonY);
+            install.Location = new Point(217, buttonY);
         }
 
         private async Task SearchProgramUpdates()
@@ -1079,9 +1047,9 @@ namespace CodexPerformanceOptimizer
                 card.Controls.Add(new Label { Text = record.Specifications, Location = new Point(16, 70), Size = new Size(440, 40), AutoEllipsis = true, ForeColor = Theme.Text });
                 card.Controls.Add(new Label { Text = record.Status, Location = new Point(16, 108), AutoSize = true, ForeColor = record.Warning ? Color.Khaki : Color.LightGreen, Font = new Font("Segoe UI Semibold", 9f) });
                 if (record.Component.IndexOf("Armazen", StringComparison.OrdinalIgnoreCase) >= 0)
-                    AttachClick(card, delegate { _tabs.SelectedIndex = (int)AppSection.Storage; });
+                    AttachClick(card, delegate { NavigateToMaintenance(0); });
                 else if (record.Component.IndexOf("Vídeo", StringComparison.OrdinalIgnoreCase) >= 0 || record.Component.IndexOf("BIOS", StringComparison.OrdinalIgnoreCase) >= 0 || record.Component.IndexOf("Placa", StringComparison.OrdinalIgnoreCase) >= 0)
-                    AttachClick(card, delegate { _tabs.SelectedIndex = (int)AppSection.Updates; });
+                    AttachClick(card, delegate { NavigateTo(AppSection.Updates); });
                 _hardwareCards.Controls.Add(card);
                 if (cardIndex % 2 == 1) _hardwareCards.SetFlowBreak(card, true);
                 cardIndex++;
@@ -1205,6 +1173,7 @@ namespace CodexPerformanceOptimizer
         {
             if (string.IsNullOrWhiteSpace(_selectedDrive)) { LoadVolumes(); if (string.IsNullOrWhiteSpace(_selectedDrive)) return; }
             _storageGrid.Rows.Clear();
+            _storageSearch.Visible = false;
             _folderSummary.Text = "Analisando " + _selectedDrive + "...";
             string drive = _selectedDrive;
             await RunWork("Analisando " + drive + "...", delegate(CancellationToken t, IProgress<string> p)
@@ -1258,6 +1227,7 @@ namespace CodexPerformanceOptimizer
             if (string.IsNullOrWhiteSpace(_selectedDrive)) { LoadVolumes(); if (string.IsNullOrWhiteSpace(_selectedDrive)) return; }
             string drive = _selectedDrive;
             _storageGrid.Rows.Clear();
+            _storageSearch.Visible = false;
             _folderSummary.Text = "Mapeando arquivos maiores que 100 MB em " + drive + "...";
             List<LargeFileEntry> files = null;
             await RunWork("Mapeando arquivos grandes...", delegate(CancellationToken t, IProgress<string> p)
@@ -1278,6 +1248,7 @@ namespace CodexPerformanceOptimizer
             {
                 if (picker.ShowDialog(this) != DialogResult.OK) return;
                 _storageGrid.Rows.Clear();
+                _storageSearch.Visible = false;
                 string folder = picker.SelectedPath;
                 List<DuplicateEntry> rows = null;
                 await RunWork("Procurando duplicados...", delegate(CancellationToken t, IProgress<string> p)
@@ -1310,6 +1281,7 @@ namespace CodexPerformanceOptimizer
                 return V2Engine.DuplicateReport(folder, rows);
             }, false);
             _storageGrid.Rows.Clear();
+            _storageSearch.Visible = false;
             if (rows != null) foreach (DuplicateEntry row in rows) AddStorageResultRow(row.Path, V2Engine.FormatBytes(row.Size), "Grupo " + row.Group);
             _folderSummary.Text = rows == null || rows.Count == 0 ? "Nenhum duplicado restante" : rows.Select(item => item.Group).Distinct().Count() + " grupos restantes";
         }
@@ -1329,6 +1301,7 @@ namespace CodexPerformanceOptimizer
 
         private void AddStorageResultRow(string path, string size, string details)
         {
+            if (_storageSearch != null) _storageSearch.Visible = true;
             string blocked = StorageDeletion.GetBlockReason(path);
             int index = _storageGrid.Rows.Add(path, size, string.IsNullOrWhiteSpace(blocked) ? details : "Protegido pelo sistema");
             if (_storageGrid.Rows.Count == 1)
@@ -1507,6 +1480,7 @@ namespace CodexPerformanceOptimizer
             if (MessageBox.Show(this, result.Message + notes + "\r\n\r\nBaixar agora? O aplicativo será fechado, atualizado e reaberto automaticamente.", "Atualização", MessageBoxButtons.YesNo, MessageBoxIcon.Information) != DialogResult.Yes) return;
             _applicationUpdateInProgress = true;
             _updateStatus.Text = "Preparando atualização...";
+            if (_operationBar != null) _operationBar.Visible = true;
             _progress.Visible = true;
             _progress.Style = ProgressBarStyle.Continuous;
             _progress.Minimum = 0;
@@ -1537,6 +1511,7 @@ namespace CodexPerformanceOptimizer
                     _progress.Visible = false;
                     _progress.Value = 0;
                 }
+                if (_operationBar != null && _cts == null) _operationBar.Visible = false;
             }
         }
 
