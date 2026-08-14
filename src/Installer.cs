@@ -13,8 +13,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("Instala ou atualiza o Otimizador de Desempenho para o usuário atual.")]
 [assembly: AssemblyCompany("Codex")]
 [assembly: AssemblyProduct("Otimizador de Desempenho")]
-[assembly: AssemblyVersion("2.0.0.0")]
-[assembly: AssemblyFileVersion("2.0.0.0")]
+[assembly: AssemblyVersion("2.0.1.0")]
+[assembly: AssemblyFileVersion("2.0.1.0")]
 
 namespace CodexPerformanceOptimizerInstaller
 {
@@ -95,7 +95,9 @@ namespace CodexPerformanceOptimizerInstaller
             {
                 ExtractRequiredResource("OptimizerBinary", stagedApp);
                 stagedVersion = AssemblyName.GetAssemblyName(stagedApp).Version;
-                if (stagedVersion == null || stagedVersion.Major < 3) throw new InvalidOperationException("A versão incorporada não é válida.");
+                Version packageVersion = Assembly.GetExecutingAssembly().GetName().Version;
+                if (stagedVersion == null || packageVersion == null || !stagedVersion.Equals(packageVersion))
+                    throw new InvalidOperationException("A versão incorporada não corresponde ao instalador.");
                 if (File.Exists(AppPath))
                 {
                     try { File.Replace(stagedApp, AppPath, RollbackPath, true); }
@@ -107,7 +109,7 @@ namespace CodexPerformanceOptimizerInstaller
                     }
                 }
                 else File.Move(stagedApp, AppPath);
-                if (AssemblyName.GetAssemblyName(AppPath).Version != stagedVersion) throw new InvalidOperationException("A verificação da versão instalada falhou.");
+                if (!AssemblyName.GetAssemblyName(AppPath).Version.Equals(stagedVersion)) throw new InvalidOperationException("A verificação da versão instalada falhou.");
                 ExtractOptionalResourceAtomic("ReleaseNotes", Path.Combine(InstallDir, "release-notes.txt"));
                 ExtractOptionalResourceAtomic("UpdateManifest", Path.Combine(InstallDir, "update-manifest.json"));
                 ExtractOptionalResourceAtomic("ReleaseChannel", Path.Combine(InstallDir, "release-channel.json"));
@@ -389,12 +391,14 @@ namespace CodexPerformanceOptimizerInstaller
             catch { }
             Controls.Add(new Label { Text = "Otimizador " + displayVersion, Font = new Font("Segoe UI Semibold", 22f), AutoSize = true, Location = new Point(94, 26) });
             Version installed = InstallerProgram.InstalledVersion();
-            string operation = installed == null ? "Instalação por usuário — não requer privilégios administrativos" : installed == package ? "Reparar a versão " + installed + " sem perder configurações" : "Atualizar da versão " + installed + " para " + package;
+            bool sameVersion = installed != null && installed.Equals(package);
+            bool renumbering = installed != null && installed.Major > package.Major && package.Major == 2;
+            string operation = installed == null ? "Instalação por usuário — não requer privilégios administrativos" : sameVersion ? "Reparar a versão " + displayVersion + " sem perder configurações" : renumbering ? "Migrar da numeração " + installed + " para a versão 2.0" : "Atualizar da versão " + installed + " para " + package;
             Controls.Add(new Label { Text = operation, AutoSize = true, Location = new Point(34, 78), ForeColor = Color.FromArgb(148, 163, 184) });
             Controls.Add(new Label { Text = "Destino\r\n" + Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "OtimizadorDeDesempenho") + "\r\n\r\nAtalhos, atualização e desinstalação serão configurados automaticamente.", Location = new Point(34, 120), Size = new Size(550, 82), ForeColor = Color.FromArgb(203, 213, 225) });
             _desktop = new CheckBox { Text = "Criar atalho na Área de Trabalho", AutoSize = true, Checked = true, Location = new Point(34, 218), FlatStyle = FlatStyle.Flat };
             _install = new Button { Text = "Instalar", Location = new Point(34, 264), Size = new Size(150, 42), BackColor = Color.FromArgb(18, 137, 190), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
-            if (installed != null) _install.Text = installed == package ? "Reparar" : "Atualizar";
+            if (installed != null) _install.Text = sameVersion ? "Reparar" : renumbering ? "Migrar" : "Atualizar";
             _install.FlatAppearance.BorderSize = 0;
             _status = new Label { Text = "Pronto", AutoSize = true, Location = new Point(204, 277), ForeColor = Color.FromArgb(148, 163, 184) };
             _install.Click += InstallClicked;

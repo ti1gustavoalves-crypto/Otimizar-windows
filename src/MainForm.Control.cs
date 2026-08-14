@@ -80,7 +80,9 @@ namespace CodexPerformanceOptimizer
 
             var application = DashboardCard(20, 320, 1016, 155);
             application.Controls.Add(new Label { Text = "Aplicativo e suporte", Location = new Point(20, 16), AutoSize = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) });
-            _updateStatus = new Label { Text = "Versão " + GetType().Assembly.GetName().Version + "  •  " + AppPaths.ModeDescription + "  •  " + AdvancedEngine.ReadSignatureStatus(Application.ExecutablePath), Location = new Point(20, 49), Size = new Size(965, 28), AutoEllipsis = true, ForeColor = Theme.Muted };
+            Version applicationVersion = GetType().Assembly.GetName().Version;
+            string publicVersion = applicationVersion.Major + "." + applicationVersion.Minor;
+            _updateStatus = new Label { Text = "Versão " + publicVersion + "  •  " + AppPaths.ModeDescription + "  •  " + AdvancedEngine.ReadSignatureStatus(Application.ExecutablePath), Location = new Point(20, 49), Size = new Size(965, 28), AutoEllipsis = true, ForeColor = Theme.Muted };
             var check = ButtonFactory("Verificar novamente", 20, 94, 175, Theme.Secondary);
             var technicalFiles = ButtonFactory("Arquivos técnicos", 207, 94, 165, Theme.Secondary);
             check.Click += async delegate { await CheckForUpdates(); };

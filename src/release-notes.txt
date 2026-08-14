@@ -1,5 +1,7 @@
 OTIMIZADOR DE DESEMPENHO 2.0
 
+- Corrigida a migração de instalações antigas 5.x para a nova numeração 2.0.
+- O instalador agora valida o executável incorporado contra sua própria versão, sem depender de uma faixa numérica antiga.
 - A numeração pública do aplicativo foi consolidada como versão 2.0.
 
 - Nova área Correções em Sistema para diagnosticar rede, proxy, DNS, Winsock, pasta temporária, serviços essenciais e caches de navegadores.
