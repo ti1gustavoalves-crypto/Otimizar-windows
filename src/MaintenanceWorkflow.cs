@@ -11,7 +11,8 @@ namespace CodexPerformanceOptimizer
         Preventive,
         SlowComputer,
         LowStorage,
-        SlowStartup
+        SlowStartup,
+        Complete
     }
 
     [Flags]
@@ -116,6 +117,7 @@ namespace CodexPerformanceOptimizer
                 case ServiceProfile.SlowComputer: return "PC lento";
                 case ServiceProfile.LowStorage: return "Pouco espaço";
                 case ServiceProfile.SlowStartup: return "Inicialização lenta";
+                case ServiceProfile.Complete: return "Atendimento completo";
                 default: return "Manutenção preventiva";
             }
         }
@@ -130,6 +132,8 @@ namespace CodexPerformanceOptimizer
                     return MaintenanceAction.CleanupTemporaryFiles | MaintenanceAction.OptimizeVolume | MaintenanceAction.CreateRestorePoint;
                 case ServiceProfile.SlowStartup:
                     return MaintenanceAction.OptimizeStartup | MaintenanceAction.ReduceBackgroundActivity | MaintenanceAction.CreateRestorePoint;
+                case ServiceProfile.Complete:
+                    return MaintenanceAction.ConfigurePower | MaintenanceAction.ReduceVisuals | MaintenanceAction.OptimizeStartup | MaintenanceAction.CleanupTemporaryFiles | MaintenanceAction.ReduceBackgroundActivity | MaintenanceAction.OptimizeVolume | MaintenanceAction.CreateRestorePoint;
                 default:
                     return MaintenanceAction.CleanupTemporaryFiles | MaintenanceAction.OptimizeStartup | MaintenanceAction.ReduceBackgroundActivity | MaintenanceAction.OptimizeVolume | MaintenanceAction.CreateRestorePoint;
             }

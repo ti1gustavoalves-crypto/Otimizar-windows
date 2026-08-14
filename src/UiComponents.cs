@@ -100,6 +100,56 @@ namespace CodexPerformanceOptimizer
         }
     }
 
+    internal sealed class EmptyStatePanel : Panel
+    {
+        private readonly Label _title;
+        private readonly Label _detail;
+
+        public EmptyStatePanel()
+        {
+            BackColor = Theme.SurfaceDark;
+            _title = new Label { AutoSize = false, Height = 30, TextAlign = ContentAlignment.MiddleCenter, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 12f) };
+            _detail = new Label { AutoSize = false, Height = 44, TextAlign = ContentAlignment.TopCenter, ForeColor = Theme.Muted, Font = new Font("Segoe UI", 9.5f) };
+            Controls.Add(_title);
+            Controls.Add(_detail);
+            Resize += delegate { LayoutContent(); };
+        }
+
+        public void SetMessage(string title, string detail)
+        {
+            _title.Text = title;
+            _detail.Text = detail;
+            LayoutContent();
+        }
+
+        private void LayoutContent()
+        {
+            int width = Math.Max(240, ClientSize.Width - 80);
+            int top = Math.Max(30, (ClientSize.Height - 82) / 2);
+            _title.SetBounds(40, top, width, 30);
+            _detail.SetBounds(40, top + 36, width, 44);
+        }
+    }
+
+    internal sealed class ResponsiveActionBar : FlowLayoutPanel
+    {
+        public ResponsiveActionBar()
+        {
+            AutoSize = false;
+            WrapContents = true;
+            FlowDirection = FlowDirection.LeftToRight;
+            BackColor = Color.Transparent;
+            Padding = Padding.Empty;
+            Margin = Padding.Empty;
+        }
+
+        public void AddAction(Control control)
+        {
+            control.Margin = new Padding(0, 0, 12, 8);
+            Controls.Add(control);
+        }
+    }
+
     internal sealed class SparklineChart : Control
     {
         private readonly List<float> _values = new List<float>();

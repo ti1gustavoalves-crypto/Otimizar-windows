@@ -95,41 +95,17 @@ namespace CodexPerformanceOptimizer
             _installedDriverGrid.Columns[6].Visible = false;
             _installedDriverGrid.ReadOnly = true;
             _installedDriverGrid.Anchor = AnchorStyles.None;
-            Button protection = BuildDriverProtectionButton();
-
             page.Controls.Add(_driverInventorySummary);
             page.Controls.Add(_driverFilter);
             page.Controls.Add(_driverSearch);
             page.Controls.Add(_driverProblemsOnly);
             page.Controls.Add(_installedDriverGrid);
-            page.Controls.Add(protection);
-            page.Resize += delegate { LayoutDriverInventory(page, protection); };
-            LayoutDriverInventory(page, protection);
+            page.Resize += delegate { LayoutDriverInventory(page); };
+            LayoutDriverInventory(page);
             return page;
         }
 
-        private Button BuildDriverProtectionButton()
-        {
-            Button protection = ButtonFactory("Proteção e backup", 20, 0, 170, Theme.Secondary);
-            var menu = new ContextMenuStrip { BackColor = Theme.Surface, ForeColor = Theme.Text, ShowImageMargin = false };
-            var backup = new ToolStripMenuItem("Criar backup de drivers");
-            var restore = new ToolStripMenuItem("Restaurar backup mais recente");
-            var backups = new ToolStripMenuItem("Abrir pasta de backups");
-            var windowsUpdate = new ToolStripMenuItem("Abrir Windows Update");
-            backup.Click += async delegate { await CreateDriverBackup(); };
-            restore.Click += async delegate { await RestoreDriverBackup(); };
-            backups.Click += delegate { DriverManager.OpenDriverBackups(); };
-            windowsUpdate.Click += delegate { DriverManager.OpenWindowsUpdate(); };
-            menu.Items.Add(backup);
-            menu.Items.Add(restore);
-            menu.Items.Add(backups);
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(windowsUpdate);
-            protection.Click += delegate { menu.Show(protection, new Point(0, protection.Height)); };
-            return protection;
-        }
-
-        private void LayoutDriverInventory(TabPage page, Button protection)
+        private void LayoutDriverInventory(TabPage page)
         {
             int width = Math.Max(650, page.ClientSize.Width - 40);
             int right = page.ClientSize.Width - 20;
@@ -138,9 +114,7 @@ namespace CodexPerformanceOptimizer
             _driverFilter.Location = new Point(_driverSearch.Left - 167, 14);
             _driverInventorySummary.Size = new Size(Math.Max(220, _driverFilter.Left - 40), 28);
             _installedDriverGrid.Location = new Point(20, 54);
-            int buttonY = Math.Max(360, page.ClientSize.Height - 50);
-            _installedDriverGrid.Size = new Size(width, Math.Max(250, buttonY - 66));
-            protection.Location = new Point(20, buttonY);
+            _installedDriverGrid.Size = new Size(width, Math.Max(250, page.ClientSize.Height - 74));
         }
 
         private static TabControl HiddenTabs(params TabPage[] pages)

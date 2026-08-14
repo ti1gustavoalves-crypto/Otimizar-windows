@@ -1,11 +1,12 @@
-OTIMIZADOR DE DESEMPENHO 5.0.0
+OTIMIZADOR DE DESEMPENHO 5.1.0
 
-- Nova navegação com cinco áreas: Painel, Manutenção, Atualizações, Sistema e Ajustes.
-- Manutenção reúne armazenamento e inicialização; Sistema reúne saúde, processos, hardware e drivers instalados.
-- Painel simplificado para um único atendimento guiado, com métricas em tempo real e plano selecionável.
-- Armazenamento reduzido às ações essenciais, com análise por tipo e ferramentas avançadas em menu contextual.
-- Atualizações separa claramente drivers disponíveis e aplicativos, sem repetir o inventário instalado.
-- Operações de backup, restauração e suporte foram agrupadas onde são necessárias.
-- Navegação lateral compacta automaticamente em janelas menores e todas as áreas foram ajustadas para 1024 × 680.
-- A barra de progresso permanece oculta quando nenhuma operação está em execução.
-- Autotestes percorrem áreas principais, seções internas e modos de atualização em três resoluções.
+- Windows, drivers e aplicativos agora aparecem em uma única fila de atualizações com pesquisa e filtro por origem.
+- As consultas de atualização são executadas em paralelo para reduzir o tempo de espera.
+- Atualizações de sistema pendentes são identificadas e encaminhadas ao mecanismo oficial do Windows Update.
+- Telas sem resultados exibem uma mensagem clara em vez de uma tabela preta vazia.
+- O último resultado do atendimento aparece apenas quando existe e permanece recolhido até ser solicitado.
+- Atendimento completo agora pode ser escolhido diretamente como perfil.
+- Backup e restauração de drivers foram movidos para Recuperação em Ajustes.
+- Novos componentes reutilizáveis padronizam estados vazios e barras de ações responsivas.
+- Código antigo das duas tabelas de atualização foi removido e o arquivo principal foi reduzido.
+- Responsividade e navegação interna continuam validadas automaticamente em três resoluções.

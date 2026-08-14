@@ -94,15 +94,17 @@ namespace CodexPerformanceOptimizer
         private TextBox _driverSearch;
         private CheckBox _driverProblemsOnly;
         private List<DriverInventoryItem> _driverInventoryItems = new List<DriverInventoryItem>();
-        private DataGridView _driverGrid;
-        private Label _driverSummary;
         private List<DriverUpdate> _driverUpdates = new List<DriverUpdate>();
         private bool _driverInventoryLoaded;
-        private DataGridView _programUpdateGrid;
-        private Label _programUpdateSummary;
-        private TextBox _programUpdateSearch;
         private List<ProgramUpdate> _programUpdates = new List<ProgramUpdate>();
-        private bool _programUpdatesLoaded;
+        private List<WindowsSystemUpdate> _windowsUpdates = new List<WindowsSystemUpdate>();
+        private DataGridView _updateQueueGrid;
+        private Label _updateQueueSummary;
+        private TextBox _updateQueueSearch;
+        private ComboBox _updateQueueFilter;
+        private EmptyStatePanel _updateQueueEmpty;
+        private Button _installUpdatesButton;
+        private bool _updatesSearched;
         private ProgressBar _progress;
         private Label _status;
         private Button _cancel;
@@ -120,6 +122,7 @@ namespace CodexPerformanceOptimizer
         private DataGridView _issueGrid;
         private Label _planSummary;
         private Label _comparisonSummary;
+        private Button _comparisonToggle;
         private Button _runPlanButton;
         private MaintenancePlan _maintenancePlan;
         private bool _planLoading;
@@ -549,211 +552,6 @@ namespace CodexPerformanceOptimizer
             _storageSummary.Size = new Size(Math.Max(180, actionsLeft - 40), 30);
         }
 
-        private Panel BuildDriversPanel()
-        {
-            var page = NewContentPanel("Atualizações de drivers");
-            _driverSummary = new Label { Text = "Drivers • verificação ainda não executada", Location = new Point(20, 18), Size = new Size(760, 28), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
-            _driverGrid = Grid(20, 56, 1000, 486);
-            _driverGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Instalar", Width = 60 });
-            _driverGrid.Columns.Add("Classification", "Tipo");
-            _driverGrid.Columns[1].Width = 125;
-            _driverGrid.Columns[1].ReadOnly = true;
-            _driverGrid.Columns.Add("Title", "Driver");
-            _driverGrid.Columns[2].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            _driverGrid.Columns[2].ReadOnly = true;
-            _driverGrid.Columns.Add("Comparison", "Versões");
-            _driverGrid.Columns[3].Width = 180;
-            _driverGrid.Columns[3].ReadOnly = true;
-            _driverGrid.Columns.Add("Size", "Download");
-            _driverGrid.Columns[4].Width = 90;
-            _driverGrid.Columns[4].ReadOnly = true;
-            _driverGrid.Columns.Add("Restart", "Reinício");
-            _driverGrid.Columns[5].Width = 75;
-            _driverGrid.Columns[5].ReadOnly = true;
-            _driverGrid.Columns.Add(new DataGridViewLinkColumn { Name = "OfficialSite", HeaderText = "Fabricante", Width = 100, TrackVisitedState = false, LinkColor = Theme.Primary, ActiveLinkColor = Theme.Text, VisitedLinkColor = Theme.Primary });
-            _driverGrid.Columns.Add(new DataGridViewLinkColumn { Name = "CatalogSite", HeaderText = "Catálogo", Width = 90, TrackVisitedState = false, LinkColor = Theme.Primary, ActiveLinkColor = Theme.Text, VisitedLinkColor = Theme.Primary });
-            _driverGrid.Columns.Add("UpdateId", "ID");
-            _driverGrid.Columns[8].Visible = false;
-            _driverGrid.Columns.Add("SupportUrl", "Endereço oficial");
-            _driverGrid.Columns[9].Visible = false;
-            _driverGrid.Columns.Add("CatalogUrl", "Catálogo exato");
-            _driverGrid.Columns[10].Visible = false;
-            _driverGrid.Columns.Add("IsFirmware", "Firmware");
-            _driverGrid.Columns[11].Visible = false;
-            for (int i = 8; i < _driverGrid.Columns.Count; i++) _driverGrid.Columns[i].ReadOnly = true;
-            _driverGrid.CellContentClick += delegate(object sender, DataGridViewCellEventArgs e)
-            {
-                if (e.RowIndex < 0) return;
-                string column = _driverGrid.Columns[e.ColumnIndex].Name;
-                if (column != "OfficialSite" && column != "CatalogSite") return;
-                string url = Convert.ToString(_driverGrid.Rows[e.RowIndex].Cells[column == "OfficialSite" ? "SupportUrl" : "CatalogUrl"].Value);
-                try { DriverManager.OpenOfficialSupport(url); }
-                catch (Exception ex) { MessageBox.Show(this, ex.Message, "Site oficial", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
-            };
-
-            var search = ButtonFactory("Verificar atualizações", 20, 554, 185, Theme.Primary);
-            var install = ButtonFactory("Instalar selecionadas", 217, 554, 190, Theme.Success);
-            search.Click += async delegate { await SearchDriverUpdates(); };
-            install.Click += async delegate { await InstallSelectedDrivers(); };
-            page.Controls.Add(_driverSummary);
-            page.Controls.Add(_driverGrid);
-            page.Controls.Add(search);
-            page.Controls.Add(install);
-            _driverGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutDriverPanel(page, search, install); };
-            LayoutDriverPanel(page, search, install);
-            return page;
-        }
-
-        private void LayoutDriverPanel(Panel page, Button search, Button install)
-        {
-            int width = Math.Max(720, page.ClientSize.Width - 40);
-            int buttonY = Math.Max(500, page.ClientSize.Height - 50);
-            _driverSummary.Location = new Point(20, 18);
-            _driverSummary.Size = new Size(width, 28);
-            _driverGrid.Location = new Point(20, 56);
-            _driverGrid.Size = new Size(width, Math.Max(300, buttonY - 68));
-            search.Location = new Point(20, buttonY);
-            install.Location = new Point(217, buttonY);
-        }
-
-        private Panel BuildProgramUpdatesPanel()
-        {
-            var page = NewContentPanel("Atualizações de aplicativos");
-            _programUpdateSummary = new Label { Text = "Aplicativos • verificação ainda não executada", Location = new Point(20, 18), Size = new Size(650, 28), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 11f) };
-            _programUpdateSearch = new TextBox { Location = new Point(720, 14), Size = new Size(300, 27), BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text, BorderStyle = BorderStyle.FixedSingle, AccessibleName = "Pesquisar aplicativos com atualização" };
-            NativeWindowTheme.SetCueBanner(_programUpdateSearch, "Pesquisar aplicativos");
-            _programUpdateSearch.TextChanged += delegate { ApplyProgramUpdateFilter(); };
-
-            _programUpdateGrid = Grid(20, 56, 1000, 500);
-            _programUpdateGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Atualizar", Width = 70 });
-            _programUpdateGrid.Columns.Add("Name", "Programa");
-            _programUpdateGrid.Columns[1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
-            _programUpdateGrid.Columns.Add("Installed", "Versão instalada");
-            _programUpdateGrid.Columns[2].Width = 145;
-            _programUpdateGrid.Columns.Add("Available", "Nova versão");
-            _programUpdateGrid.Columns[3].Width = 145;
-            _programUpdateGrid.Columns.Add("PackageId", "Identificador WinGet");
-            _programUpdateGrid.Columns[4].Width = 260;
-            _programUpdateGrid.Columns[4].Visible = false;
-            _programUpdateGrid.Columns.Add("Source", "Origem");
-            _programUpdateGrid.Columns[5].Width = 90;
-            _programUpdateGrid.Columns[5].Visible = false;
-            for (int index = 1; index < _programUpdateGrid.Columns.Count; index++) _programUpdateGrid.Columns[index].ReadOnly = true;
-
-            var refresh = ButtonFactory("Verificar atualizações", 20, 574, 185, Theme.Primary);
-            var install = ButtonFactory("Atualizar selecionados", 217, 574, 190, Theme.Success);
-            refresh.Click += async delegate { await SearchProgramUpdates(); };
-            install.Click += async delegate { await InstallSelectedPrograms(); };
-
-            page.Controls.Add(_programUpdateSummary);
-            page.Controls.Add(_programUpdateSearch);
-            page.Controls.Add(_programUpdateGrid);
-            page.Controls.Add(refresh);
-            page.Controls.Add(install);
-            _programUpdateGrid.Anchor = AnchorStyles.None;
-            page.Resize += delegate { LayoutProgramUpdatesPanel(page, refresh, install); };
-            LayoutProgramUpdatesPanel(page, refresh, install);
-            return page;
-        }
-
-        private void LayoutProgramUpdatesPanel(Panel page, Button refresh, Button install)
-        {
-            int width = Math.Max(720, page.ClientSize.Width - 40);
-            int buttonY = Math.Max(500, page.ClientSize.Height - 50);
-            _programUpdateSearch.Location = new Point(Math.Max(420, page.ClientSize.Width - 320), 14);
-            _programUpdateSummary.Size = new Size(Math.Max(300, _programUpdateSearch.Left - 40), 28);
-            _programUpdateGrid.Location = new Point(20, 56);
-            _programUpdateGrid.Size = new Size(width, Math.Max(300, buttonY - 68));
-            refresh.Location = new Point(20, buttonY);
-            install.Location = new Point(217, buttonY);
-        }
-
-        private async Task SearchProgramUpdates()
-        {
-            await SearchProgramUpdates(true);
-        }
-
-        private async Task SearchProgramUpdates(bool force)
-        {
-            bool available = await Task.Run(delegate { return ProgramUpdater.IsAvailable(); });
-            if (!available)
-            {
-                _programUpdateSummary.Text = "WinGet não está disponível neste Windows";
-                MessageBox.Show(this, "O Windows Package Manager (WinGet) não foi encontrado. Instale ou atualize o App Installer pela Microsoft Store.", "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            List<ProgramUpdate> found = null;
-            string result = await RunWork("Buscando atualizações de programas...", delegate(CancellationToken token, IProgress<string> progress)
-            {
-                found = CachedAnalysis.SearchProgramUpdates(force, token, progress);
-                return found.Count == 0 ? "Todos os programas consultados estão atualizados." : found.Count + " atualizações de programas encontradas.";
-            }, false);
-            if (found == null)
-            {
-                _programUpdateSummary.Text = "Não foi possível consultar o WinGet";
-                MessageBox.Show(this, result, "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            string version = await Task.Run(delegate { return ProgramUpdater.ReadVersion(); });
-            PopulateProgramUpdates(found, version);
-        }
-
-        private void PopulateProgramUpdates(List<ProgramUpdate> found, string wingetVersion)
-        {
-            _programUpdates = found ?? new List<ProgramUpdate>();
-            _programUpdatesLoaded = true;
-            ApplyProgramUpdateFilter();
-            _programUpdateSummary.Text = _programUpdates.Count == 0 ? "Seus programas estão atualizados" : _programUpdates.Count + (_programUpdates.Count == 1 ? " atualização disponível" : " atualizações disponíveis");
-            if (!string.IsNullOrEmpty(wingetVersion)) _programUpdateSummary.Text += " • WinGet " + wingetVersion.TrimStart('v', 'V');
-        }
-
-        private void ApplyProgramUpdateFilter()
-        {
-            if (_programUpdateGrid == null) return;
-            SyncProgramUpdateSelection();
-            string search = _programUpdateSearch == null ? string.Empty : _programUpdateSearch.Text.Trim();
-            IEnumerable<ProgramUpdate> visible = _programUpdates.Where(delegate(ProgramUpdate item)
-            {
-                return string.IsNullOrEmpty(search) || (item.Name + " " + item.PackageId + " " + item.InstalledVersion + " " + item.AvailableVersion).IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
-            });
-            _programUpdateGrid.Rows.Clear();
-            foreach (ProgramUpdate item in visible)
-                _programUpdateGrid.Rows.Add(item.Selected, item.Name, item.InstalledVersion, item.AvailableVersion, item.PackageId, item.Source);
-        }
-
-        private void SyncProgramUpdateSelection()
-        {
-            if (_programUpdateGrid == null) return;
-            foreach (DataGridViewRow row in _programUpdateGrid.Rows)
-            {
-                if (row.IsNewRow) continue;
-                string id = Convert.ToString(row.Cells["PackageId"].Value);
-                ProgramUpdate item = _programUpdates.FirstOrDefault(update => string.Equals(update.PackageId, id, StringComparison.OrdinalIgnoreCase));
-                if (item != null) item.Selected = Convert.ToBoolean(row.Cells["Selected"].Value);
-            }
-        }
-
-        private async Task InstallSelectedPrograms()
-        {
-            SyncProgramUpdateSelection();
-            var ids = _programUpdates.Where(item => item.Selected).Select(item => item.PackageId).ToList();
-            if (ids.Count == 0)
-            {
-                MessageBox.Show(this, "Selecione ao menos um programa.", "Atualização de programas", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            List<ProgramUpdate> selected = _programUpdates.Where(item => ids.Contains(item.PackageId, StringComparer.OrdinalIgnoreCase)).ToList();
-            string preview = string.Join("\r\n", selected.Take(8).Select(item => "• " + item.Name + ": " + item.InstalledVersion + " → " + item.AvailableVersion));
-            if (selected.Count > 8) preview += "\r\n• e mais " + (selected.Count - 8);
-            string confirmation = "Atualizar " + selected.Count + (selected.Count == 1 ? " programa" : " programas") + " pelo WinGet?\r\n\r\n" + preview + "\r\n\r\nAlguns instaladores podem solicitar permissão do Windows.";
-            if (MessageBox.Show(this, confirmation, "Confirmar atualizações", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
-            string result = await RunWork("Atualizando programas...", delegate(CancellationToken token, IProgress<string> progress) { return ProgramUpdater.InstallUpdates(ids, token, progress); });
-            ShowTextDialog("Resultado das atualizações", result);
-            _programUpdatesLoaded = false;
-            AnalysisCache.Invalidate("program-updates");
-            await SearchProgramUpdates(true);
-        }
 
         private async Task LoadDriverInventoryAsync(bool force)
         {
@@ -789,75 +587,6 @@ namespace CodexPerformanceOptimizer
             }
         }
 
-        private async Task SearchDriverUpdates()
-        {
-            await SearchDriverUpdates(true);
-        }
-
-        private async Task SearchDriverUpdates(bool force)
-        {
-            List<DriverUpdate> found = null;
-            string result = await RunWork("Buscando drivers no Windows Update...", delegate(CancellationToken token, IProgress<string> progress)
-            {
-                found = CachedAnalysis.SearchDriverUpdates(force, token, progress);
-                return DriverManager.BuildSearchReport(found);
-            }, false);
-            if (found == null)
-            {
-                MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            PopulateDriverUpdates(found);
-        }
-
-        private void PopulateDriverUpdates(List<DriverUpdate> found)
-        {
-            _driverUpdates = found ?? new List<DriverUpdate>();
-            _driverGrid.Rows.Clear();
-            foreach (DriverUpdate update in _driverUpdates)
-            {
-                int index = _driverGrid.Rows.Add(update.Selected, update.Classification, update.Title, update.Comparison, V2Engine.FormatBytes(update.DownloadBytes), update.RebootRequired ? "Sim" : "Não", update.SupportName, "Catálogo", update.UpdateId, update.SupportUrl, update.CatalogUrl, update.IsFirmware);
-                if (update.IsOlderRisk) _driverGrid.Rows[index].DefaultCellStyle.ForeColor = Theme.Warning;
-            }
-            int recommended = _driverUpdates.Count(delegate(DriverUpdate item) { return item.Classification == "Recomendada" || item.Classification == "Obrigatória"; });
-            int firmware = _driverUpdates.Count(delegate(DriverUpdate item) { return item.IsFirmware; });
-            _driverSummary.Text = _driverUpdates.Count == 0 ? "Seus drivers estão atualizados" : _driverUpdates.Count + " atualizações • " + recommended + " recomendadas" + (firmware == 0 ? string.Empty : " • " + firmware + " firmware/BIOS");
-        }
-
-        private async Task InstallSelectedDrivers()
-        {
-            var ids = new List<string>();
-            foreach (DataGridViewRow row in _driverGrid.Rows)
-                if (!row.IsNewRow && Convert.ToBoolean(row.Cells["Selected"].Value)) ids.Add(Convert.ToString(row.Cells["UpdateId"].Value));
-            if (ids.Count == 0)
-            {
-                MessageBox.Show(this, "Selecione ao menos um driver.", "Drivers", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            List<DriverUpdate> selected = _driverUpdates.Where(delegate(DriverUpdate item) { return ids.Contains(item.UpdateId, StringComparer.OrdinalIgnoreCase); }).ToList();
-            if (!Optimizer.IsAdministrator())
-            {
-                if (MessageBox.Show(this, "A instalação exige privilégios de administrador. Reabrir o Otimizador como administrador?", "Drivers", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes) RunAsAdmin(null, EventArgs.Empty);
-                return;
-            }
-            DriverSafetyStatus safety = await Task.Run(delegate { return DriverManager.ReadSafetyStatus(); });
-            string firmwareBlock = DriverManager.ValidateFirmwareSelection(selected, safety);
-            if (!string.IsNullOrEmpty(firmwareBlock))
-            {
-                MessageBox.Show(this, firmwareBlock, "Proteção de BIOS e firmware", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            bool older = selected.Any(delegate(DriverUpdate item) { return item.IsOlderRisk; });
-            string warning = older ? "\r\n\r\nA seleção contém um pacote possivelmente mais antigo." : string.Empty;
-            string firmwareInfo = selected.Any(delegate(DriverUpdate item) { return item.IsFirmware; }) ? "\r\n\r\nVerificação de firmware:\r\n" + safety.Summary : string.Empty;
-            string confirmation = "Será criado um backup dos drivers atuais antes da instalação.\r\n\r\nO Windows Update instalará " + ids.Count + (ids.Count == 1 ? " driver." : " drivers.") + warning + firmwareInfo + "\r\n\r\nContinuar?";
-            if (MessageBox.Show(this, confirmation, "Atualizar drivers", MessageBoxButtons.YesNo, older ? MessageBoxIcon.Warning : MessageBoxIcon.Question) != DialogResult.Yes) return;
-            string result = await RunWork("Atualizando drivers...", delegate(CancellationToken token, IProgress<string> progress) { return DriverManager.InstallUpdates(ids, token, progress); });
-            MessageBox.Show(this, result, "Drivers", MessageBoxButtons.OK, result.IndexOf("Falha", StringComparison.OrdinalIgnoreCase) >= 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
-            CachedAnalysis.InvalidateDrivers();
-            await LoadDriverInventoryAsync(true);
-            await SearchDriverUpdates(true);
-        }
 
         private async Task CreateDriverBackup()
         {
@@ -1562,11 +1291,6 @@ namespace CodexPerformanceOptimizer
         private TabPage NewPage(string text)
         {
             return new TabPage(text) { BackColor = Theme.Background, ForeColor = Theme.Text, AccessibleName = "Aba " + text, AutoScroll = true };
-        }
-
-        private static Panel NewContentPanel(string accessibleName)
-        {
-            return new Panel { BackColor = Theme.Background, ForeColor = Theme.Text, AccessibleName = accessibleName };
         }
 
         private DashboardPanel DashboardCard(int x, int y, int width, int height)

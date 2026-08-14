@@ -4,7 +4,7 @@ Aplicativo desktop em C# e Windows Forms para acompanhar recursos do computador,
 
 A interface apresenta identidade visual própria, barra de título escura e cinco áreas organizadas para reduzir cliques durante a manutenção técnica.
 
-A versão 5.0.0 reorganiza o produto em Painel, Manutenção, Atualizações, Sistema e Ajustes, reduz ações redundantes e adapta a interface a janelas a partir de 1024 × 680.
+A versão 5.1.0 consolida Windows, drivers e aplicativos em uma fila de atualizações, adiciona estados vazios claros, torna o último resultado expansível e reduz código duplicado da interface.
 
 ## Recursos principais
 
@@ -23,7 +23,7 @@ A versão 5.0.0 reorganiza o produto em Painel, Manutenção, Atualizações, Si
 - Atalhos seguros para o suporte oficial do fabricante de cada atualização encontrada.
 - Correspondência por Hardware ID, classificação e comparação segura de versões.
 - Backup e restauração de drivers, diagnóstico de dispositivos e proteção especial para BIOS/firmware.
-- Central unificada de atualizações para drivers e programas pelo WinGet, sempre com confirmação prévia.
+- Central unificada de atualizações para Windows e drivers pelo Windows Update e aplicativos pelo WinGet, sempre com confirmação prévia.
 - Limpeza selecionável de arquivos temporários e análise por volume.
 - Exclusão selecionável de arquivos e pastas para a Lixeira, com proteção de locais críticos.
 - Otimização automática por tipo de unidade, escolhendo o método adequado para SSD, HDD ou armazenamento em camadas.

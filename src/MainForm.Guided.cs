@@ -39,12 +39,20 @@ namespace CodexPerformanceOptimizer
             service.Controls.Add(new Label { Text = "Escolha o objetivo; o Otimizador prepara somente ações coerentes com o caso.", Location = new Point(20, 44), Size = new Size(590, 22), AutoEllipsis = true, ForeColor = Theme.Muted });
 
             _serviceProfile = new ComboBox { Location = new Point(20, 78), Size = new Size(270, 29), DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, BackColor = Theme.SurfaceAlt, ForeColor = Theme.Text };
-            _serviceProfile.Items.AddRange(new object[] { "Manutenção preventiva", "PC lento", "Pouco espaço", "Inicialização lenta" });
-            _serviceProfile.SelectedIndex = _initialServiceProfile.HasValue ? Math.Max(0, Math.Min(3, _initialServiceProfile.Value)) : 0;
+            _serviceProfile.Items.AddRange(new object[] { "Manutenção preventiva", "PC lento", "Pouco espaço", "Inicialização lenta", "Atendimento completo" });
+            _serviceProfile.SelectedIndex = _initialServiceProfile.HasValue ? Math.Max(0, Math.Min(4, _initialServiceProfile.Value)) : 0;
             _serviceProfile.SelectedIndexChanged += async delegate { await RefreshMaintenancePlanAsync(); };
 
             _planSummary = new Label { Text = "Preparando o plano...", Location = new Point(20, 124), Size = new Size(270, 66), AutoEllipsis = true, ForeColor = Theme.Muted };
-            _comparisonSummary = new Label { Text = ComparisonSummary(), Location = new Point(20, 204), Size = new Size(270, 90), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 9f) };
+            string comparison = ComparisonSummary();
+            _comparisonToggle = ButtonFactory("Último resultado  ▾", 20, 200, 170, Theme.Secondary);
+            _comparisonToggle.Visible = !string.IsNullOrEmpty(comparison);
+            _comparisonSummary = new Label { Text = comparison, Location = new Point(20, 240), Size = new Size(270, 74), AutoEllipsis = true, ForeColor = Theme.Text, Font = new Font("Segoe UI Semibold", 9f), Visible = false };
+            _comparisonToggle.Click += delegate
+            {
+                _comparisonSummary.Visible = !_comparisonSummary.Visible;
+                _comparisonToggle.Text = _comparisonSummary.Visible ? "Último resultado  ▴" : "Último resultado  ▾";
+            };
             _issueGrid = Grid(316, 78, 680, 278);
             _issueGrid.RowTemplate.Height = 30;
             _issueGrid.Columns.Add(new DataGridViewCheckBoxColumn { Name = "Selected", HeaderText = "Fazer", Width = 55 });
@@ -81,6 +89,7 @@ namespace CodexPerformanceOptimizer
 
             service.Controls.Add(_serviceProfile);
             service.Controls.Add(_planSummary);
+            service.Controls.Add(_comparisonToggle);
             service.Controls.Add(_comparisonSummary);
             service.Controls.Add(_issueGrid);
             service.Controls.Add(_runPlanButton);
@@ -249,6 +258,9 @@ namespace CodexPerformanceOptimizer
             PopulateDiagnostics(_diagnosticSnapshot);
             await RefreshMaintenancePlanAsync();
             _comparisonSummary.Text = ComparisonSummary();
+            _comparisonToggle.Visible = !string.IsNullOrEmpty(_comparisonSummary.Text);
+            _comparisonSummary.Visible = _comparisonToggle.Visible;
+            _comparisonToggle.Text = "Último resultado  ▴";
             _planSummary.Text = "Atendimento concluído • saúde " + service.BeforeHealth.Score + " → " + service.AfterHealth.Score + "/100";
 
             int pending = service.DriverUpdates.Count + service.ProgramUpdates.Count;
@@ -275,7 +287,7 @@ namespace CodexPerformanceOptimizer
         private static string ComparisonSummary()
         {
             PerformanceComparison comparison = AdvancedEngine.ReadComparison();
-            if (comparison == null) return "ANTES E DEPOIS\r\nExecute uma manutenção para criar a primeira comparação.";
+            if (comparison == null) return string.Empty;
             string boot = comparison.BootDurationMilliseconds > 0 ? "  •  Inicialização " + TimeSpan.FromMilliseconds(comparison.BootDurationMilliseconds).TotalSeconds.ToString("N1", CultureInfo.CurrentCulture) + " s" : string.Empty;
             return string.Format(CultureInfo.CurrentCulture, "ÚLTIMO RESULTADO\r\n{0}\r\nRAM {1:N1} → {2:N1} GB  •  CPU {3:N0}% → {4:N0}%\r\nDisco {5:N1} → {6:N1} GB{7}", comparison.Operation, comparison.BeforeFreeRamGb, comparison.AfterFreeRamGb, comparison.BeforeCpuPercent, comparison.AfterCpuPercent, comparison.BeforeFreeDiskGb, comparison.AfterFreeDiskGb, boot);
         }

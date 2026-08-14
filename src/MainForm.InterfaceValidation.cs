@@ -68,27 +68,36 @@ namespace CodexPerformanceOptimizer
         {
             TabPage page = _tabs.TabPages[(int)AppSection.Updates];
             _tabs.SelectedTab = page;
-            Button programs = FindButton(page, "Aplicativos");
-            Button drivers = FindButton(page, "Drivers");
-            if (programs == null || drivers == null) { problems.Add("Atualizações: filtros de origem indisponíveis."); return; }
-            programs.PerformClick();
-            Application.DoEvents();
-            page.PerformLayout();
-            ValidateControlTree(page, "Atualizações / Aplicativos", problems);
-            drivers.PerformClick();
-            Application.DoEvents();
-        }
-
-        private static Button FindButton(Control parent, string text)
-        {
-            foreach (Control control in parent.Controls)
+            if (_updateQueueFilter == null || _updateQueueFilter.Items.Count != 4 || _updateQueueGrid == null || _updateQueueEmpty == null)
             {
-                var button = control as Button;
-                if (button != null && string.Equals(button.Text, text, StringComparison.OrdinalIgnoreCase)) return button;
-                Button child = FindButton(control, text);
-                if (child != null) return child;
+                problems.Add("Atualizações: fila unificada ou filtros indisponíveis.");
+                return;
             }
-            return null;
+            int selected = _updateQueueFilter.SelectedIndex;
+            List<WindowsSystemUpdate> originalWindows = _windowsUpdates;
+            List<DriverUpdate> originalDrivers = _driverUpdates;
+            List<ProgramUpdate> originalPrograms = _programUpdates;
+            bool originalSearched = _updatesSearched;
+            _windowsUpdates = new List<WindowsSystemUpdate> { new WindowsSystemUpdate { Title = "Atualização do Windows", UpdateId = "teste" } };
+            _driverUpdates = new List<DriverUpdate> { new DriverUpdate { Title = "Driver de teste", UpdateId = "teste", Selected = true } };
+            _programUpdates = new List<ProgramUpdate> { new ProgramUpdate { Name = "Aplicativo de teste", PackageId = "Teste.App", Selected = true } };
+            _updatesSearched = true;
+            for (int index = 0; index < _updateQueueFilter.Items.Count; index++)
+            {
+                _updateQueueFilter.SelectedIndex = index;
+                ApplyUnifiedUpdateFilter();
+                Application.DoEvents();
+                page.PerformLayout();
+                int expected = index == 0 ? 3 : 1;
+                if (_updateQueueGrid.Rows.Count != expected) problems.Add("Atualizações / " + _updateQueueFilter.Items[index] + ": filtro retornou quantidade inesperada.");
+                ValidateControlTree(page, "Atualizações / " + _updateQueueFilter.Items[index], problems);
+            }
+            _windowsUpdates = originalWindows;
+            _driverUpdates = originalDrivers;
+            _programUpdates = originalPrograms;
+            _updatesSearched = originalSearched;
+            _updateQueueFilter.SelectedIndex = selected;
+            ApplyUnifiedUpdateFilter();
         }
 
         private static void ValidateControlTree(Control parent, string area, List<string> problems)

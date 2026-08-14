@@ -407,6 +407,15 @@ namespace CodexPerformanceOptimizer
         public string Source { get; set; }
     }
 
+    internal sealed class WindowsSystemUpdate
+    {
+        public string Title { get; set; }
+        public string UpdateId { get; set; }
+        public long DownloadBytes { get; set; }
+        public bool Mandatory { get; set; }
+        public bool RebootRequired { get; set; }
+    }
+
     internal sealed class PackagedStartupTask
     {
         public string PackageFamilyName { get; set; }

@@ -81,6 +81,9 @@ namespace CodexPerformanceOptimizer
                 string wingetSample = "Name                 Id                    Version        Available\r\n----------------------------------------------------------------------------\r\nGoogle Chrome        Google.Chrome.EXE     150.0.7871.127 150.0.7871.129\r\nPowerShell 7         Microsoft.PowerShell  7.4.0          7.5.0\r\n2 upgrades available.";
                 var programUpdates = ProgramUpdater.ParseUpgradeOutputForTesting(wingetSample);
                 if (programUpdates.Count != 2 || programUpdates[0].PackageId != "Google.Chrome.EXE" || !ProgramUpdater.IsValidPackageIdForTesting("Microsoft.PowerShell") || ProgramUpdater.IsValidPackageIdForTesting("pacote & comando")) throw new InvalidOperationException("Parser seguro do WinGet falhou.");
+                string windowsTitle = Convert.ToBase64String(Encoding.UTF8.GetBytes("Atualização cumulativa de teste"));
+                var windowsUpdates = WindowsUpdateInventory.ParseForTesting(windowsTitle + "|00000000-0000-0000-0000-000000000001|1024|True|False");
+                if (windowsUpdates.Count != 1 || !windowsUpdates[0].Mandatory || windowsUpdates[0].Title.IndexOf("cumulativa", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("Parser do Windows Update falhou.");
                 var driverInventory = DriverManager.ReadInstalledDrivers();
                 if (driverInventory == null || driverInventory.Any(item => string.IsNullOrWhiteSpace(item.Category) || string.IsNullOrWhiteSpace(item.Device) || string.IsNullOrWhiteSpace(item.Version))) throw new InvalidOperationException("Inventário de drivers retornou dados inválidos.");
                 var startupEntries = V2Engine.ReadStartupEntries();
@@ -90,6 +93,8 @@ namespace CodexPerformanceOptimizer
                     new DiagnosticSnapshot { Stability = new StabilityDiagnostic { PendingRestart = true } },
                     new[] { new StartupEntry { Name = "Teste", Enabled = true, CanChange = true, Impact = "alto", Source = "Teste" } }, 2, 3);
                 if (guidedPlan.SelectedCount < 5 || !guidedPlan.RequiresAdministrator || !guidedPlan.Issues.Any(item => item.Id == "storage" && item.Severity == "Crítico") || !guidedPlan.Issues.Any(item => item.Id == "restart" && !item.CanFix)) throw new InvalidOperationException("Plano guiado não priorizou as pendências corretamente.");
+                MaintenancePlan completePlan = MaintenanceWorkflow.BuildPlan(ServiceProfile.Complete, new SystemMetrics(), null, new StartupEntry[0], 0, 0);
+                if (completePlan.SelectedCount != 7 || !completePlan.RequiresAdministrator) throw new InvalidOperationException("Perfil de atendimento completo não selecionou todas as ações seguras.");
                 int[] testedDpis = { 96, 120, 144, 168, 192 };
                 if (testedDpis.Any(dpi => !string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(1024, 680, dpi))) || string.IsNullOrEmpty(ResponsiveLayoutPolicy.Validate(900, 640, 96))) throw new InvalidOperationException("Política de responsividade falhou.");
                 if (!AppPaths.IsPortableConfiguration("OtimizadorDeDesempenho-Portatil.exe", new string[0], false) || !AppPaths.IsPortableConfiguration("Otimizador.exe", new[] { "--portable" }, false) || AppPaths.IsPortableConfiguration("Otimizador.exe", new string[0], false)) throw new InvalidOperationException("Detecção do modo portátil falhou.");
