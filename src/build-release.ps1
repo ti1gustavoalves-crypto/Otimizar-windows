@@ -21,7 +21,6 @@ $notes = Join-Path $PSScriptRoot 'release-notes.txt'
 $localManifest = Join-Path $PSScriptRoot 'update-manifest.json'
 $channel = Join-Path $PSScriptRoot 'release-channel.json'
 $iconIco = Join-Path $PSScriptRoot 'assets\optimizer-icon.ico'
-$iconPng = Join-Path $PSScriptRoot 'assets\optimizer-icon.png'
 $navigationIcons = @(
     @{ Path = (Join-Path $PSScriptRoot 'assets\navigation\painel.png'); Resource = 'NavigationPanelPng' }
     @{ Path = (Join-Path $PSScriptRoot 'assets\navigation\manutencao.png'); Resource = 'NavigationMaintenancePng' }
@@ -29,7 +28,7 @@ $navigationIcons = @(
     @{ Path = (Join-Path $PSScriptRoot 'assets\navigation\sistema.png'); Resource = 'NavigationSystemPng' }
     @{ Path = (Join-Path $PSScriptRoot 'assets\navigation\ajustes.png'); Resource = 'NavigationSettingsPng' }
 )
-if (-not (Test-Path -LiteralPath $iconIco) -or -not (Test-Path -LiteralPath $iconPng)) { throw 'Arquivos do icone do aplicativo nao encontrados.' }
+if (-not (Test-Path -LiteralPath $iconIco)) { throw 'Arquivo do icone do aplicativo nao encontrado.' }
 foreach ($navigationIcon in $navigationIcons) { if (-not (Test-Path -LiteralPath $navigationIcon.Path)) { throw "Icone de navegacao ausente: $($navigationIcon.Path)" } }
 $navigationResources = $navigationIcons | ForEach-Object { "/resource:$($_.Path),$($_.Resource)" }
 $excludedSources = @('Installer.cs', 'V2SelfTest.cs')
@@ -52,7 +51,7 @@ finally {
     if (Test-Path -LiteralPath $testExecutable) { Remove-Item -LiteralPath $testExecutable -Force }
 }
 
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" "/win32icon:$iconIco" "/resource:$iconPng,OptimizerIconPng" @navigationResources @references "/out:$app" @sources
+& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifestPath" "/win32icon:$iconIco" @navigationResources @references "/out:$app" @sources
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o aplicativo.' }
 
 function Find-SignTool {

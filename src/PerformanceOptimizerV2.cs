@@ -28,10 +28,8 @@ namespace CodexPerformanceOptimizer
         private TabControl _systemTabs;
         private Button[] _navigationButtons;
         private Panel _navigationPanel;
-        private Button _homeButton;
         private Label _privilegeStatus;
         private Panel _operationBar;
-        private Image _brandImage;
         private Label _overviewStatus;
         private Label _overviewNote;
         private Label _environmentBadge;
@@ -152,7 +150,8 @@ namespace CodexPerformanceOptimizer
             _startFullService = startFullService;
             _suppressStartup = suppressStartup;
             _startIntegrityScan = startIntegrityScan;
-            Text = "Otimizador";
+            Text = string.Empty;
+            ShowIcon = false;
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1024, 680);
             Size = new Size(1280, 800);
@@ -162,7 +161,6 @@ namespace CodexPerformanceOptimizer
             NativeWindowTheme.Apply(this);
             AutoScaleMode = AutoScaleMode.Dpi;
             AccessibleName = "Otimizador de Desempenho";
-            try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             _advancedSettings = AdvancedEngine.ReadSettings();
             _processHistory = new ProcessHistoryTracker();
             _toolTip = new ToolTip { AutoPopDelay = 8000, InitialDelay = 350, ReshowDelay = 100 };
@@ -252,32 +250,12 @@ namespace CodexPerformanceOptimizer
                 _trayIcon.Visible = false;
                 _trayIcon.Dispose();
                 _toolTip.Dispose();
-                if (_brandImage != null) _brandImage.Dispose();
             };
         }
 
         private Panel BuildNavigation()
         {
             _navigationPanel = new Panel { Dock = DockStyle.Left, Width = 172, BackColor = Theme.Navigation, Padding = new Padding(10, 16, 10, 12) };
-            _brandImage = LoadBrandImage();
-            _homeButton = new Button
-            {
-                BackgroundImage = _brandImage,
-                BackgroundImageLayout = ImageLayout.Zoom,
-                Location = new Point(10, 14),
-                Size = new Size(44, 44),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Theme.Navigation,
-                Cursor = Cursors.Hand,
-                AccessibleName = "Ir para o Painel",
-                TabIndex = 0
-            };
-            _homeButton.FlatAppearance.BorderSize = 0;
-            _homeButton.FlatAppearance.MouseOverBackColor = Theme.SurfaceAlt;
-            _homeButton.Click += delegate { _tabs.SelectedIndex = (int)AppSection.Dashboard; };
-            _toolTip.SetToolTip(_homeButton, "Painel");
-            _navigationPanel.Controls.Add(_homeButton);
-
             _privilegeStatus = new Label
             {
                 Text = Optimizer.IsAdministrator() ? "●  Administrador" : "●  Usuário padrão",
@@ -303,7 +281,7 @@ namespace CodexPerformanceOptimizer
                     Image = CreateNavigationIcon(i),
                     ImageAlign = ContentAlignment.MiddleLeft,
                     TextImageRelation = TextImageRelation.ImageBeforeText,
-                    Location = new Point(10, 70 + (i * 48)),
+                    Location = new Point(10, 16 + (i * 48)),
                     Size = new Size(152, 40),
                     TextAlign = ContentAlignment.MiddleLeft,
                     Padding = new Padding(12, 0, 0, 0),
@@ -331,18 +309,13 @@ namespace CodexPerformanceOptimizer
             if (_navigationPanel == null || _navigationButtons == null) return;
             bool compact = ClientSize.Width < 1180;
             _navigationPanel.Width = compact ? 68 : 172;
-            if (_homeButton != null)
-            {
-                _homeButton.Location = compact ? new Point(12, 14) : new Point(10, 14);
-                _homeButton.Size = new Size(44, 44);
-            }
             if (_privilegeStatus != null) _privilegeStatus.Visible = !compact;
             string[] full = { "Painel", "Manutenção", "Atualizações", "Sistema", "Ajustes" };
             for (int index = 0; index < _navigationButtons.Length; index++)
             {
                 Button button = _navigationButtons[index];
                 button.Text = compact ? string.Empty : full[index];
-                button.Location = new Point(compact ? 8 : 10, 70 + (index * 48));
+                button.Location = new Point(compact ? 8 : 10, 16 + (index * 48));
                 button.Size = new Size(compact ? 52 : 152, 40);
                 button.Padding = compact ? Padding.Empty : new Padding(12, 0, 0, 0);
                 button.ImageAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
@@ -416,19 +389,6 @@ namespace CodexPerformanceOptimizer
                 }
             }
             return image;
-        }
-
-        private Image LoadBrandImage()
-        {
-            try
-            {
-                using (Stream stream = GetType().Assembly.GetManifestResourceStream("OptimizerIconPng"))
-                {
-                    if (stream == null) return null;
-                    using (Image image = Image.FromStream(stream)) return new Bitmap(image);
-                }
-            }
-            catch { return null; }
         }
 
         private void UpdateNavigationState()

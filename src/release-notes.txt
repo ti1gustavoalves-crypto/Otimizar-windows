@@ -1,5 +1,7 @@
 OTIMIZADOR DE DESEMPENHO 2.0
 
+- Removidos o ícone grande da navegação, o ícone da barra de título e o nome repetido no topo da janela.
+- As guias laterais agora começam no topo e aproveitam melhor o espaço disponível.
 - As cinco guias laterais agora usam os ícones fornecidos para Painel, Manutenção, Atualizações, Sistema e Ajustes.
 - Os desenhos são redimensionados em alta qualidade e recebem automaticamente a cor adequada ao tema escuro.
 - O manifesto agora aponta para o instalador imutável da própria tag, evitando misturas de versões causadas por cache do GitHub.

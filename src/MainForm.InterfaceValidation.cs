@@ -17,8 +17,10 @@ namespace CodexPerformanceOptimizer
             PerformLayout();
             Application.DoEvents();
             var problems = new List<string>();
+            if (ShowIcon || !string.IsNullOrEmpty(Text)) problems.Add("A janela ainda exibe identificação redundante na barra de título.");
             if (_tabs == null || _tabs.TabPages.Count != 5) problems.Add("A navegação deve possuir cinco áreas.");
             if (_navigationButtons == null || _tabs == null || _navigationButtons.Length != _tabs.TabPages.Count) problems.Add("A navegação lateral não corresponde às áreas disponíveis.");
+            if (_navigationButtons != null && _navigationButtons.Length > 0 && _navigationButtons[0].Top > 20) problems.Add("A navegação não aproveita o espaço superior disponível.");
             if (_tabs != null)
             {
                 int selected = _tabs.SelectedIndex;
