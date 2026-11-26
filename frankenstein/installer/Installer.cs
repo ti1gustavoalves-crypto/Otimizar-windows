@@ -11,8 +11,8 @@ using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Instalar Frankenstein TI")]
 [assembly: AssemblyProduct("Frankenstein TI Installer")]
-[assembly: AssemblyVersion("0.2.0.0")]
-[assembly: AssemblyFileVersion("0.2.0.0")]
+[assembly: AssemblyVersion("0.3.0.0")]
+[assembly: AssemblyFileVersion("0.3.0.0")]
 namespace FrankensteinSetup
 {
     internal static class Setup
@@ -53,7 +53,7 @@ namespace FrankensteinSetup
             if(!string.Equals(Application.ExecutablePath,maintenance,StringComparison.OrdinalIgnoreCase))File.Copy(Application.ExecutablePath,maintenance,true);
             using(var key=Registry.CurrentUser.CreateSubKey(RegPath))
             {
-                key.SetValue("DisplayName","Frankenstein TI");key.SetValue("DisplayVersion","0.2.0");key.SetValue("Publisher","Gustavo Alves");key.SetValue("InstallLocation",Root);key.SetValue("DisplayIcon",Path.Combine(Root,"App","FrankensteinTI.exe"));
+                key.SetValue("DisplayName","Frankenstein TI");key.SetValue("DisplayVersion","0.3.0");key.SetValue("Publisher","Gustavo Alves");key.SetValue("InstallLocation",Root);key.SetValue("DisplayIcon",Path.Combine(Root,"App","FrankensteinTI.exe"));
                 key.SetValue("UninstallString","\""+maintenance+"\" --uninstall");key.SetValue("NoModify",1,RegistryValueKind.DWord);key.SetValue("NoRepair",1,RegistryValueKind.DWord);
             }
         }
@@ -64,7 +64,7 @@ namespace FrankensteinSetup
         Button action, launch; Label status; CheckBox desktop;
         public SetupForm(bool remove)
         {
-            uninstall=remove;Text=remove?"Desinstalar Frankenstein TI":"Instalar Frankenstein TI 0.2.0";ClientSize=new Size(620,400);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;BackColor=Color.FromArgb(13,19,25);ForeColor=Color.White;Font=new Font("Segoe UI",10);
+            uninstall=remove;Text=remove?"Desinstalar Frankenstein TI":"Instalar Frankenstein TI 0.3.0";ClientSize=new Size(620,400);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;BackColor=Color.FromArgb(13,19,25);ForeColor=Color.White;Font=new Font("Segoe UI",10);
             var brand=new Label{Text="F / TI",Font=new Font("Segoe UI",27,FontStyle.Bold),ForeColor=Color.FromArgb(153,237,190),Location=new Point(28,22),Size=new Size(550,55)};
             var title=new Label{Text=remove?"Desinstalar a central":"Sua bancada de suporte. Instalada.",Font=new Font("Segoe UI",20,FontStyle.Bold),Location=new Point(28,90),Size=new Size(565,45)};
             status=new Label{Text=remove?"Remove o aplicativo e seus atalhos. Históricos, backups e versões anteriores permanecem na pasta de instalação.":"Instalação para seu usuário, com temas e atualização pelo GitHub.\r\n\r\nDestino: "+Setup.Root,Location=new Point(30,151),Size=new Size(554,111)};
@@ -110,7 +110,7 @@ namespace FrankensteinSetup
                 else
                 {
                     Setup.Register();Setup.Shortcut(Environment.GetFolderPath(Environment.SpecialFolder.Programs),true);if(desktop.Checked)Setup.Shortcut(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),true);
-                    status.Text="Frankenstein TI 0.2.0 instalado.\r\n\r\nUse o botão Atualizações dentro da central para buscar novas versões. Históricos e temas são preservados nas atualizações.";launch.Visible=true;action.Text="Concluir";
+                    status.Text="Frankenstein TI 0.3.0 instalado.\r\n\r\nUse o botão Atualizações dentro da central para buscar novas versões. Históricos e temas são preservados nas atualizações.";launch.Visible=true;action.Text="Concluir";
                 }
                 action.Enabled=true;action.Tag="done";
             }

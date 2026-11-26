@@ -1,54 +1,40 @@
-# Frankenstein TI
+# Frankenstein TI 0.3.0
 
-Central modular de suporte para Windows 10/11 x64. A versão 0.2.0 reúne 12 módulos, instalador por usuário, histórico local e cinco temas: Frankenstein, Minecraft, Gamer, Tecnologia e Claro.
+Bancada integrada para Windows 10/11 x64. Desempenho, manutenção, catálogo de programas, navegadores, diagnóstico de aplicativos e ferramentas técnicas funcionam dentro da mesma janela e do mesmo executável.
 
-[Baixar o instalador 0.2.0](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.2.0/InstalarFrankensteinTI.exe) · [Página da versão](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/tag/frankenstein-v0.2.0)
+[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.0/InstalarFrankensteinTI.exe)
 
-## Instalar e atualizar
+## Interface
 
-Execute `InstalarFrankensteinTI.exe`. A instalação fica em `%LOCALAPPDATA%\Programs\FrankensteinTI`, com atalho no menu Iniciar e opção de atalho na Área de Trabalho. A central aparece na lista de aplicativos instalados do Windows.
+Janela sem a barra padrão do Windows, redimensionamento pelas bordas, área de arraste e controles de minimizar, maximizar e fechar. Ícone original com letra F, costura e raio. Em **Aparência**, escolha Frankenstein, Minecraft, Gamer, Tecnologia ou Claro: cada tema possui desenho próprio, além de cores e tipografia.
 
-Escolha o tema no canto inferior esquerdo. O botão **Atualizações** consulta o canal exclusivo do Frankenstein. A abertura da central também verifica a disponibilidade, sem instalar silenciosamente. O download exige HTTPS, origem/versionamento esperados, tamanho e SHA-256 corretos antes de abrir o instalador.
+## Integração
 
-O canal fica em `frankenstein/releases/update-manifest.json`. Ele não altera o canal do Otimizador de Desempenho. A versão atual do instalador não possui assinatura Authenticode; hashes não substituem assinatura digital. A verificação não ignora bloqueios de segurança do Windows.
+- O código do otimizador é compilado no Frankenstein; suas áreas de sistema, atualizações do PC e recuperação permanecem disponíveis.
+- O código recuperado dos programas fornecidos de instalação e Navegador SOS está em `integrated`, adaptado à navegação e aos dados compartilhados. O catálogo reúne 48 entradas; os programas do instalador menor já estão incluídos nele.
+- Diagnóstico de apps, NX, LabX e vínculo corporativo usam rotinas PowerShell sem janela de console, com resultados na interface.
+- Uma sessão compartilhada bloqueia o início simultâneo de operações entre áreas e registra os atendimentos. Entrar na área de desempenho inicia consultas de diagnóstico e monitoramento; não aplica otimizações.
+- O pacote contém um único executável de aplicação. Não contém nem inicia os antigos EXEs. Os comandos nativos do Windows, os navegadores usados nos testes e os instaladores dos programas escolhidos continuam sendo processos externos necessários ao trabalho.
+- A exclusão indiscriminada de inscrições corporativas não foi incorporada. Automação de energia e ícone próprio de bandeja do antigo otimizador ficam desabilitados nesta integração.
 
-## Dados e recuperação
+## Instalação, atualização e dados
 
-- `Dados/Execucoes`: histórico, relatórios e backups da central.
-- `Dados/interface.json`: tema escolhido.
-- `App/modules/optimizer/Dados do Otimizador`: dados próprios do módulo original, copiados para a nova versão durante atualizações.
-- `previous-*`: cópias da aplicação anterior. A troca malsucedida restaura a aplicação anterior.
+Instale com `InstalarFrankensteinTI.exe`. O botão **Verificar atualização** usa o canal exclusivo do Frankenstein no GitHub e confere versão, HTTPS, tamanho e SHA-256 antes de abrir o instalador. A atualização não é instalada silenciosamente. O instalador não possui assinatura Authenticode.
 
-A desinstalação remove a aplicação ativa e os atalhos, preserva os dados e as versões anteriores e arquiva os dados do otimizador em `Dados`. A desinstalação não desfaz reparos ou programas instalados pelos módulos. Antes de atualizar, conclua os módulos em execução e feche a central.
+A instalação usa `%LOCALAPPDATA%\Programs\FrankensteinTI`. Dados ficam em `Dados`: `Execucoes`, `Otimizador`, `Navegadores`, `Instalacoes` e `interface.json`. Dados antigos do otimizador são copiados para a pasta compartilhada no primeiro início, mantendo a origem para recuperação. A instalação conserva uma cópia `previous-*` e reverte a troca se ela falhar. A desinstalação preserva os dados; não desfaz reparos no Windows ou instalações de terceiros.
 
-## Módulos
+Use **Administrador** quando uma ação exigir elevação. Ao reabrir, revise novamente o plano de manutenção; ações não são retomadas silenciosamente. Fechar a janela fica bloqueado enquanto uma operação compartilhada está ativa.
 
-Diagnóstico inicial, otimizador completo, central de instalação, instalador de programas, reparo de apps, Navegador SOS, reparo avançado de navegadores, três ações de licença NX, instalação assistida do LabX e diagnóstico do vínculo corporativo.
+## Compilar e validar
 
-Os programas legados mantêm interfaces próprias. O encerramento de um executável não comprova o sucesso de reparos. Procedimentos de instalação/reparo devem ser avaliados em máquinas de teste. A limpeza total de inscrições corporativas continua somente como referência.
-
-## Compilar e testar
-
-Na pasta `frankenstein`, usando Windows PowerShell 5.1 e .NET Framework 4.8:
+Execute no Windows PowerShell 5.1, com .NET Framework 4.8:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-Release.ps1
 ```
 
-O build usa `../src` para o otimizador e `Originais` para as ferramentas fornecidas. Executa os testes da central, dos módulos, do otimizador e de distribuição antes de gerar o instalador, manifesto e checksum em `releases`. Não distribua a pasta `build`, que contém fixtures e dados de teste.
+O build prepara cópias de `../src` em diretório temporário de compilação, sem modificar o produto Otimizador independente. Compila esses arquivos com `src` e `integrated`. Não precisa dos executáveis em `Originais` nem do decompilador. Gera o ícone em vários tamanhos e executa testes de scripts, núcleo, distribuição, interface e motor original antes de empacotar.
 
-## Publicar uma próxima versão
+Os testes verificam consultas reais somente de leitura, simulações de reparo, proteção de caminhos, hashes, rollback de instalação, persistência, contraste, renderização e hospedagem de 11 áreas na mesma janela. Não comprovam todos os reparos em todos os computadores: valide alterações do Windows em máquina de teste antes de uso amplo.
 
-1. Atualize a versão da central e do instalador, além dos textos/notas correspondentes.
-2. Execute `Build-Release.ps1` e revise os resultados.
-3. Faça commit dos fontes e de `releases/update-manifest.json` e `releases/SHA256SUMS.txt`.
-4. Crie a tag `frankenstein-vX.Y.Z` e uma Release com o ativo `InstalarFrankensteinTI.exe`, exatamente com esse nome.
-5. Envie a branch `main` com o manifesto correspondente; confira publicamente a URL e o SHA-256 do ativo antes de anunciar a atualização.
-
-Os binários de distribuição ficam como ativos da Release. Não reutilize uma tag publicada com conteúdo diferente. Não altere `releases/update-manifest.public.json` da raiz: ele pertence ao otimizador original.
-
-## Validação
-
-Testes da central e módulos: 30 verificações. Distribuição/interface: 28 verificações, incluindo instalação isolada, preservação de dados, rollback, remoção do aplicativo, extração confinada, manifesto, download limitado e contraste dos cinco temas. Também é executado o autoteste original do otimizador. A integração visual é revisada nos tamanhos 1440×900 e 1120×760.
-
-Nenhuma suíte garante ausência de falhas em todas as máquinas. Os testes não instalam LabX nem executam reparos reais no Windows.
+Publique instalador, checksum e manifesto na tag `frankenstein-vX.Y.Z`; atualize `releases/update-manifest.json` somente com o hash real. O canal do Otimizador independente permanece separado.

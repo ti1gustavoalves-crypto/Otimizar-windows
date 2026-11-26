@@ -18,7 +18,7 @@ internal static class SelfTest
     }
     static async Task Run(string package)
     {
-        var modules=Catalog.All(); Assert(modules.Count==12 && modules.Select(m=>m.Id).Distinct().Count()==12,"catálogo completo e identificadores únicos");
+        var modules=Catalog.All(); Assert(modules.Count==8 && modules.Select(m=>m.Id).Distinct().Count()==8,"catálogo nativo completo e identificadores únicos");
         var engine=new Engine(package,Path.Combine(package,"TestData"));
         Console.WriteLine(engine.VerifyAll()); Assert(true,"integridade de todos os arquivos empacotados");
         bool blocked=false; try { Engine.SafePath(package,"..\\fora.exe"); } catch(IOException){blocked=true;} Assert(blocked,"travessia de diretório bloqueada");
@@ -29,7 +29,7 @@ internal static class SelfTest
         Assert(Engine.Classify(true,3010,null)=="Reinicialização necessária","reinício tratado separadamente");
         Assert(Engine.Classify(true,0,new ModuleResult{Status="REVIEW"})=="Encerrado · conferir resultado","instalação sem validação permanece para conferência");
         // Um módulo ausente é bloqueado antes de executar qualquer processo.
-        blocked=false; try { await engine.Execute(new Module{Id="missing",Name="Teste",File="missing.exe"},new Dictionary<string,object>(),s=>{}); } catch(IOException){blocked=true;} Assert(blocked,"módulo não autorizado no manifesto bloqueado");
+        blocked=false; try { await engine.Execute(new Module{Id="missing",Name="Teste",Native=true,File="missing.exe"},new Dictionary<string,object>(),s=>{}); } catch(IOException){blocked=true;} Assert(blocked,"módulo não autorizado no manifesto bloqueado");
         string script=Path.Combine(package,"modules","Central.ps1"); string original=File.ReadAllText(script,Encoding.UTF8); byte[] originalBytes=File.ReadAllBytes(script);
         try { File.AppendAllText(script,"\r\n# alterado para teste\r\n"); blocked=false; try{engine.Verify("modules\\Central.ps1");}catch(IOException){blocked=true;} Assert(blocked,"módulo adulterado bloqueado"); }
         finally { File.WriteAllBytes(script,originalBytes); }

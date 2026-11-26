@@ -1,53 +1,41 @@
-﻿param(
-    [string]$OptimizerSource = (Join-Path $PSScriptRoot '..\src'),
-    [string]$OriginalTools = (Join-Path $PSScriptRoot 'Originais'),
-    [string]$Destination = (Join-Path $PSScriptRoot '..\build\Frankenstein-TI'),
-    [switch]$SkipTests
-)
-$ErrorActionPreference = 'Stop'
-$Destination = [IO.Path]::GetFullPath($Destination)
-$OptimizerSource = [IO.Path]::GetFullPath($OptimizerSource)
-$csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-if (-not (Test-Path -LiteralPath $csc)) { throw 'Compilador .NET Framework x64 não encontrado.' }
-New-Item -ItemType Directory -Force -Path $Destination,(Join-Path $Destination 'modules\optimizer'),(Join-Path $Destination 'modules\legacy'),(Join-Path $Destination 'Referencias'),(Join-Path $Destination 'TestArtifacts') | Out-Null
-$optimizerOutput = Join-Path $Destination 'modules\optimizer\Otimizador-Portatil.exe'
-$excluded = @('Installer.cs','V2SelfTest.cs')
-$optimizerFiles = @(Get-ChildItem -LiteralPath $OptimizerSource -Filter '*.cs' | Where-Object { $excluded -notcontains $_.Name } | Sort-Object Name | Select-Object -ExpandProperty FullName)
-$refs = @('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Management.dll','System.Web.Extensions.dll','Microsoft.VisualBasic.dll') | ForEach-Object { '/reference:' + $_ }
-$resources = @('painel','manutencao','atualizacoes','sistema','ajustes')
-$resourceNames = @('NavigationPanelPng','NavigationMaintenancePng','NavigationUpdatesPng','NavigationSystemPng','NavigationSettingsPng')
-$embedded = for ($i=0;$i -lt $resources.Count;$i++) { '/resource:' + (Join-Path $OptimizerSource ('assets\navigation\' + $resources[$i] + '.png')) + ',' + $resourceNames[$i] }
-$manifest = Join-Path $OptimizerSource 'app.manifest'
-$icon = Join-Path $OptimizerSource 'assets\optimizer-icon.ico'
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" "/win32icon:$icon" @embedded @refs "/out:$optimizerOutput" @optimizerFiles
-if ($LASTEXITCODE) { throw 'Falha na compilação do otimizador.' }
-Set-Content -LiteralPath (Join-Path $Destination 'modules\optimizer\portable.mode') -Value 'portable' -Encoding ASCII
-Set-Content -LiteralPath (Join-Path $Destination 'modules\optimizer\release-channel.json') -Value '{"ManifestUrl":""}' -Encoding UTF8
-Copy-Item -LiteralPath (Join-Path $OptimizerSource 'release-notes.txt') -Destination (Join-Path $Destination 'modules\optimizer\release-notes.txt') -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'scripts\Central.ps1') -Destination (Join-Path $Destination 'modules\Central.ps1') -Force
-foreach ($file in @('CentralDeInstalacaoTI.exe','InstaladorProgramas.exe','Diagnostico-e-Reparo-de-Apps.exe','NavegadorSOS-Professional-3.0.exe','Reparar-Navegadores.ps1')) {
-    Copy-Item -LiteralPath (Join-Path $OriginalTools $file) -Destination (Join-Path $Destination 'modules\legacy') -Force
-}
-Get-ChildItem -LiteralPath $OriginalTools -File | Copy-Item -Destination (Join-Path $Destination 'Referencias') -Force
-$sources = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | Select-Object -ExpandProperty FullName)
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" @refs "/out:$(Join-Path $Destination 'FrankensteinTI.exe')" @sources
-if ($LASTEXITCODE) { throw 'Falha na compilação da central.' }
+param([string]$OptimizerSource=(Join-Path $PSScriptRoot '..\src'),[string]$OriginalTools=(Join-Path $PSScriptRoot 'Originais'),[string]$Destination=(Join-Path $PSScriptRoot 'build\Unified'),[switch]$SkipTests)
+$ErrorActionPreference='Stop'
+$Destination=[IO.Path]::GetFullPath($Destination);$OptimizerSource=[IO.Path]::GetFullPath($OptimizerSource)
+$csc='C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$generated=Join-Path (Split-Path $Destination) ('sources-'+[guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force $Destination,(Join-Path $Destination 'modules'),(Join-Path $Destination 'TestArtifacts') | Out-Null
+& (Join-Path $PSScriptRoot 'Prepare-Integrated.ps1') -OptimizerSource $OptimizerSource -Destination $generated
+& (Join-Path $PSScriptRoot 'Build-Icon.ps1')
+$refs=@('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Management.dll','System.Web.Extensions.dll','Microsoft.VisualBasic.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll') | ForEach-Object {'/reference:'+$_}
+$embedded=@('/resource:'+(Join-Path $PSScriptRoot 'assets\catalog.png')+',CentralInstalacaoTI.icons.png')
+$names=@('painel','manutencao','atualizacoes','sistema','ajustes');$ids=@('NavigationPanelPng','NavigationMaintenancePng','NavigationUpdatesPng','NavigationSystemPng','NavigationSettingsPng')
+for($i=0;$i -lt $names.Count;$i++){$embedded+=('/resource:'+(Join-Path $OptimizerSource ('assets\navigation\'+$names[$i]+'.png'))+','+$ids[$i])}
+$sources=@(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src'),(Join-Path $PSScriptRoot 'integrated'),$generated -Filter '*.cs' | Select-Object -ExpandProperty FullName)
+$manifest=Join-Path $PSScriptRoot 'installer\app.manifest';$icon=Join-Path $PSScriptRoot 'assets\frankenstein.ico'
+& $csc /nologo /target:winexe /main:FrankensteinTI.Program /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" "/win32icon:$icon" @refs @embedded "/out:$(Join-Path $Destination 'FrankensteinTI.exe')" @sources
+if($LASTEXITCODE){throw 'Falha na compilacao integrada.'}
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'scripts\Central.ps1'),(Join-Path $PSScriptRoot 'scripts\Apps.ps1') -Destination (Join-Path $Destination 'modules') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LEIA-ME.txt') -Destination $Destination -Force
-$hashes = [ordered]@{}
-foreach ($relative in @('modules\Central.ps1','modules\optimizer\Otimizador-Portatil.exe','modules\optimizer\portable.mode','modules\optimizer\release-channel.json','modules\optimizer\release-notes.txt','modules\legacy\CentralDeInstalacaoTI.exe','modules\legacy\InstaladorProgramas.exe','modules\legacy\Diagnostico-e-Reparo-de-Apps.exe','modules\legacy\NavegadorSOS-Professional-3.0.exe','modules\legacy\Reparar-Navegadores.ps1')) { $hashes[$relative] = (Get-FileHash -LiteralPath (Join-Path $Destination $relative) -Algorithm SHA256).Hash }
-$hashes | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $Destination 'integridade.json') -Encoding UTF8
-if (-not $SkipTests) {
+$hashes=[ordered]@{};foreach($name in @('Central.ps1','Apps.ps1')){$hashes['modules\'+$name]=(Get-FileHash -LiteralPath (Join-Path $Destination ('modules\'+$name)) -Algorithm SHA256).Hash}
+$hashes | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'integridade.json') -Encoding UTF8
+if(-not $SkipTests){
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'tests\Test-Modules.ps1') -ModulePath (Join-Path $Destination 'modules\Central.ps1')
-    if ($LASTEXITCODE) { throw 'Testes PowerShell reprovados.' }
-    $testExe = Join-Path $Destination 'TestArtifacts\CentralSelfTest.exe'
-    & $csc /nologo /target:exe /warn:4 /platform:x64 @refs "/out:$testExe" (Join-Path $PSScriptRoot 'src\Core.cs') (Join-Path $PSScriptRoot 'tests\SelfTest.cs')
-    if ($LASTEXITCODE) { throw 'Compilação dos testes da central falhou.' }
-    & $testExe $Destination
-    if ($LASTEXITCODE) { throw 'Testes da central reprovados.' }
-    $upstreamTest = Join-Path $Destination 'modules\optimizer\OptimizerSelfTest.exe'
-    & $csc /nologo /target:exe /warn:4 /optimize+ /platform:x64 /define:SELF_TEST /main:CodexPerformanceOptimizer.V2SelfTest @refs "/out:$upstreamTest" @optimizerFiles (Join-Path $OptimizerSource 'V2SelfTest.cs')
-    if ($LASTEXITCODE) { throw 'Compilação dos testes do otimizador falhou.' }
-    & $upstreamTest
-    if ($LASTEXITCODE) { throw 'Autotestes do otimizador reprovados. Consulte o log.' }
+    if($LASTEXITCODE){throw 'Falha nos testes PowerShell.'}
+    $core=Join-Path $Destination 'TestArtifacts\CoreSelfTest.exe'
+    & $csc /nologo /target:exe /platform:x64 @refs "/out:$core" (Join-Path $PSScriptRoot 'src\Core.cs') (Join-Path $PSScriptRoot 'tests\SelfTest.cs')
+    if($LASTEXITCODE){throw 'Falha ao compilar testes nativos.'}
+    & $core $Destination
+    if($LASTEXITCODE){throw 'Falha nos testes nativos.'}
+    $test=Join-Path $Destination 'TestArtifacts\DistributionTests.exe'
+    & $csc /nologo /target:exe /platform:x64 /main:DistributionTests @refs @embedded "/out:$test" @sources (Join-Path $PSScriptRoot 'installer\Deployment.cs') (Join-Path $PSScriptRoot 'tests\DistributionTests.cs')
+    if($LASTEXITCODE){throw 'Falha ao compilar testes.'}
+    & $test (Join-Path $Destination 'TestArtifacts\Distribution')
+    if($LASTEXITCODE){throw 'Falha nos testes integrados.'}
+    $upstream=@(Get-ChildItem -LiteralPath $OptimizerSource -Filter '*.cs' | Where-Object Name -ne 'Installer.cs' | Select-Object -ExpandProperty FullName)
+    $test=Join-Path $Destination 'TestArtifacts\OptimizerSelfTest.exe'
+    & $csc /nologo /target:exe /platform:x64 /define:SELF_TEST /main:CodexPerformanceOptimizer.V2SelfTest @refs "/out:$test" @upstream
+    if($LASTEXITCODE){throw 'Falha ao compilar testes do motor.'}
+    & $test
+    if($LASTEXITCODE){throw 'Falha nos testes do motor.'}
 }
-Write-Output "COMPILAÇÃO CONCLUÍDA: $Destination"
+Write-Output "APP INTEGRADO: $Destination"

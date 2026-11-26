@@ -10,7 +10,7 @@ $Destination=[IO.Path]::GetFullPath($Destination)
 $Scratch=[IO.Path]::GetFullPath($Scratch)
 $payloadRoot=Join-Path $Scratch ('payload-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $Destination,$payloadRoot | Out-Null
-foreach($name in @('modules','Referencias','FrankensteinTI.exe','integridade.json','LEIA-ME.txt')){Copy-Item -LiteralPath (Join-Path $AppFolder $name) -Destination $payloadRoot -Recurse}
+foreach($name in @('modules','FrankensteinTI.exe','integridade.json','LEIA-ME.txt')){Copy-Item -LiteralPath (Join-Path $AppFolder $name) -Destination $payloadRoot -Recurse}
 # Apenas arquivos de distribuição: nunca inclua dados ou executáveis de teste.
 $testExe=Join-Path $payloadRoot 'modules\optimizer\OptimizerSelfTest.exe'
 if(Test-Path -LiteralPath $testExe){Remove-Item -LiteralPath $testExe -Force}
@@ -28,11 +28,11 @@ $manifest=Join-Path $PSScriptRoot 'installer\app.manifest'
 $csc='C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $installer=Join-Path $Destination 'InstalarFrankensteinTI.exe'
 $refs=@('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll') | ForEach-Object {'/reference:'+$_}
-& $csc /nologo /target:winexe /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" @refs "/resource:$zip,Payload" "/out:$installer" $meta (Join-Path $PSScriptRoot 'installer\Installer.cs') (Join-Path $PSScriptRoot 'installer\Deployment.cs')
+& $csc /nologo /target:winexe "/win32icon:$(Join-Path $PSScriptRoot 'assets\frankenstein.ico')" /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" @refs "/resource:$zip,Payload" "/out:$installer" $meta (Join-Path $PSScriptRoot 'installer\Installer.cs') (Join-Path $PSScriptRoot 'installer\Deployment.cs')
 if($LASTEXITCODE){throw 'Falha ao compilar o instalador.'}
 $version=[Reflection.AssemblyName]::GetAssemblyName($installer).Version.ToString()
 $hash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
-$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='Instalador por usuário, cinco temas e canal de atualizações. Históricos e preferências preservados.'}
+$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='Aplicativo integrado, janela sem bordas, identidade própria e cinco ambientes visuais.'}
 $update | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'update-manifest.json') -Encoding UTF8
 ($hash+'  InstalarFrankensteinTI.exe') | Set-Content -LiteralPath (Join-Path $Destination 'SHA256SUMS.txt') -Encoding ASCII
 Write-Output ('Instalador '+$version+' criado: '+$installer)

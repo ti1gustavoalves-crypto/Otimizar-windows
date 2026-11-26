@@ -1,8 +1,8 @@
 ﻿{
     "Product":  "FrankensteinTI",
-    "Version":  "0.2.0.0",
-    "InstallerUrl":  "https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.2.0/InstalarFrankensteinTI.exe",
-    "Sha256":  "470517EC4BCAED7808B0EFD635EE80F5480062C4AABBA8DC751CC2A124C12D52",
-    "Size":  1417728,
-    "Notes":  "Instalador por usuário, cinco temas e canal de atualizações. Históricos e preferências preservados."
+    "Version":  "0.3.0.0",
+    "InstallerUrl":  "https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.0/InstalarFrankensteinTI.exe",
+    "Sha256":  "6358F9379B6A3AB03DC324AC7132A2F51F370F7EB661CDFEBDD9F369E81B385E",
+    "Size":  390144,
+    "Notes":  "Aplicativo integrado, janela sem bordas, identidade própria e cinco ambientes visuais."
 }

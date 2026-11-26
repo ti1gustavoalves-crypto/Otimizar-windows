@@ -66,11 +66,19 @@ internal static class DistributionTests
         using(var form=new MainWindow(true))
         {
             form.Show();
+            Assert(form.FormBorderStyle==FormBorderStyle.None,"janela sem barra padrão do Windows");
             foreach(var p in Style.Themes)form.PreviewTheme(p,Path.Combine(root,"tema-"+p.Name+".png"),new Size(1440,900));
             form.PreviewTheme(Style.Themes[1],Path.Combine(root,"tema-minimo.png"),new Size(1120,760));
+            foreach(string section in new[]{"Programas","Navegadores","Desempenho","Manutenção","Sistema","Atualizações do PC","Recuperação","Windows e apps","Ferramentas técnicas","Histórico","Aparência"}){
+                form.Navigate(section);form.PreviewTheme(Style.Themes[0],Path.Combine(root,"workspace-"+section+".png"),new Size(1440,900));
+                Assert(Application.OpenForms.Cast<Form>().Count(f=>f.TopLevel)==1,"mesma janela: "+section);
+            }
             form.Close();
         }
         Assert(true,"cinco temas renderizados e navegação validada no tamanho mínimo");
+        Assert(Catalog.All().All(m=>m.Native&&!m.File.EndsWith(".exe")),"catálogo sem executáveis legados");
+        Assert(Session.Begin("Teste isolado",false)&&!Session.Begin("Concorrente",false),"operações concorrentes bloqueadas entre áreas");
+        Session.End("Teste concluído",root);Assert(!Session.Busy,"bancada liberada após a operação");
     }
     static double L(Color c){Func<byte,double> f=x=>{double s=x/255.0;return s<=0.04045?s/12.92:Math.Pow((s+0.055)/1.055,2.4);};return .2126*f(c.R)+.7152*f(c.G)+.0722*f(c.B);}
     static double Contrast(Color a,Color b){double x=L(a),y=L(b);return (Math.Max(x,y)+.05)/(Math.Min(x,y)+.05);}
