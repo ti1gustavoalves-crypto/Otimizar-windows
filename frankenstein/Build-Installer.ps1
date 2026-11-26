@@ -32,7 +32,7 @@ $refs=@('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Form
 if($LASTEXITCODE){throw 'Falha ao compilar o instalador.'}
 $version=[Reflection.AssemblyName]::GetAssemblyName($installer).Version.ToString()
 $hash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
-$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='O instalador solicita o fechamento do aplicativo antes de atualizar e aguarda operações em andamento.'}
+$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='App e instalador pedem administrador ao abrir. Revisão de temas, layout e carregamento das áreas integradas.'}
 $update | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'update-manifest.json') -Encoding UTF8
 ($hash+'  InstalarFrankensteinTI.exe') | Set-Content -LiteralPath (Join-Path $Destination 'SHA256SUMS.txt') -Encoding ASCII
 Write-Output ('Instalador '+$version+' criado: '+$installer)

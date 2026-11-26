@@ -76,6 +76,9 @@ internal static class DistributionTests
         Assert(Style.Themes.Length==5&&Style.Themes.Select(p=>p.Name).Distinct().Count()==5,"cinco temas disponíveis");
         foreach(var p in Style.Themes){Assert(Contrast(p.Text,p.Surface)>=4.5&&Contrast(p.Muted,p.Surface)>=4.5&&Contrast(p.Accent,p.Bg)>=4.5,"contraste de texto e ação: "+p.Name);}
         Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
+        using(var embedded=new CodexPerformanceOptimizer.MainFormV2(null,false,true,false)){
+            embedded.AttachWorkspace(true);Assert(embedded.WorkspaceQueriesEnabled,"consultas de inicialização e sistema habilitadas na interface integrada");embedded.StopWorkspace();
+        }
         using(var form=new MainWindow(true))
         {
             form.Show();
@@ -85,6 +88,8 @@ internal static class DistributionTests
             foreach(string section in new[]{"Programas","Navegadores","Desempenho","Manutenção","Sistema","Atualizações do PC","Recuperação","Windows e apps","Ferramentas técnicas","Histórico","Aparência"}){
                 form.Navigate(section);form.PreviewTheme(Style.Themes[0],Path.Combine(root,"workspace-"+section+".png"),new Size(1440,900));
                 Assert(Application.OpenForms.Cast<Form>().Count(f=>f.TopLevel)==1,"mesma janela: "+section);
+                form.PreviewTheme(Style.Themes[4],Path.Combine(root,"claro-minimo-"+section+".png"),new Size(1120,760));
+                form.PreviewTheme(Style.Themes[1],Path.Combine(root,"minecraft-minimo-"+section+".png"),new Size(1120,760));
             }
             form.Close();
         }

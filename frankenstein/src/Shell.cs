@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -45,13 +45,11 @@ namespace FrankensteinTI
             }
             var foot=new Panel{Dock=DockStyle.Bottom,Height=99,Padding=new Padding(16,4,16,10)};
             updates=Style.Button("Verificar atualização");updates.Dock=DockStyle.Top;updates.Height=34;updates.Font=new Font(Style.FontName,8);updates.Click+=async delegate{await CheckUpdates(true);};
-            var version=Style.Label("FRANKENSTEIN  0.3.1\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
+            var version=Style.Label("FRANKENSTEIN  0.3.2\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
             var close=Style.Button("×");close.AccessibleName="Fechar aplicativo";close.SetBounds(160,9,30,30);close.Font=new Font("Segoe UI",15);close.Click+=delegate{Close();};
             var max=Style.Button("□");max.AccessibleName="Maximizar ou restaurar";max.SetBounds(124,9,30,30);max.Click+=delegate{ToggleMaximize();};
             var min=Style.Button("−");min.AccessibleName="Minimizar";min.SetBounds(88,9,30,30);min.Click+=delegate{WindowState=FormWindowState.Minimized;};
             var chrome=new Panel{Dock=DockStyle.Right,Width=202};chrome.Controls.AddRange(new Control[]{min,max,close});
-            var elevate=Style.Button("Administrador");elevate.SetBounds(0,9,115,30);elevate.Font=new Font(Style.FontName,8);elevate.Click+=delegate{if(Session.Busy)return;try{Process.Start(new ProcessStartInfo(Application.ExecutablePath,"--wait-for-instance"){UseShellExecute=true,Verb="runas"});Close();}catch(Exception ex){MessageBox.Show(this,ex.Message,"Elevação cancelada");}};
-            if(!CodexPerformanceOptimizer.Optimizer.IsAdministrator()){chrome.Width=330;min.Left+=128;max.Left+=128;close.Left+=128;chrome.Controls.Add(elevate);}
             var top=new Panel{Dock=DockStyle.Top,Height=54,Padding=new Padding(28,13,0,0)};
             heading=Style.Label("BANCADA  /  VISÃO GERAL",8.5f,Style.Muted,true);heading.Dock=DockStyle.Fill;heading.MouseDown+=Drag;heading.DoubleClick+=delegate{ToggleMaximize();};top.MouseDown+=Drag;top.Controls.Add(heading);top.Controls.Add(chrome);
             var bottom=new Panel{Dock=DockStyle.Bottom,Height=34,Padding=new Padding(28,7,12,2)};status=Style.Label(Session.Status,8,Style.Muted);status.Dock=DockStyle.Fill;bottom.Controls.Add(status);
@@ -69,7 +67,7 @@ namespace FrankensteinTI
             if(key=="Visão geral"){BuildHome();return;}if(key=="Aparência"){BuildAppearance();return;}if(key=="Histórico"){BuildHistory();return;}
             Form view;
             if(key=="Desempenho"||key=="Manutenção"||key=="Sistema"||key=="Atualizações do PC"||key=="Recuperação"){
-                if(optimizer==null){IntegratedStyle.EnginePalette();optimizer=new CodexPerformanceOptimizer.MainFormV2(null,false,true,false);optimizer.AttachWorkspace();workspaces["optimizer"]=optimizer;}
+                if(optimizer==null){IntegratedStyle.EnginePalette();optimizer=new CodexPerformanceOptimizer.MainFormV2(null,false,true,false);optimizer.AttachWorkspace(!preview);workspaces["optimizer"]=optimizer;}
                 optimizer.SelectWorkspace(key=="Desempenho"?0:key=="Manutenção"?1:key=="Atualizações do PC"?2:key=="Sistema"?3:4,!preview);view=optimizer;
             }else if(!workspaces.TryGetValue(key,out view)){
                 if(key=="Programas")view=new CentralInstalacaoTI.MainForm();

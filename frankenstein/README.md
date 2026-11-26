@@ -1,8 +1,8 @@
-﻿# Frankenstein TI 0.3.1
+﻿# Frankenstein TI 0.3.2
 
 Bancada integrada para Windows 10/11 x64. Desempenho, manutenção, catálogo de programas, navegadores, diagnóstico de aplicativos e ferramentas técnicas funcionam dentro da mesma janela e do mesmo executável.
 
-[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.1/InstalarFrankensteinTI.exe)
+[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.2/InstalarFrankensteinTI.exe)
 
 ## Interface
 
@@ -23,7 +23,7 @@ Instale com `InstalarFrankensteinTI.exe`. O botão **Verificar atualização** u
 
 A instalação usa `%LOCALAPPDATA%\Programs\FrankensteinTI`. Dados ficam em `Dados`: `Execucoes`, `Otimizador`, `Navegadores`, `Instalacoes` e `interface.json`. Dados antigos do otimizador são copiados para a pasta compartilhada no primeiro início, mantendo a origem para recuperação. A instalação conserva uma cópia `previous-*` e reverte a troca se ela falhar. A desinstalação preserva os dados; não desfaz reparos no Windows ou instalações de terceiros.
 
-Use **Administrador** quando uma ação exigir elevação. Ao reabrir, revise novamente o plano de manutenção; ações não são retomadas silenciosamente. Fechar a janela fica bloqueado enquanto uma operação compartilhada está ativa.
+O aplicativo e o instalador exigem administrador desde a abertura. O Windows solicita consentimento pelo UAC (ou credenciais administrativas, conforme a conta e a política do computador). Se você cancelar, o programa não abre. Ao reabrir, revise novamente o plano de manutenção; ações não são retomadas silenciosamente. Fechar a janela fica bloqueado enquanto uma operação compartilhada está ativa.
 
 ## Compilar e validar
 
@@ -39,4 +39,6 @@ Os testes verificam consultas reais somente de leitura, simulações de reparo, 
 
 Publique instalador, checksum e manifesto na tag `frankenstein-vX.Y.Z`; atualize `releases/update-manifest.json` somente com o hash real. O canal do Otimizador independente permanece separado.
 
-Atualização 0.3.1: o instalador fecha automaticamente a cópia instalada antes da troca. Na versão 0.3.1 e seguintes, operações em andamento terminam antes do fechamento, e novos trabalhos ficam bloqueados. Versões anteriores recebem o pedido normal de fechar e podem solicitar que você conclua a operação. Após 60 segundos sem liberação, a atualização é cancelada sem substituir arquivos; conclua o trabalho e tente novamente. O instalador não força o encerramento e não fecha outras cópias ou sessões. Se o app estiver elevado, execute também o instalador como administrador.
+Atualização 0.3.2: o instalador fecha automaticamente a cópia instalada antes da troca. Na versão 0.3.1 e seguintes, operações em andamento terminam antes do fechamento, e novos trabalhos ficam bloqueados. Versões anteriores recebem o pedido normal de fechar e podem solicitar que você conclua a operação. Após 60 segundos sem liberação, a atualização é cancelada sem substituir arquivos; conclua o trabalho e tente novamente. O instalador não força o encerramento e não fecha outras cópias ou sessões. O instalador também solicita elevação, para conseguir fechar o app elevado.
+
+Revisão 0.3.2: elevação declarada nos dois executáveis e conferida nos recursos PE após compilar. Botões principais destacados, categorias adaptadas ao tema Claro e cabeçalho de navegadores sem sobreposição em 1120×760. Consultas de inicialização e sistema voltam a carregar ao navegar na interface integrada; nenhum reparo é iniciado por essa navegação. A instalação continua por perfil: use a mesma conta administrativa da instalação existente para preservar destino e dados.

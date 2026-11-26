@@ -10,13 +10,15 @@ namespace FrankensteinTI
     {
         public static void Apply(Control c)
         {
+            var modern=c as CodexPerformanceOptimizer.ModernButton;
+            if(modern!=null&&modern.BaseColor==CodexPerformanceOptimizer.Theme.Primary)c.Tag="primary";
             c.Font=new Font(Style.FontName,c.Font.Size,c.Font.Style);
             c.BackColor=c is TextBoxBase || c is ListControl || c is TabPage || c is CodexPerformanceOptimizer.DashboardPanel?Style.Surface:Style.Bg;
             c.ForeColor=Style.Text;
             var button=c as Button;
             if(button!=null){button.FlatStyle=FlatStyle.Flat;button.BackColor=Style.Surface;button.FlatAppearance.BorderColor=Style.Border;button.FlatAppearance.MouseOverBackColor=Style.Hover;}
-            var modern=c as CodexPerformanceOptimizer.ModernButton;
             if(modern!=null){modern.BaseColor=Style.Surface;modern.Radius=Style.Current.Name=="Minecraft"?1:8;}
+            if(button!=null&&Convert.ToString(button.Tag)=="primary"){button.BackColor=Style.Mint;button.ForeColor=Style.Bg;button.FlatAppearance.BorderSize=0;button.FlatAppearance.MouseOverBackColor=Style.Mint;if(modern!=null)modern.BaseColor=Style.Mint;}
             var grid=c as DataGridView;
             if(grid!=null){grid.EnableHeadersVisualStyles=false;grid.BackgroundColor=Style.Bg;grid.GridColor=Style.Border;grid.DefaultCellStyle.BackColor=Style.Surface;grid.DefaultCellStyle.ForeColor=Style.Text;grid.DefaultCellStyle.SelectionBackColor=Style.Selected;grid.DefaultCellStyle.SelectionForeColor=Style.Text;grid.ColumnHeadersDefaultCellStyle.BackColor=Style.Sidebar;grid.ColumnHeadersDefaultCellStyle.ForeColor=Style.Mint;}
             foreach(Control child in c.Controls)Apply(child);
@@ -35,9 +37,11 @@ namespace CodexPerformanceOptimizer
 {
     internal sealed partial class MainFormV2
     {
-        internal void AttachWorkspace()
+        internal bool WorkspaceQueriesEnabled {get{return !_suppressStartup;}}
+        internal void AttachWorkspace(bool live=false)
         {
             TopLevel=false;FormBorderStyle=FormBorderStyle.None;MinimumSize=Size.Empty;Dock=DockStyle.Fill;
+            _suppressStartup=!live;
             _navigationPanel.Visible=false;_trayIcon.Visible=false;
             _automaticProfiles.Enabled=false;_minimizeToTray.Enabled=false;
         }
@@ -49,7 +53,6 @@ namespace CodexPerformanceOptimizer
             if(!initialized){initialized=true;_activitySampler.Prime();_processSampler.Prime();_liveMetricsTimer.Start();}
             if(FrankensteinTI.Session.Busy)return;
             if(index==0)await RefreshAudit();
-            else if(index==1)LoadVolumes();
         }
         internal void StopWorkspace(){_liveMetricsTimer.Stop();_liveMetricsTimer.Dispose();_trayIcon.Visible=false;_trayIcon.Dispose();_toolTip.Dispose();}
     }

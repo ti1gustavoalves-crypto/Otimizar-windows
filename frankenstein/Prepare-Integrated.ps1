@@ -5,6 +5,7 @@ foreach($file in Get-ChildItem -LiteralPath $OptimizerSource -Filter '*.cs' | Wh
     $source=[IO.File]::ReadAllText($file.FullName)
     $source=[regex]::Replace($source,'(?m)^\[assembly:.*\]\s*$','')
     if($file.Name -eq 'UiComponents.cs'){$source=$source.Replace('static readonly Color','static Color')}
+    if($file.Name -eq 'PerformanceOptimizerV2.cs'){$source=$source.Replace('readonly bool _suppressStartup','bool _suppressStartup').Replace('if (_suppressStartup) return;','if (_suppressStartup || !TopLevel) return;')}
     if($file.Name -eq 'PerformanceOptimizerV2.cs'){$source=$source.Replace('_advancedSettings = AdvancedEngine.ReadSettings();','_advancedSettings = AdvancedEngine.ReadSettings(); _advancedSettings.AutomaticPowerProfiles=false; _advancedSettings.MinimizeToTray=false;')}
     if($file.Name -eq 'MainForm.Control.cs'){$source=$source.Replace('check.Click += async delegate { await CheckForUpdates(); };','check.Text="Atualização na barra lateral"; check.Enabled=false;')}
     if($file.Name -eq 'AppPaths.cs'){$source=[regex]::Replace($source,'private static readonly string Root = Portable[\s\S]*?;','private static readonly string Root = Path.Combine(FrankensteinTI.Distribution.DataRoot, "Otimizador");')}

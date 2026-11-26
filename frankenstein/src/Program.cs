@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -12,8 +12,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Frankenstein TI")]
 [assembly: AssemblyProduct("Frankenstein TI")]
 [assembly: AssemblyDescription("Bancada integrada de suporte técnico")]
-[assembly: AssemblyVersion("0.3.1.0")]
-[assembly: AssemblyFileVersion("0.3.1.0")]
+[assembly: AssemblyVersion("0.3.2.0")]
+[assembly: AssemblyFileVersion("0.3.2.0")]
 namespace FrankensteinTI
 {
     internal static class Program
@@ -42,6 +42,6 @@ namespace FrankensteinTI
     {
         public static Color Bg=Color.FromArgb(13,19,25), Surface=Color.FromArgb(22,31,39), Border=Color.FromArgb(43,57,67), Text=Color.FromArgb(235,242,242), Muted=Color.FromArgb(157,175,185), Mint=Color.FromArgb(153,237,190), Amber=Color.FromArgb(243,201,125);
         public static Label Label(string text,float size,Color color,bool bold=false) { return new Label { Text=text, ForeColor=color, BackColor=Color.Transparent, Font=new Font(FontName,size,bold?FontStyle.Bold:FontStyle.Regular), AutoEllipsis=true }; }
-        public static Button Button(string text,bool primary=false) { var b=new Button { Text=text, FlatStyle=FlatStyle.Flat, BackColor=primary?Mint:Surface,ForeColor=primary?Bg:Text,Cursor=Cursors.Hand,Height=42,Font=new Font(FontName,10,FontStyle.Bold),UseVisualStyleBackColor=false }; b.FlatAppearance.BorderColor=Border; b.FlatAppearance.BorderSize=primary?0:1; b.FlatAppearance.MouseOverBackColor=primary?Mint:Hover; return b; }
+        public static Button Button(string text,bool primary=false) { var b=new Button { Text=text, Tag=primary?"primary":null, FlatStyle=FlatStyle.Flat, BackColor=primary?Mint:Surface,ForeColor=primary?Bg:Text,Cursor=Cursors.Hand,Height=42,Font=new Font(FontName,10,FontStyle.Bold),UseVisualStyleBackColor=false }; b.FlatAppearance.BorderColor=Border; b.FlatAppearance.BorderSize=primary?0:1; b.FlatAppearance.MouseOverBackColor=primary?Mint:Hover; return b; }
     }
 }

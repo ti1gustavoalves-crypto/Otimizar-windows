@@ -1,8 +1,8 @@
 ﻿{
     "Product":  "FrankensteinTI",
-    "Version":  "0.3.1.0",
-    "InstallerUrl":  "https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.1/InstalarFrankensteinTI.exe",
-    "Sha256":  "F3A97EEFCA89D165E9551768723E3159A1832DCCF466AF2CABB4DDB1EE43B20F",
+    "Version":  "0.3.2.0",
+    "InstallerUrl":  "https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.2/InstalarFrankensteinTI.exe",
+    "Sha256":  "950AA4670900D7EEBEBADAD9F9F6AEC55621BD588ABF23E72953869D7A255C83",
     "Size":  394240,
-    "Notes":  "O instalador solicita o fechamento do aplicativo antes de atualizar e aguarda operações em andamento."
+    "Notes":  "App e instalador pedem administrador ao abrir. Revisão de temas, layout e carregamento das áreas integradas."
 }

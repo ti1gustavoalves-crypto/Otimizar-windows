@@ -362,7 +362,7 @@ namespace CentralInstalacaoTI
 				}
 			};
 			toolbar.Controls.Add(_preferLocal);
-			_install.Text = "INSTALAR";
+			_install.Text = "INSTALAR"; _install.Tag="primary";
 			_install.Width = 130;
 			_install.Height = 32;
 			_install.Top = 13;
@@ -599,11 +599,11 @@ namespace CentralInstalacaoTI
 				return;
 			}
 			bool flag = (e.State & DrawItemState.Selected) != 0;
-			using (SolidBrush brush = new SolidBrush(flag ? Color.FromArgb(30, 64, 108) : Color.FromArgb(11, 18, 32)))
+			using (SolidBrush brush = new SolidBrush(flag ? FrankensteinTI.Style.Selected : FrankensteinTI.Style.Surface))
 			{
 				e.Graphics.FillRectangle(brush, e.Bounds);
 			}
-			using (SolidBrush brush2 = new SolidBrush(flag ? Color.White : Color.FromArgb(148, 163, 184)))
+			using (SolidBrush brush2 = new SolidBrush(flag ? FrankensteinTI.Style.Mint : FrankensteinTI.Style.Text))
 			{
 				e.Graphics.DrawString(_category.Items[e.Index].ToString(), new Font("Segoe UI", 9f), brush2, e.Bounds.Left + 10, e.Bounds.Top + 7);
 			}

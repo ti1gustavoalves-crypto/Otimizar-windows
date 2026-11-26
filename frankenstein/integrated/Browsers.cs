@@ -266,7 +266,7 @@ namespace NavegadorSOS
 			panel2.BringToFront();
 			Panel panel3 = new Panel();
 			panel3.Dock = DockStyle.Top;
-			panel3.Height = 78;
+			panel3.Height = 126;
 			panel3.BackColor = Color.White;
 			panel3.Padding = new Padding(22, 13, 18, 10);
 			Panel panel4 = panel3;
@@ -278,7 +278,7 @@ namespace NavegadorSOS
 			phase.ForeColor = Muted;
 			phase.AutoSize = true;
 			phase.Location = new Point(25, 45);
-			analyze.Text = "Iniciar análise";
+			analyze.Text = "Iniciar análise"; analyze.Tag="primary";
 			StyleButton(analyze, false);
 			analyze.Size = new Size(146, 36);
 			analyze.Margin = new Padding(0, 0, 10, 0);
@@ -296,7 +296,8 @@ namespace NavegadorSOS
 				await RepairSelected();
 			};
 			FlowLayoutPanel flowLayoutPanel = new FlowLayoutPanel();
-			flowLayoutPanel.Dock = DockStyle.Right;
+			flowLayoutPanel.Dock = DockStyle.Bottom;
+			flowLayoutPanel.Height = 44;
 			flowLayoutPanel.Width = 322;
 			flowLayoutPanel.FlowDirection = FlowDirection.LeftToRight;
 			flowLayoutPanel.WrapContents = false;
@@ -306,6 +307,9 @@ namespace NavegadorSOS
 			flowLayoutPanel2.Controls.Add(analyze);
 			flowLayoutPanel2.Controls.Add(repair);
 			panel4.Controls.AddRange(new Control[3] { headline, phase, flowLayoutPanel2 });
+            headline.AutoSize=false;headline.AutoEllipsis=true;headline.Height=32;
+            phase.AutoSize=false;phase.AutoEllipsis=true;phase.Height=28;
+            panel4.Resize+=delegate{headline.Width=Math.Max(100,panel4.Width-44);phase.Width=Math.Max(100,panel4.Width-50);};
 			TableLayoutPanel tableLayoutPanel = new TableLayoutPanel();
 			tableLayoutPanel.Dock = DockStyle.Top;
 			tableLayoutPanel.Height = 86;
@@ -330,9 +334,9 @@ namespace NavegadorSOS
 			};
 			body.Resize += delegate
 			{
-				if (body.Height > 430)
+				if (body.Height > 200)
 				{
-					body.SplitterDistance = body.Height - 300;
+					body.SplitterDistance = Math.Min(body.Height-100,Math.Max(100,body.Height-270));
 				}
 			};
 			BuildGrid(body.Panel1);
@@ -359,8 +363,8 @@ namespace NavegadorSOS
 			progressText.Dock = DockStyle.Fill;
 			progressText.AutoEllipsis = true;
 			progress.Dock = DockStyle.Fill;
-			progress.Style = ProgressBarStyle.Marquee;
-			progress.MarqueeAnimationSpeed = 28;
+			progress.Style = ProgressBarStyle.Continuous;
+			progress.MarqueeAnimationSpeed = 0;
 			progress.Margin = new Padding(0);
 			reportPath.Text = "Relatórios e backups ficam nos dados do Frankenstein TI.";
 			reportPath.ForeColor = Muted;
@@ -520,8 +524,8 @@ namespace NavegadorSOS
 		{
 			c.Text = title + "\r\n    " + desc;
 			c.AutoSize = false;
-			c.Width = 390;
-			c.Height = 34;
+			c.Width = 400;
+			c.Height = 52;
 			c.ForeColor = Color.FromArgb(30, 41, 59);
 			c.Checked = enabled;
 			c.Padding = new Padding(2, 0, 0, 0);
