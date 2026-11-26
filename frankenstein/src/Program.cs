@@ -12,8 +12,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Frankenstein TI")]
 [assembly: AssemblyProduct("Frankenstein TI")]
 [assembly: AssemblyDescription("Bancada integrada de suporte técnico")]
-[assembly: AssemblyVersion("0.3.2.0")]
-[assembly: AssemblyFileVersion("0.3.2.0")]
+[assembly: AssemblyVersion("0.3.3.0")]
+[assembly: AssemblyFileVersion("0.3.3.0")]
 namespace FrankensteinTI
 {
     internal static class Program
@@ -36,7 +36,7 @@ namespace FrankensteinTI
         }
         static void MigrateData() { string old=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"modules","optimizer","Dados do Otimizador"), target=Path.Combine(Distribution.DataRoot,"Otimizador"); if(Directory.Exists(old)&&!Directory.Exists(target)){string stage=target+"-migracao-"+Guid.NewGuid().ToString("N");CopyData(old,stage);Directory.Move(stage,target);} }
         static void CopyData(string source,string target){Directory.CreateDirectory(target);foreach(string f in Directory.GetFiles(source))File.Copy(f,Path.Combine(target,Path.GetFileName(f)),false);foreach(string d in Directory.GetDirectories(source)){if((File.GetAttributes(d)&FileAttributes.ReparsePoint)!=0)continue;CopyData(d,Path.Combine(target,Path.GetFileName(d)));}}
-        static void LogException(Exception error) { try { string folder=Path.Combine(Distribution.DataRoot,"Falhas"); Directory.CreateDirectory(folder); File.WriteAllText(Path.Combine(folder,DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+".txt"),error==null?"Falha não identificada.":error.ToString()); } catch {} }
+        internal static void LogException(Exception error) { try { string folder=Path.Combine(Distribution.DataRoot,"Falhas"); Directory.CreateDirectory(folder); File.WriteAllText(Path.Combine(folder,DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+".txt"),error==null?"Falha não identificada.":error.ToString()); } catch {} }
     }
     internal static partial class Style
     {

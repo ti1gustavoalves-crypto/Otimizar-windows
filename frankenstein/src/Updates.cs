@@ -56,6 +56,11 @@ namespace FrankensteinTI
             byte[] buffer=new byte[32768]; long total=0; int n;
             while((n=input.Read(buffer,0,buffer.Length))>0) { total+=n; if(total>limit)throw new IOException("Download excedeu o tamanho permitido."); output.Write(buffer,0,n); if(report!=null)report(total); }
         }
+        internal static void CopyDownload(Stream input,Stream output,long size,Action<int> progress)
+        {
+            if(size<=0)throw new ArgumentOutOfRangeException("size");
+            CopyLimited(input,output,size,n=>{if(progress!=null)progress((int)(100*n/size));});
+        }
         public static string Download(UpdateManifest m,Action<int> progress)
         {
             Validate(m);
@@ -63,7 +68,7 @@ namespace FrankensteinTI
             string path=Path.Combine(folder,"InstalarFrankensteinTI.exe"), partial=path+".partial";
             try
             {
-                using(var response=Request(m.InstallerUrl)) using(var stream=response.GetResponseStream()) using(var output=File.Create(partial)) CopyLimited(stream,output,m.Size,n=>progress((int)(100*n/m.Size)));
+                using(var response=Request(m.InstallerUrl)) using(var stream=response.GetResponseStream()) using(var output=File.Create(partial)) CopyDownload(stream,output,m.Size,progress);
                 if(new FileInfo(partial).Length!=m.Size || !string.Equals(Engine.Hash(partial),m.Sha256,StringComparison.OrdinalIgnoreCase)) throw new IOException("O instalador não passou na conferência de tamanho/SHA-256.");
                 var info=FileVersionInfo.GetVersionInfo(partial);
                 if(info.ProductName!="Frankenstein TI Installer" || new Version(info.FileVersion)!=new Version(m.Version)) throw new IOException("A identificação do instalador diverge do manifesto.");

@@ -1,4 +1,4 @@
-﻿FRANKENSTEIN TI 0.3.2
+﻿FRANKENSTEIN TI 0.3.3
 
 Um aplicativo, uma janela: desempenho, manutenção, programas, navegadores,
 diagnóstico de apps, NX e LabX. Os antigos executáveis não são distribuídos.
@@ -18,3 +18,5 @@ antes de reparos. Consulte o resultado e teste os programas após o procedimento
 O instalador não possui assinatura digital. A desinstalação preserva os dados.
 
 Atualização 0.3.2: o instalador fecha automaticamente a cópia instalada antes da troca. Na versão 0.3.1 e seguintes, operações em andamento terminam antes do fechamento, e novos trabalhos ficam bloqueados. Versões anteriores recebem o pedido normal de fechar e podem solicitar que você conclua a operação. Após 60 segundos sem liberação, a atualização é cancelada sem substituir arquivos; conclua o trabalho e tente novamente. O instalador não força o encerramento e não fecha outras cópias ou sessões. O instalador também exige administrador desde a abertura.
+
+0.3.3: corrigido erro de referência nula ao baixar atualizações. Se estiver em uma versão afetada, baixe este instalador pelo GitHub e execute-o manualmente uma vez.

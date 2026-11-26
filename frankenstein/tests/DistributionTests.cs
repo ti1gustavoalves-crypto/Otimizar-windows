@@ -73,6 +73,9 @@ internal static class DistributionTests
         manifest=Manifest();manifest.Sha256="123";Assert(Reject(()=>Distribution.Validate(manifest)),"checksum malformado bloqueado");
         manifest=Manifest();manifest.Version="9.0.0.0";Assert(Reject(()=>Distribution.Validate(manifest)),"URL divergente da versão bloqueada");
         using(var source=new MemoryStream(new byte[100]))using(var target=new MemoryStream())Assert(Reject(()=>Distribution.CopyLimited(source,target,50,null)),"download com tamanho excessivo interrompido");
+        using(var source=new MemoryStream(new byte[70000]))using(var target=new MemoryStream()){Distribution.CopyDownload(source,target,70000,null);Assert(target.Length==70000,"regressão: download sem callback de progresso não gera referência nula");}
+        int percent=0;using(var source=new MemoryStream(new byte[70000]))using(var target=new MemoryStream()){Distribution.CopyDownload(source,target,70000,p=>percent=p);Assert(percent==100&&target.Length==70000,"download com progresso termina em 100%");}
+        using(var source=new MemoryStream(new byte[100]))using(var target=new MemoryStream())Assert(Reject(()=>Distribution.CopyDownload(source,target,50,null)),"download sem progresso mantém limite de tamanho");
         Assert(Style.Themes.Length==5&&Style.Themes.Select(p=>p.Name).Distinct().Count()==5,"cinco temas disponíveis");
         foreach(var p in Style.Themes){Assert(Contrast(p.Text,p.Surface)>=4.5&&Contrast(p.Muted,p.Surface)>=4.5&&Contrast(p.Accent,p.Bg)>=4.5,"contraste de texto e ação: "+p.Name);}
         Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);

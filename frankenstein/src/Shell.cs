@@ -45,7 +45,7 @@ namespace FrankensteinTI
             }
             var foot=new Panel{Dock=DockStyle.Bottom,Height=99,Padding=new Padding(16,4,16,10)};
             updates=Style.Button("Verificar atualização");updates.Dock=DockStyle.Top;updates.Height=34;updates.Font=new Font(Style.FontName,8);updates.Click+=async delegate{await CheckUpdates(true);};
-            var version=Style.Label("FRANKENSTEIN  0.3.2\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
+            var version=Style.Label("FRANKENSTEIN  0.3.3\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
             var close=Style.Button("×");close.AccessibleName="Fechar aplicativo";close.SetBounds(160,9,30,30);close.Font=new Font("Segoe UI",15);close.Click+=delegate{Close();};
             var max=Style.Button("□");max.AccessibleName="Maximizar ou restaurar";max.SetBounds(124,9,30,30);max.Click+=delegate{ToggleMaximize();};
             var min=Style.Button("−");min.AccessibleName="Minimizar";min.SetBounds(88,9,30,30);min.Click+=delegate{WindowState=FormWindowState.Minimized;};
@@ -128,8 +128,26 @@ namespace FrankensteinTI
         async Task CheckUpdates(bool manual)
         {
             if(!updates.Enabled)return;if(manual&&Session.Busy){MessageBox.Show(this,"Conclua a operação atual antes de atualizar.");return;}updates.Enabled=false;
-            try{var manifest=await Task.Run(()=>Distribution.Check());bool available=new Version(manifest.Version)>Distribution.Current;updates.Text=available?"Nova versão disponível":"Verificar atualização";if(!manual)return;if(!available){MessageBox.Show(this,"Versão atual: "+Distribution.Current.ToString(3));return;}if(MessageBox.Show(this,manifest.Notes+"\n\nBaixar a versão "+manifest.Version+" e abrir o instalador?","Atualização",MessageBoxButtons.OKCancel)!=DialogResult.OK)return;if(!Session.Begin("Atualização do Frankenstein"))return;try{string file=await Task.Run(()=>Distribution.Download(manifest,null));Process.Start(new ProcessStartInfo(file){UseShellExecute=true});Session.End("Instalador aberto",file);Close();}finally{Session.End("Download encerrado","");}}
-            catch(Exception ex){if(manual)MessageBox.Show(this,ex.Message,"Atualização indisponível");else updates.Text="Atualizações · offline";}finally{if(!IsDisposed)updates.Enabled=true;}
+            try
+            {
+                var manifest=await Task.Run(()=>Distribution.Check());
+                bool available=new Version(manifest.Version)>Distribution.Current;
+                updates.Text=available?"Nova versão disponível":"Verificar atualização";
+                if(!manual)return;
+                if(!available){MessageBox.Show(this,"Versão atual: "+Distribution.Current.ToString(3));return;}
+                if(MessageBox.Show(this,manifest.Notes+"\n\nBaixar a versão "+manifest.Version+" e abrir o instalador?","Atualização",MessageBoxButtons.OKCancel)!=DialogResult.OK)return;
+                if(!Session.Begin("Atualização do Frankenstein"))return;
+                try
+                {
+                    var progress=new Progress<int>(value=>{if(!IsDisposed)status.Text="Baixando atualização: "+value+"%";});
+                    string file=await Task.Run(()=>Distribution.Download(manifest,value=>((IProgress<int>)progress).Report(value)));
+                    Process.Start(new ProcessStartInfo(file){UseShellExecute=true});
+                    Session.End("Instalador aberto",file);Close();
+                }
+                catch(Exception ex){Session.End("Falha na atualização",ex.ToString());throw;}
+            }
+            catch(Exception ex){Program.LogException(ex);if(manual)MessageBox.Show(this,ex.Message,"Atualização não concluída");else updates.Text="Atualizações · offline";}
+            finally{if(!IsDisposed){updates.Enabled=true;status.Text=Session.Status;}}
         }
         internal void PreviewTheme(Palette p,string path,Size size){Size=size;ChangeTheme(p,false);PerformLayout();Application.DoEvents();using(var bitmap=new Bitmap(Width,Height)){DrawToBitmap(bitmap,ClientRectangle);bitmap.Save(path);}if(navigation["Aparência"].Bottom>updates.Parent.Top)throw new Exception("Navegação sobreposta ao rodapé.");}
     }

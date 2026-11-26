@@ -1,8 +1,8 @@
-﻿# Frankenstein TI 0.3.2
+﻿# Frankenstein TI 0.3.3
 
 Bancada integrada para Windows 10/11 x64. Desempenho, manutenção, catálogo de programas, navegadores, diagnóstico de aplicativos e ferramentas técnicas funcionam dentro da mesma janela e do mesmo executável.
 
-[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.2/InstalarFrankensteinTI.exe)
+[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.3/InstalarFrankensteinTI.exe)
 
 ## Interface
 
@@ -42,3 +42,5 @@ Publique instalador, checksum e manifesto na tag `frankenstein-vX.Y.Z`; atualize
 Atualização 0.3.2: o instalador fecha automaticamente a cópia instalada antes da troca. Na versão 0.3.1 e seguintes, operações em andamento terminam antes do fechamento, e novos trabalhos ficam bloqueados. Versões anteriores recebem o pedido normal de fechar e podem solicitar que você conclua a operação. Após 60 segundos sem liberação, a atualização é cancelada sem substituir arquivos; conclua o trabalho e tente novamente. O instalador não força o encerramento e não fecha outras cópias ou sessões. O instalador também solicita elevação, para conseguir fechar o app elevado.
 
 Revisão 0.3.2: elevação declarada nos dois executáveis e conferida nos recursos PE após compilar. Botões principais destacados, categorias adaptadas ao tema Claro e cabeçalho de navegadores sem sobreposição em 1120×760. Consultas de inicialização e sistema voltam a carregar ao navegar na interface integrada; nenhum reparo é iniciado por essa navegação. A instalação continua por perfil: use a mesma conta administrativa da instalação existente para preservar destino e dados.
+
+Correção 0.3.3: o download aceita callback de progresso ausente e a interface mostra a porcentagem durante a transferência. Falhas ficam registradas no histórico e em Dados/Falhas. O erro de referência nula da atualização foi reproduzido antes da correção e o mesmo download foi validado depois. Para atualizar uma versão afetada, baixe e execute o instalador pelo GitHub uma vez; o atualizador embutido antigo pode falhar antes de baixar a correção.
