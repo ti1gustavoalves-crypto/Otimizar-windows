@@ -1,0 +1,14 @@
+Write-Host "`n=== Estado da associação ===" -ForegroundColor Cyan
+dsregcmd /status
+
+Write-Host "`n=== Tarefas EnterpriseMgmt restantes ===" -ForegroundColor Cyan
+Get-ScheduledTask -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.TaskPath -like "\Microsoft\Windows\EnterpriseMgmt\*"
+    } |
+    Select-Object TaskPath, TaskName, State |
+    Format-Table -AutoSize
+
+Write-Host "`n=== Inscrições restantes no Registro ===" -ForegroundColor Cyan
+Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Enrollments" |
+    Select-Object -ExpandProperty PSChildName

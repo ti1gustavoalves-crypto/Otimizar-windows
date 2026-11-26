@@ -1,0 +1,96 @@
+﻿FRANKENSTEIN TI 0.2.0 · INSTALADOR E TEMAS
+26/11/2026
+
+Execute InstalarFrankensteinTI.exe para instalar por usuário.
+Temas: Frankenstein, Minecraft, Gamer, Tecnologia e Claro.
+Escolha o tema no canto inferior esquerdo; ele é salvo automaticamente.
+Use Atualizações para consultar e baixar novas versões pelo GitHub.
+Dados ficam em %LOCALAPPDATA%\Programs\FrankensteinTI\Dados na instalação.
+O instalador preserva dados e temas, mantém a aplicação anterior e oferece
+desinstalação na lista de aplicativos do Windows. Executáveis sem assinatura digital.
+
+A documentação abaixo descreve os módulos da base 0.1 e seu uso portátil.
+Na instalação 0.2, os dados da central ficam fora da subpasta App.
+O canal exclusivo do Frankenstein está habilitado; o canal do módulo otimizador
+continua independente. Publicação: tag frankenstein-v0.2.0 no repositório do usuário.
+
+FRANKENSTEIN TI · PRÉVIA 0.1.0
+Central portátil de suporte técnico · 24/11/2026
+
+COMO ABRIR
+1. Extraia o ZIP inteiro para uma pasta local com permissão de gravação.
+2. Abra FrankensteinTI.exe. Mantenha modules, Referencias e integridade.json juntos.
+3. Escolha um módulo; leia os efeitos no painel direito antes de executar.
+4. Confira os resultados em Histórico e em Abrir arquivos da execução.
+
+Requisitos: Windows 10 ou 11 x64, Windows PowerShell 5.1 e .NET Framework 4.8.
+Esta central não oferece suporte ao Windows 7. O script antigo foi preservado em Referencias.
+Não requer instalar a central. Não inclui os instaladores dos programas externos, como o LabX.
+Dependências e acesso à rede das ferramentas originais continuam necessários.
+Executáveis desta prévia não possuem assinatura digital. A integridade SHA-256 é uma
+conferência contra o manifesto local, não uma prova de autoria. Não desative proteções
+do Windows ou da empresa; encaminhe bloqueios para análise da TI.
+
+O QUE ESTÁ INTEGRADO
+- Diagnóstico inicial sem reparo: Windows, discos, reinício pendente e navegadores.
+- Otimizador completo compilado do código C# do repositório enviado.
+- CentralDeInstalacaoTI, InstaladorProgramas, Diagnostico-e-Reparo-de-Apps e Navegador SOS.
+- Script original de reparo de navegadores, com janela própria e relatórios originais.
+- NX: verificar, configurar por escopo, fazer backup e restaurar com verificação.
+- LabX: selecionar instalador e tratar apenas o caso conhecido de exclusão pendente
+  de gamingservicesproxy_*.dll.0, com backup e recuperação do estado dos serviços.
+- Diagnóstico do vínculo corporativo.
+
+Os módulos legados mantêm suas janelas próprias. Esta primeira versão unifica acesso,
+descrições, conferência de arquivos e histórico; não reescreve o interior dos EXEs.
+Encerrar um programa legado não comprova sucesso da instalação ou do reparo.
+Processos derivados iniciados pelas ferramentas podem continuar após o processo inicial.
+Confira se terminaram antes de iniciar outra ação. Feche o otimizador também na bandeja.
+A central não encerra à força instalações ou reparos. Espere o módulo finalizar.
+
+NX E RECUPERAÇÃO
+Feche o NX antes de alterar variáveis. O padrão é configurar o usuário atual.
+Para escopo computador, o Windows solicita administrador; a central não altera o HKCU
+de outra conta elevada. Backups de usuário só podem ser restaurados pela mesma conta.
+Para desfazer, escolha Licença NX · restaurar e selecione nx-backup.json na pasta
+da execução que realizou a mudança. A restauração gera um backup do estado anterior.
+Saia e entre no Windows após alterar variáveis. A gravação não valida a licença no servidor.
+
+LABX
+O fluxo exige um LabXBundle.exe existente. Não remove outras pendências nem ignora
+reinicializações exigidas pelo Windows Update/CBS. Em erro de restauração de serviços,
+o resultado mostra a falha e o backup fica preservado para intervenção técnica.
+Os serviços podem levar até 30 segundos para cada transição.
+
+ARQUIVOS E PRIVACIDADE
+Dados/Execucoes: pedido, estado de execução, relatórios e backups de cada atendimento.
+modules/optimizer/Dados do Otimizador: histórico e backups próprios do otimizador.
+Reparo de navegadores: relatórios na Área de Trabalho da conta que executou o script;
+caches arquivados em C:\ProgramData\BrowserRepair, conforme o funcionamento original.
+O diagnóstico corporativo pode incluir identificadores de conta/dispositivo.
+Os relatórios ficam locais. Revise-os antes de compartilhar.
+
+REFERÊNCIAS ORIGINAIS
+Todos os 13 arquivos enviados foram copiados sem alteração para Referencias.
+A remoção total de HKLM\SOFTWARE\Microsoft\Enrollments não foi transformada em botão.
+O conteúdo de Referencias é arquivo histórico, não uma lista de procedimentos validados.
+O instalador antigo do otimizador está arquivado; use Desempenho e manutenção na central
+para abrir o módulo atual compilado do GitHub.
+
+CONFIABILIDADE E LIMITES
+A central executa um módulo por vez e registra início, fim, código de saída e resultado.
+Módulos nativos usam resultado estruturado; os legados são marcados para conferência.
+Um processo sem encerramento registrado permanece identificável no histórico.
+Falhas de energia/processo não garantem reversão automática de qualquer ferramenta.
+Backups de configuração não substituem backup completo de dados ou imagem do sistema.
+Esta prévia foi compilada e testada conforme VALIDACAO.txt; os reparos que alteram a
+máquina não são executados automaticamente durante a validação.
+
+ORIGEM E RECOMPILAÇÃO
+Otimizador: https://github.com/ti1gustavoalves-crypto/Otimizar-windows
+Commit analisado: 13e0de7c9492b8393b1277899e2bd9130b1617b3 (versão 2.0.4).
+O código-fonte do otimizador foi preservado. O canal de atualização do pacote portátil
+é vazio para esta prévia; configurações próprias do módulo podem alterá-lo posteriormente.
+O ZIP de código-fonte contém a central, os testes, o otimizador original e os arquivos
+originais necessários para reconstrução. Execute Recompilar.ps1 em Windows x64.
+A versão 0.2.0 é publicada como Frankenstein TI, em pasta e tag próprias.

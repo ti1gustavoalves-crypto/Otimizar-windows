@@ -1,0 +1,8 @@
+build/
+Dados/
+TestData/
+TestArtifacts/
+releases/*.exe
+releases/*.zip
+*.partial
+!Originais/*.exe

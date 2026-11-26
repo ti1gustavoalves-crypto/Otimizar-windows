@@ -1,0 +1,21 @@
+# Define o caminho da chave do registro
+$registryPath = "HKLM:\SOFTWARE\Microsoft\Enrollments"
+
+Write-Host "Verificando a chave de registro: $registryPath"
+
+# Verifica se a chave existe
+if (Test-Path $registryPath) {
+    Write-Host "Chave localizada. Iniciando processo de remoção..." -ForegroundColor Yellow
+    
+    try {
+        # O parâmetro -Recurse remove todas as subchaves e -Force força a remoção
+        Remove-Item -Path $registryPath -Recurse -Force -ErrorAction Stop
+        Write-Host "Chave e todas as suas subchaves foram removidas com sucesso!" -ForegroundColor Green
+    } catch {
+        Write-Host "Falha ao remover a chave. Certifique-se de executar o PowerShell como Administrador." -ForegroundColor Red
+        Write-Host "Detalhe do erro: $($_.Exception.Message)" -ForegroundColor DarkGray
+        Write-Host "Nota: Se o acesso for negado mesmo como Administrador, você precisará assumir a propriedade (Take Ownership) da chave pelo Regedit antes de rodar o script." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "A chave de registro não foi encontrada no sistema. Nenhuma ação necessária." -ForegroundColor Cyan
+}

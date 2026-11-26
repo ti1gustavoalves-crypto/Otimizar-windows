@@ -1,0 +1,33 @@
+REPARO E DIAGNOSTICO DE NAVEGADORES
+
+1. Copie os arquivos Executar-Reparo-Navegadores.cmd e Reparar-Navegadores.ps1
+   para o computador com problema, mantendo-os na mesma pasta.
+2. Clique duas vezes em Executar-Reparo-Navegadores.cmd.
+3. Aceite a solicitacao de administrador do Windows.
+4. Aguarde. DISM e SFC podem demorar bastante e parecer parados.
+5. Ao terminar, sera aberto um relatorio HTML e uma copia ficara na Area de Trabalho.
+
+O que a ferramenta faz:
+- encontra Edge, Chrome, Firefox, Brave e Opera;
+- primeiro encerra processos residuais, arquiva caches/bloqueios recriaveis e executa DISM/SFC;
+- somente depois das correcoes testa abertura normal, sem GPU/extensoes e usando perfil temporario;
+- abre uma pagina local identificavel e aguarda 5 segundos completos;
+- diferencia janela aberta de pagina realmente carregada;
+- captura novos eventos de falha gerados por cada tentativa;
+- registra versao e estado da assinatura digital dos executaveis;
+- coleta falhas do Visualizador de Eventos, politicas e indicios do AppLocker;
+- arquiva somente caches e arquivos de bloqueio recriaveis;
+- executa DISM e SFC;
+- repete o teste e gera relatorios HTML, LOG e JSON na Area de Trabalho.
+
+O que ela NAO faz:
+- nao apaga favoritos, senhas, cookies ou perfis;
+- nao desativa antivirus/EDR, AppLocker ou politicas da empresa;
+- nao reinstala navegadores nem drivers silenciosamente;
+- nao contorna mecanismos de seguranca.
+
+Os caches arquivados ficam em C:\ProgramData\BrowserRepair. Eles podem ser removidos
+depois que o computador estiver funcionando e o relatorio tiver sido analisado.
+
+Opcao para apenas diagnosticar e limpar caches, sem executar DISM/SFC:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Reparar-Navegadores.ps1 -SkipWindowsRepair
