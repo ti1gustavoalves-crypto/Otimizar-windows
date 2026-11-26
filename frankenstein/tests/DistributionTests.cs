@@ -17,8 +17,21 @@ internal static class DistributionTests
     static bool Reject(Action action){try{action();return false;}catch{return true;}}
     [STAThread] public static int Main(string[] args)
     {
+        if(args[0]=="--shutdown-fixture")return ShutdownFixture(args);
         try { Run(Path.GetFullPath(args[0]));Console.WriteLine(passed+" testes de distribuição/interface aprovados.");return 0; }
         catch(Exception e){Console.WriteLine("FALHOU: "+e);return 1;}
+    }
+    static int ShutdownFixture(string[] args)
+    {
+        Application.EnableVisualStyles();
+        using(var gate=new System.Threading.Mutex(false,args[1]))using(var ready=System.Threading.EventWaitHandle.OpenExisting(args[2]))using(var form=new MainWindow(true))using(var timer=new Timer())
+        {
+            gate.WaitOne();
+            try{
+                form.Shown+=delegate{Session.Begin("Trabalho de teste",false);timer.Interval=1500;timer.Tick+=delegate{timer.Stop();Session.End("Concluído","");};timer.Start();ready.Set();};
+                Application.Run(form);return 0;
+            }finally{gate.ReleaseMutex();}
+        }
     }
     static string Zip(string root,string name,string version)
     {
@@ -79,6 +92,33 @@ internal static class DistributionTests
         Assert(Catalog.All().All(m=>m.Native&&!m.File.EndsWith(".exe")),"catálogo sem executáveis legados");
         Assert(Session.Begin("Teste isolado",false)&&!Session.Begin("Concorrente",false),"operações concorrentes bloqueadas entre áreas");
         Session.End("Teste concluído",root);Assert(!Session.Busy,"bancada liberada após a operação");
+        Assert(AppShutdown.Matches(Path.Combine(root,"App","FrankensteinTI.exe"),Path.Combine(root,"App","FrankensteinTI.exe"),1,1),"fechamento seleciona caminho e sessão exatos");
+        Assert(!AppShutdown.Matches(Path.Combine(root,"OutraCopia","FrankensteinTI.exe"),Path.Combine(root,"App","FrankensteinTI.exe"),1,1),"outra cópia do aplicativo não é encerrada");
+        Assert(!AppShutdown.Matches(Path.Combine(root,"App","FrankensteinTI.exe"),Path.Combine(root,"App","FrankensteinTI.exe"),2,1),"outra sessão do Windows não é encerrada");
+        string gateName="Local\\FrankensteinTI-Test-"+Guid.NewGuid().ToString("N");
+        using(var gate=AppShutdown.Acquire(root,s=>{},gateName,400)){Assert(true,"instalação sem aplicativo aberto adquire exclusão");gate.ReleaseMutex();}
+        using(var ready=new System.Threading.ManualResetEvent(false))using(var release=new System.Threading.ManualResetEvent(false)){
+            var worker=System.Threading.Tasks.Task.Run(delegate{using(var held=new System.Threading.Mutex(false,gateName)){held.WaitOne();ready.Set();release.WaitOne();held.ReleaseMutex();}});
+            ready.WaitOne();try{Assert(Reject(()=>AppShutdown.Acquire(root,s=>{},gateName,400)),"timeout cancela atualização sem forçar encerramento");}finally{release.Set();worker.Wait();}
+        }
+        using(var form=new MainWindow(true)){
+            form.Show();Session.Begin("Operação simulada",false);form.RequestUpdateClose();Application.DoEvents();
+            Assert(!form.IsDisposed&&Session.Busy,"pedido de atualização aguarda operação ativa");
+            Assert(!Session.Begin("Nova operação",false),"pedido de atualização bloqueia novos trabalhos");
+            Session.End("Concluído",root);Application.DoEvents();Assert(form.IsDisposed,"aplicativo fecha automaticamente ao concluir operação");
+        }
+        Session.ClosingForUpdate=false;
+        using(var form=new MainWindow(true)){form.Show();form.RequestUpdateClose();Assert(form.IsDisposed,"aplicativo ocioso fecha para atualização");}
+        Session.ClosingForUpdate=false;
+        string childRoot=Path.Combine(root,"running-app"),childExe=Path.Combine(childRoot,"App","FrankensteinTI.exe");Directory.CreateDirectory(Path.GetDirectoryName(childExe));File.Copy(typeof(DistributionTests).Assembly.Location,childExe);
+        string readyName="Local\\FrankensteinTI-Ready-"+Guid.NewGuid().ToString("N");
+        using(var ready=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.ManualReset,readyName))
+        using(var process=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(childExe,"--shutdown-fixture "+gateName+" "+readyName){UseShellExecute=false,CreateNoWindow=true})){
+            try{
+                Assert(ready.WaitOne(15000),"processo de teste iniciou e registrou trabalho ativo");
+                using(var gate=AppShutdown.Acquire(childRoot,s=>{},gateName,15000)){Assert(process.HasExited&&process.ExitCode==0,"instalador fecha processo real pelo protocolo após concluir trabalho");gate.ReleaseMutex();}
+            }finally{if(!process.HasExited){process.CloseMainWindow();process.WaitForExit(10000);}}
+        }
     }
     static double L(Color c){Func<byte,double> f=x=>{double s=x/255.0;return s<=0.04045?s/12.92:Math.Pow((s+0.055)/1.055,2.4);};return .2126*f(c.R)+.7152*f(c.G)+.0722*f(c.B);}
     static double Contrast(Color a,Color b){double x=L(a),y=L(b);return (Math.Max(x,y)+.05)/(Math.Min(x,y)+.05);}

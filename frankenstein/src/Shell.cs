@@ -13,6 +13,8 @@ namespace FrankensteinTI
     internal sealed class MainWindow : Form
     {
         [DllImport("user32.dll")] static extern bool ReleaseCapture();
+        [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string name);
+        static readonly uint updateCloseMessage=RegisterWindowMessage("FrankensteinTI.CloseForUpdate.v1");
         [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr window,int message,IntPtr w,IntPtr l);
         readonly Dictionary<string,Button> navigation=new Dictionary<string,Button>();
         readonly Dictionary<string,Form> workspaces=new Dictionary<string,Form>();
@@ -29,7 +31,8 @@ namespace FrankensteinTI
             FormClosed+=delegate{Session.Changed-=OnSessionChanged;if(optimizer!=null)optimizer.StopWorkspace();foreach(var view in workspaces.Values)view.Dispose();};
             Shown+=async delegate{Navigate("Visão geral");if(!preview)await CheckUpdates(false);};
         }
-        void OnSessionChanged(){if(IsDisposed)return;if(InvokeRequired){BeginInvoke((Action)OnSessionChanged);return;}status.Text=Session.Status;}
+        void OnSessionChanged(){if(IsDisposed)return;if(InvokeRequired){BeginInvoke((Action)OnSessionChanged);return;}status.Text=Session.Status;if(Session.ClosingForUpdate&&!Session.Busy)BeginInvoke((Action)Close);}
+        internal void RequestUpdateClose(){Session.ClosingForUpdate=true;status.Text="Atualização aguardando a conclusão da operação. O aplicativo fechará automaticamente.";if(!Session.Busy)Close();}
         void Build()
         {
             var rail=new Panel{Dock=DockStyle.Left,Width=210,BackColor=Style.Sidebar};
@@ -42,7 +45,7 @@ namespace FrankensteinTI
             }
             var foot=new Panel{Dock=DockStyle.Bottom,Height=99,Padding=new Padding(16,4,16,10)};
             updates=Style.Button("Verificar atualização");updates.Dock=DockStyle.Top;updates.Height=34;updates.Font=new Font(Style.FontName,8);updates.Click+=async delegate{await CheckUpdates(true);};
-            var version=Style.Label("FRANKENSTEIN  0.3.0\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
+            var version=Style.Label("FRANKENSTEIN  0.3.1\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
             var close=Style.Button("×");close.AccessibleName="Fechar aplicativo";close.SetBounds(160,9,30,30);close.Font=new Font("Segoe UI",15);close.Click+=delegate{Close();};
             var max=Style.Button("□");max.AccessibleName="Maximizar ou restaurar";max.SetBounds(124,9,30,30);max.Click+=delegate{ToggleMaximize();};
             var min=Style.Button("−");min.AccessibleName="Minimizar";min.SetBounds(88,9,30,30);min.Click+=delegate{WindowState=FormWindowState.Minimized;};
@@ -57,7 +60,7 @@ namespace FrankensteinTI
         }
         void Drag(object s,MouseEventArgs e){if(e.Button!=MouseButtons.Left)return;ReleaseCapture();SendMessage(Handle,0xA1,new IntPtr(2),IntPtr.Zero);}
         void ToggleMaximize(){MaximizedBounds=Screen.FromHandle(Handle).WorkingArea;WindowState=WindowState==FormWindowState.Maximized?FormWindowState.Normal:FormWindowState.Maximized;}
-        protected override void WndProc(ref Message m){base.WndProc(ref m);if(m.Msg==0x84&&WindowState==FormWindowState.Normal){Point p=PointToClient(new Point(unchecked((short)(long)m.LParam),unchecked((short)((long)m.LParam>>16))));bool l=p.X<7,r=p.X>Width-8,t=p.Y<7,b=p.Y>Height-8;if(t&&l)m.Result=(IntPtr)13;else if(t&&r)m.Result=(IntPtr)14;else if(b&&l)m.Result=(IntPtr)16;else if(b&&r)m.Result=(IntPtr)17;else if(l)m.Result=(IntPtr)10;else if(r)m.Result=(IntPtr)11;else if(t)m.Result=(IntPtr)12;else if(b)m.Result=(IntPtr)15;}}
+        protected override void WndProc(ref Message m){if((uint)m.Msg==updateCloseMessage){RequestUpdateClose();return;}base.WndProc(ref m);if(m.Msg==0x84&&WindowState==FormWindowState.Normal){Point p=PointToClient(new Point(unchecked((short)(long)m.LParam),unchecked((short)((long)m.LParam>>16))));bool l=p.X<7,r=p.X>Width-8,t=p.Y<7,b=p.Y>Height-8;if(t&&l)m.Result=(IntPtr)13;else if(t&&r)m.Result=(IntPtr)14;else if(b&&l)m.Result=(IntPtr)16;else if(b&&r)m.Result=(IntPtr)17;else if(l)m.Result=(IntPtr)10;else if(r)m.Result=(IntPtr)11;else if(t)m.Result=(IntPtr)12;else if(b)m.Result=(IntPtr)15;}}
         internal void Navigate(string key)
         {
             section=key;heading.Text="BANCADA  /  "+key.ToUpperInvariant();

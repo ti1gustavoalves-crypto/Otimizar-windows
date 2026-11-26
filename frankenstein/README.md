@@ -1,8 +1,8 @@
-# Frankenstein TI 0.3.0
+﻿# Frankenstein TI 0.3.1
 
 Bancada integrada para Windows 10/11 x64. Desempenho, manutenção, catálogo de programas, navegadores, diagnóstico de aplicativos e ferramentas técnicas funcionam dentro da mesma janela e do mesmo executável.
 
-[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.0/InstalarFrankensteinTI.exe)
+[Baixar instalador](https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v0.3.1/InstalarFrankensteinTI.exe)
 
 ## Interface
 
@@ -38,3 +38,5 @@ O build prepara cópias de `../src` em diretório temporário de compilação, s
 Os testes verificam consultas reais somente de leitura, simulações de reparo, proteção de caminhos, hashes, rollback de instalação, persistência, contraste, renderização e hospedagem de 11 áreas na mesma janela. Não comprovam todos os reparos em todos os computadores: valide alterações do Windows em máquina de teste antes de uso amplo.
 
 Publique instalador, checksum e manifesto na tag `frankenstein-vX.Y.Z`; atualize `releases/update-manifest.json` somente com o hash real. O canal do Otimizador independente permanece separado.
+
+Atualização 0.3.1: o instalador fecha automaticamente a cópia instalada antes da troca. Na versão 0.3.1 e seguintes, operações em andamento terminam antes do fechamento, e novos trabalhos ficam bloqueados. Versões anteriores recebem o pedido normal de fechar e podem solicitar que você conclua a operação. Após 60 segundos sem liberação, a atualização é cancelada sem substituir arquivos; conclua o trabalho e tente novamente. O instalador não força o encerramento e não fecha outras cópias ou sessões. Se o app estiver elevado, execute também o instalador como administrador.

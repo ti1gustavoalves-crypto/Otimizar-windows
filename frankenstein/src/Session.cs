@@ -8,6 +8,7 @@ namespace FrankensteinTI
     {
         static readonly object gate=new object();
         static RunRecord active; static bool persist;
+        public static bool ClosingForUpdate;
         public static event Action Changed;
         public static bool Busy { get { lock(gate)return active!=null; } }
         public static string Status { get { lock(gate)return active==null?"Tudo pronto. Sua bancada está livre.":active.Name+" · em andamento"; } }
@@ -16,6 +17,7 @@ namespace FrankensteinTI
         {
             lock(gate)
             {
+                if(ClosingForUpdate)return false;
                 if(active!=null){if(notify)MessageBox.Show("Conclua a operação atual antes de iniciar outra: "+active.Name,"Operação em andamento");return false;}
                 string id=DateTime.Now.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N").Substring(0,8);
                 var record=new RunRecord{Id=id,ModuleId="integrado",Name=name,Started=DateTime.Now.ToString("o"),Status="Em execução",Folder=Path.Combine(Journal.Data,id)};

@@ -12,8 +12,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Frankenstein TI")]
 [assembly: AssemblyProduct("Frankenstein TI")]
 [assembly: AssemblyDescription("Bancada integrada de suporte técnico")]
-[assembly: AssemblyVersion("0.3.0.0")]
-[assembly: AssemblyFileVersion("0.3.0.0")]
+[assembly: AssemblyVersion("0.3.1.0")]
+[assembly: AssemblyFileVersion("0.3.1.0")]
 namespace FrankensteinTI
 {
     internal static class Program

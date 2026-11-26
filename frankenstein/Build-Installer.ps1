@@ -28,11 +28,11 @@ $manifest=Join-Path $PSScriptRoot 'installer\app.manifest'
 $csc='C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $installer=Join-Path $Destination 'InstalarFrankensteinTI.exe'
 $refs=@('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll') | ForEach-Object {'/reference:'+$_}
-& $csc /nologo /target:winexe "/win32icon:$(Join-Path $PSScriptRoot 'assets\frankenstein.ico')" /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" @refs "/resource:$zip,Payload" "/out:$installer" $meta (Join-Path $PSScriptRoot 'installer\Installer.cs') (Join-Path $PSScriptRoot 'installer\Deployment.cs')
+& $csc /nologo /target:winexe "/win32icon:$(Join-Path $PSScriptRoot 'assets\frankenstein.ico')" /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" @refs "/resource:$zip,Payload" "/out:$installer" $meta (Join-Path $PSScriptRoot 'installer\Installer.cs') (Join-Path $PSScriptRoot 'installer\Deployment.cs') (Join-Path $PSScriptRoot 'installer\AppShutdown.cs')
 if($LASTEXITCODE){throw 'Falha ao compilar o instalador.'}
 $version=[Reflection.AssemblyName]::GetAssemblyName($installer).Version.ToString()
 $hash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
-$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='Aplicativo integrado, janela sem bordas, identidade própria e cinco ambientes visuais.'}
+$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='O instalador solicita o fechamento do aplicativo antes de atualizar e aguarda operações em andamento.'}
 $update | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'update-manifest.json') -Encoding UTF8
 ($hash+'  InstalarFrankensteinTI.exe') | Set-Content -LiteralPath (Join-Path $Destination 'SHA256SUMS.txt') -Encoding ASCII
 Write-Output ('Instalador '+$version+' criado: '+$installer)

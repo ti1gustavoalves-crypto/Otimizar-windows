@@ -1,4 +1,4 @@
-param([string]$OptimizerSource=(Join-Path $PSScriptRoot '..\src'),[string]$OriginalTools=(Join-Path $PSScriptRoot 'Originais'),[string]$Destination=(Join-Path $PSScriptRoot 'build\Unified'),[switch]$SkipTests)
+﻿param([string]$OptimizerSource=(Join-Path $PSScriptRoot '..\src'),[string]$OriginalTools=(Join-Path $PSScriptRoot 'Originais'),[string]$Destination=(Join-Path $PSScriptRoot 'build\Unified'),[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $Destination=[IO.Path]::GetFullPath($Destination);$OptimizerSource=[IO.Path]::GetFullPath($OptimizerSource)
 $csc='C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -27,7 +27,7 @@ if(-not $SkipTests){
     & $core $Destination
     if($LASTEXITCODE){throw 'Falha nos testes nativos.'}
     $test=Join-Path $Destination 'TestArtifacts\DistributionTests.exe'
-    & $csc /nologo /target:exe /platform:x64 /main:DistributionTests @refs @embedded "/out:$test" @sources (Join-Path $PSScriptRoot 'installer\Deployment.cs') (Join-Path $PSScriptRoot 'tests\DistributionTests.cs')
+    & $csc /nologo /target:exe /platform:x64 /main:DistributionTests @refs @embedded "/out:$test" @sources (Join-Path $PSScriptRoot 'installer\Deployment.cs') (Join-Path $PSScriptRoot 'installer\AppShutdown.cs') (Join-Path $PSScriptRoot 'tests\DistributionTests.cs')
     if($LASTEXITCODE){throw 'Falha ao compilar testes.'}
     & $test (Join-Path $Destination 'TestArtifacts\Distribution')
     if($LASTEXITCODE){throw 'Falha nos testes integrados.'}
