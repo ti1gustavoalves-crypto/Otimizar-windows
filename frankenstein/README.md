@@ -21,6 +21,8 @@ Janela sem a barra padrão do Windows, redimensionamento pelas bordas, área de 
 
 Instale com `InstalarFrankensteinTI.exe`. O botão **Verificar atualização** usa o canal exclusivo do Frankenstein no GitHub e confere versão, HTTPS, tamanho e SHA-256 antes de abrir o instalador. A atualização não é instalada silenciosamente. O instalador não possui assinatura Authenticode.
 
+O pipeline está preparado para assinar aplicativo e instalador quando houver um certificado confiável. Consulte [configuração e validação da assinatura](ASSINATURA.md). Sem certificado configurado, os arquivos continuam explicitamente sem assinatura; os instaladores já publicados não são alterados.
+
 A instalação usa `%LOCALAPPDATA%\Programs\FrankensteinTI`. Dados ficam em `Dados`: `Execucoes`, `Otimizador`, `Navegadores`, `Instalacoes` e `interface.json`. Dados antigos do otimizador são copiados para a pasta compartilhada no primeiro início, mantendo a origem para recuperação. A instalação conserva uma cópia `previous-*` e reverte a troca se ela falhar. A desinstalação preserva os dados; não desfaz reparos no Windows ou instalações de terceiros.
 
 O aplicativo e o instalador exigem administrador desde a abertura. O Windows solicita consentimento pelo UAC (ou credenciais administrativas, conforme a conta e a política do computador). Se você cancelar, o programa não abre. Ao reabrir, revise novamente o plano de manutenção; ações não são retomadas silenciosamente. Fechar a janela fica bloqueado enquanto uma operação compartilhada está ativa.

@@ -1,9 +1,15 @@
 ﻿param(
     [string]$AppFolder,
     [string]$Destination = (Join-Path $PSScriptRoot 'releases'),
-    [string]$Scratch = (Join-Path $PSScriptRoot 'build\installer')
+    [string]$Scratch = (Join-Path $PSScriptRoot 'build\installer'),
+    $SigningConfiguration=$null
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'Signing.ps1')
+if($SigningConfiguration) {
+    $appSignature=Get-AuthenticodeSignature -LiteralPath (Join-Path $AppFolder 'FrankensteinTI.exe')
+    if($appSignature.Status -ne 'Valid' -or !$appSignature.SignerCertificate -or $appSignature.SignerCertificate.Thumbprint -ne $SigningConfiguration.Thumbprint -or !$appSignature.TimeStamperCertificate) { throw 'O aplicativo deve estar assinado e verificado antes de gerar o payload.' }
+}
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $AppFolder=[IO.Path]::GetFullPath($AppFolder)
 $Destination=[IO.Path]::GetFullPath($Destination)
@@ -30,6 +36,7 @@ $installer=Join-Path $Destination 'InstalarFrankensteinTI.exe'
 $refs=@('System.dll','System.Core.dll','System.Drawing.dll','System.Windows.Forms.dll','System.Web.Extensions.dll','System.IO.Compression.dll','System.IO.Compression.FileSystem.dll') | ForEach-Object {'/reference:'+$_}
 & $csc /nologo /target:winexe "/win32icon:$(Join-Path $PSScriptRoot 'assets\frankenstein.ico')" /warn:4 /optimize+ /platform:x64 "/win32manifest:$manifest" @refs "/resource:$zip,Payload" "/out:$installer" $meta (Join-Path $PSScriptRoot 'installer\Installer.cs') (Join-Path $PSScriptRoot 'installer\Deployment.cs') (Join-Path $PSScriptRoot 'installer\AppShutdown.cs')
 if($LASTEXITCODE){throw 'Falha ao compilar o instalador.'}
+Invoke-FrankensteinSigning -Path $installer -Configuration $SigningConfiguration
 $version=[Reflection.AssemblyName]::GetAssemblyName($installer).Version.ToString()
 $hash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
 $update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='Corrigido erro de referência nula no download de atualizações. Progresso visível e registro detalhado de falhas.'}
