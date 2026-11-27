@@ -6,6 +6,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Threading;
+using System.Linq;
 using System.Web.Script.Serialization;
 
 namespace FrankensteinTI
@@ -34,13 +36,22 @@ namespace FrankensteinTI
             string expected="/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v"+version.ToString(3)+"/InstalarFrankensteinTI.exe";
             if(uri.AbsolutePath!=expected || !Regex.IsMatch(m.Sha256??"","\\A[0-9a-fA-F]{64}\\z") || m.Size<1024 || m.Size>100*1024*1024) throw new InvalidDataException("Versão, tamanho ou checksum do instalador inválido.");
         }
+        internal static bool AllowedEndpoint(Uri uri)
+        {
+            return uri!=null&&uri.Scheme=="https"&&uri.IsDefaultPort&&string.IsNullOrEmpty(uri.UserInfo)&&string.IsNullOrEmpty(uri.Fragment)&&new[]{"github.com","raw.githubusercontent.com","release-assets.githubusercontent.com","objects.githubusercontent.com"}.Contains(uri.Host);
+        }
         static HttpWebResponse Request(string url)
         {
             ServicePointManager.SecurityProtocol|=SecurityProtocolType.Tls12;
-            var req=(HttpWebRequest)WebRequest.Create(url); req.UserAgent="FrankensteinTI/"+Current; req.Timeout=25000; req.ReadWriteTimeout=25000; req.AllowAutoRedirect=true;
-            var response=(HttpWebResponse)req.GetResponse();
-            if(response.ResponseUri.Scheme!="https") { response.Dispose(); throw new IOException("Redirecionamento sem HTTPS bloqueado."); }
-            return response;
+            var uri=new Uri(url);
+            for(int redirects=0;redirects<=5;redirects++){
+                if(!AllowedEndpoint(uri))throw new IOException("Destino de atualização não autorizado.");
+                var req=(HttpWebRequest)WebRequest.Create(uri);req.UserAgent="FrankensteinTI/"+Current;req.Timeout=25000;req.ReadWriteTimeout=25000;req.AllowAutoRedirect=false;
+                var response=(HttpWebResponse)req.GetResponse();int code=(int)response.StatusCode;
+                if(code>=300&&code<400){string location=response.Headers["Location"];response.Dispose();if(string.IsNullOrEmpty(location))throw new IOException("Redirecionamento sem destino.");uri=new Uri(uri,location);continue;}
+                return response;
+            }
+            throw new IOException("Limite de redirecionamentos excedido.");
         }
         public static UpdateManifest Check()
         {
@@ -61,14 +72,27 @@ namespace FrankensteinTI
             if(size<=0)throw new ArgumentOutOfRangeException("size");
             CopyLimited(input,output,size,n=>{if(progress!=null)progress((int)(100*n/size));});
         }
+        internal static bool Transient(WebException e)
+        {
+            var response=e.Response as HttpWebResponse;
+            if(response!=null)return response.StatusCode==HttpStatusCode.RequestTimeout||(int)response.StatusCode==429||(int)response.StatusCode>=500;
+            return e.Status==WebExceptionStatus.Timeout||e.Status==WebExceptionStatus.ConnectFailure||e.Status==WebExceptionStatus.ConnectionClosed||e.Status==WebExceptionStatus.ReceiveFailure||e.Status==WebExceptionStatus.NameResolutionFailure;
+        }
+        internal static void RetryTransfer(Action transfer,CancellationToken token,Action<string> stage)
+        {
+            for(int attempt=1;;attempt++){token.ThrowIfCancellationRequested();try{if(stage!=null)stage("Baixando instalador · tentativa "+attempt+" de 3");transfer();return;}catch(WebException ex){bool retry=attempt<3&&Transient(ex);if(ex.Response!=null)ex.Response.Dispose();token.ThrowIfCancellationRequested();if(!retry)throw;if(stage!=null)stage("Conexão interrompida. Tentando novamente...");if(token.WaitHandle.WaitOne(attempt*1000))token.ThrowIfCancellationRequested();}catch{token.ThrowIfCancellationRequested();throw;}}
+        }
         public static string Download(UpdateManifest m,Action<int> progress)
+        {return Download(m,progress,CancellationToken.None,null);}
+        public static string Download(UpdateManifest m,Action<int> progress,CancellationToken token,Action<string> stage)
         {
             Validate(m);
             string folder=Path.Combine(DataRoot,"Atualizacoes",Guid.NewGuid().ToString("N")); Directory.CreateDirectory(folder);
             string path=Path.Combine(folder,"InstalarFrankensteinTI.exe"), partial=path+".partial";
             try
             {
-                using(var response=Request(m.InstallerUrl)) using(var stream=response.GetResponseStream()) using(var output=File.Create(partial)) CopyDownload(stream,output,m.Size,progress);
+                RetryTransfer(delegate{using(var response=Request(m.InstallerUrl))using(token.Register(response.Close))using(var stream=response.GetResponseStream())using(var output=File.Create(partial))CopyDownload(stream,output,m.Size,p=>{token.ThrowIfCancellationRequested();if(progress!=null)progress(p);});},token,stage);
+                token.ThrowIfCancellationRequested();if(stage!=null)stage("Verificando tamanho, SHA-256 e identidade do instalador...");
                 if(new FileInfo(partial).Length!=m.Size || !string.Equals(Engine.Hash(partial),m.Sha256,StringComparison.OrdinalIgnoreCase)) throw new IOException("O instalador não passou na conferência de tamanho/SHA-256.");
                 var info=FileVersionInfo.GetVersionInfo(partial);
                 if(info.ProductName!="Frankenstein TI Installer" || new Version(info.FileVersion)!=new Version(m.Version)) throw new IOException("A identificação do instalador diverge do manifesto.");

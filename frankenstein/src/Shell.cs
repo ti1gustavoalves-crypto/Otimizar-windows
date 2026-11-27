@@ -45,14 +45,14 @@ namespace FrankensteinTI
             }
             var foot=new Panel{Dock=DockStyle.Bottom,Height=99,Padding=new Padding(16,4,16,10)};
             updates=Style.Button("Verificar atualização");updates.Dock=DockStyle.Top;updates.Height=34;updates.Font=new Font(Style.FontName,8);updates.Click+=async delegate{await CheckUpdates(true);};
-            var version=Style.Label("FRANKENSTEIN  0.3.3\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
+            var version=Style.Label("FRANKENSTEIN  0.4.0\n"+(CodexPerformanceOptimizer.Optimizer.IsAdministrator()?"Administrador":"Usuário padrão"),8,Style.Muted);version.Dock=DockStyle.Bottom;version.Height=39;foot.Controls.Add(updates);foot.Controls.Add(version);rail.Controls.Add(foot);
             var close=Style.Button("×");close.AccessibleName="Fechar aplicativo";close.SetBounds(160,9,30,30);close.Font=new Font("Segoe UI",15);close.Click+=delegate{Close();};
             var max=Style.Button("□");max.AccessibleName="Maximizar ou restaurar";max.SetBounds(124,9,30,30);max.Click+=delegate{ToggleMaximize();};
             var min=Style.Button("−");min.AccessibleName="Minimizar";min.SetBounds(88,9,30,30);min.Click+=delegate{WindowState=FormWindowState.Minimized;};
             var chrome=new Panel{Dock=DockStyle.Right,Width=202};chrome.Controls.AddRange(new Control[]{min,max,close});
             var top=new Panel{Dock=DockStyle.Top,Height=54,Padding=new Padding(28,13,0,0)};
             heading=Style.Label("BANCADA  /  VISÃO GERAL",8.5f,Style.Muted,true);heading.Dock=DockStyle.Fill;heading.MouseDown+=Drag;heading.DoubleClick+=delegate{ToggleMaximize();};top.MouseDown+=Drag;top.Controls.Add(heading);top.Controls.Add(chrome);
-            var bottom=new Panel{Dock=DockStyle.Bottom,Height=34,Padding=new Padding(28,7,12,2)};status=Style.Label(Session.Status,8,Style.Muted);status.Dock=DockStyle.Fill;bottom.Controls.Add(status);
+            var bottom=new Panel{Dock=DockStyle.Bottom,Height=34,Padding=new Padding(28,7,12,2)};status=Style.Label(Session.Status,8,Style.Muted);status.Dock=DockStyle.Fill;status.Cursor=Cursors.Hand;status.Click+=delegate{Navigate("Histórico");};bottom.Controls.Add(status);
             canvas=new Panel{Dock=DockStyle.Fill,Padding=new Padding(24,8,24,12)};
             var body=new Panel{Dock=DockStyle.Fill};body.Controls.Add(canvas);body.Controls.Add(bottom);body.Controls.Add(top);Controls.Add(body);Controls.Add(rail);
         }
@@ -64,9 +64,12 @@ namespace FrankensteinTI
             section=key;heading.Text="BANCADA  /  "+key.ToUpperInvariant();
             foreach(var p in navigation){p.Value.BackColor=p.Key==key?Style.Selected:Style.Sidebar;p.Value.ForeColor=p.Key==key?Style.Mint:Style.Muted;}
             foreach(Control c in canvas.Controls.Cast<Control>().ToArray()){canvas.Controls.Remove(c);if(!(c is Form))c.Dispose();else c.Hide();}
-            if(key=="Visão geral"){BuildHome();return;}if(key=="Aparência"){BuildAppearance();return;}if(key=="Histórico"){BuildHistory();return;}
+            if(key=="Visão geral"){BuildHome();return;}if(key=="Aparência"){BuildAppearance();return;}
             Form view;
-            if(key=="Desempenho"||key=="Manutenção"||key=="Sistema"||key=="Atualizações do PC"||key=="Recuperação"){
+            if(key=="Histórico"||key=="Diagnóstico geral"){
+                if(!workspaces.TryGetValue("care",out view)){view=new CareCenter(Navigate){TopLevel=false,FormBorderStyle=FormBorderStyle.None,Dock=DockStyle.Fill};workspaces["care"]=view;}
+                if(key=="Diagnóstico geral")((CareCenter)view).SelectDiagnosis();else ((CareCenter)view).SelectTasks();
+            }else if(key=="Desempenho"||key=="Manutenção"||key=="Sistema"||key=="Atualizações do PC"||key=="Recuperação"){
                 if(optimizer==null){IntegratedStyle.EnginePalette();optimizer=new CodexPerformanceOptimizer.MainFormV2(null,false,true,false);optimizer.AttachWorkspace(!preview);workspaces["optimizer"]=optimizer;}
                 optimizer.SelectWorkspace(key=="Desempenho"?0:key=="Manutenção"?1:key=="Atualizações do PC"?2:key=="Sistema"?3:4,!preview);view=optimizer;
             }else if(!workspaces.TryGetValue(key,out view)){
@@ -87,7 +90,7 @@ namespace FrankensteinTI
             var sub=Style.Label("Diagnostique, cuide e prepare seu computador em um só lugar.",10,Style.Muted);sub.SetBounds(28,178,580,38);hero.Controls.AddRange(new Control[]{tag,title,sub});
             var flows=new TableLayoutPanel{Dock=DockStyle.Top,Height=225,ColumnCount=3,RowCount=1,Padding=new Padding(0,20,0,8)};
             for(int i=0;i<3;i++)flows.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,33.333f));
-            AddFlow(flows,0,"01 / ENTENDER","O que está acontecendo?","Diagnóstico do Windows, falhas de apps e relatórios para orientar o próximo passo.","Windows e apps");
+            AddFlow(flows,0,"01 / ENTENDER","O que está acontecendo?","Hardware, HDs e SSDs, sensores, rede e telas azuis. Evidências e próximos passos.","Diagnóstico geral");
             AddFlow(flows,1,"02 / CUIDAR","Mais fôlego para o PC.","Manutenção, armazenamento e inicialização com ações revisadas por você.","Manutenção");
             AddFlow(flows,2,"03 / PREPARAR","Tudo para começar.","Catálogo de programas, instalação em lote e ferramentas do seu dia a dia.","Programas");
             var activity=new Panel{Dock=DockStyle.Top,Height=170,Padding=new Padding(20),BackColor=Style.Surface};
@@ -135,15 +138,24 @@ namespace FrankensteinTI
                 updates.Text=available?"Nova versão disponível":"Verificar atualização";
                 if(!manual)return;
                 if(!available){MessageBox.Show(this,"Versão atual: "+Distribution.Current.ToString(3));return;}
+                if(File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"portable.mode"))){if(MessageBox.Show(this,"Nova versão portátil disponível. Baixe o ZIP, feche o aplicativo e extraia em uma pasta nova. Copie a pasta Dados para preservar o histórico e os temas. Abrir a versão no GitHub?","Atualização portátil",MessageBoxButtons.OKCancel)==DialogResult.OK)Process.Start(new ProcessStartInfo("https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/tag/frankenstein-v"+new Version(manifest.Version).ToString(3)){UseShellExecute=true});return;}
                 if(MessageBox.Show(this,manifest.Notes+"\n\nBaixar a versão "+manifest.Version+" e abrir o instalador?","Atualização",MessageBoxButtons.OKCancel)!=DialogResult.OK)return;
                 if(!Session.Begin("Atualização do Frankenstein"))return;
                 try
                 {
-                    var progress=new Progress<int>(value=>{if(!IsDisposed)status.Text="Baixando atualização: "+value+"%";});
-                    string file=await Task.Run(()=>Distribution.Download(manifest,value=>((IProgress<int>)progress).Report(value)));
+                    string file;
+                    using(var cancellation=new System.Threading.CancellationTokenSource()){
+                        Session.SetCancellation(cancellation.Cancel);
+                        var progress=new Progress<int>(value=>{if(!IsDisposed)Session.Report("Baixando atualização",value);});
+                        var stage=new Progress<string>(message=>{if(!IsDisposed)Session.Report(message);});
+                        file=await Task.Run(()=>Distribution.Download(manifest,value=>((IProgress<int>)progress).Report(value),cancellation.Token,message=>((IProgress<string>)stage).Report(message)));
+                        cancellation.Token.ThrowIfCancellationRequested();Session.SetCancellation(null);
+                    }
                     Process.Start(new ProcessStartInfo(file){UseShellExecute=true});
+                    Session.ClosingForUpdate=true;
                     Session.End("Instalador aberto",file);Close();
                 }
+                catch(OperationCanceledException){Session.End("Download cancelado","O instalador não foi aberto.");}
                 catch(Exception ex){Session.End("Falha na atualização",ex.ToString());throw;}
             }
             catch(Exception ex){Program.LogException(ex);if(manual)MessageBox.Show(this,ex.Message,"Atualização não concluída");else updates.Text="Atualizações · offline";}

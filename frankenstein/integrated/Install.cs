@@ -1217,8 +1217,10 @@ namespace CentralInstalacaoTI
 			_summary.Text = string.Format("{0} aplicativo(s) selecionado(s) — {1} item(ns) no catálogo", _selected.Count, _catalog.Count);
 		}
 
-		private void InstallSelected(object sender, EventArgs e)
+		private int failedInstalls,manualInstalls;
+		private async void InstallSelected(object sender, EventArgs e)
 		{
+			if(!_install.Enabled)return;
 			SaveVisibleSelections();
 			List<AppItem> apps = _catalog.Where((AppItem a) => _selected.Contains(a.Id) && IsAvailable(a)).ToList();
 			if (apps.Count == 0)
@@ -1243,32 +1245,37 @@ namespace CentralInstalacaoTI
 			string text = Path.Combine(FrankensteinTI.Distribution.DataRoot, "Instalacoes");
 			Directory.CreateDirectory(text);
 			_logPath = Path.Combine(text, string.Format("instalacao-{0:yyyyMMdd-HHmmss}.log", DateTime.Now));
-			if (!FrankensteinTI.Session.Begin("Instalação de programas")) return;
 			_install.Enabled = false;
+			_runSoftwareRoot = _folder.Text; _runPreferLocal = _preferLocal.Checked;
+			bool acquired=false;
+			try { acquired=await FrankensteinTI.Session.AcquireAsync("Instalação de programas"); if(!acquired){_install.Enabled=true;return;} await System.Threading.Tasks.Task.Run(()=>FrankensteinTI.Protection.EnsureCheckpoint()); }
+			catch(Exception ex){ if(acquired)FrankensteinTI.Session.End("Instalação bloqueada",ex.Message);_install.Enabled=true;MessageBox.Show(this,ex.Message);return; }
 			_log.Clear();
 			_bottom.Visible = true;
 			LayoutContent();
-			_runSoftwareRoot = _folder.Text;
-			_runPreferLocal = _preferLocal.Checked;
 			LogUi("Iniciando instalação de " + apps.Count + " aplicativo(s). Destino preferido: " + installRoot);
 			BackgroundWorker backgroundWorker = new BackgroundWorker();
+			failedInstalls=0;manualInstalls=0;int cancellation=0;
+			FrankensteinTI.Session.SetCancellation(()=>System.Threading.Interlocked.Exchange(ref cancellation,1));
 			backgroundWorker.DoWork += delegate
 			{
 				foreach (AppItem item in apps)
 				{
+					if(System.Threading.Volatile.Read(ref cancellation)!=0){LogUi("Lote interrompido entre programas; o instalador em execução foi aguardado.");break;}
+					FrankensteinTI.Session.Report("Instalando "+item.Name);
 					InstallOne(item, installRoot);
 				}
 			};
 			backgroundWorker.RunWorkerCompleted += delegate(object s, RunWorkerCompletedEventArgs completed)
 			{
-				FrankensteinTI.Session.End(completed.Error == null ? "Encerrado · conferir relatório" : "Falha", _logPath);
+				FrankensteinTI.Session.End(completed.Error!=null?"Falha":cancellation!=0?"Interrompido entre programas":failedInstalls>0?"Encerrado com falhas":manualInstalls>0?"Ações manuais pendentes":"Instaladores encerrados · conferir relatório", _logPath);
 				_install.Enabled = true;
 				if (completed.Error != null)
 				{
 					LogUi("ERRO GERAL: " + completed.Error.Message);
 				}
 				LogUi("Processo concluído. Relatório: " + _logPath);
-				MessageBox.Show(this, "Processo concluído. Consulte o painel de atividade e o relatório.", "Central de Instalação", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+				MessageBox.Show(this, "Lote encerrado. Falhas: "+failedInstalls+". Ações manuais: "+manualInstalls+". Consulte o painel de atividade e o relatório.", "Central de Instalação", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 			};
 			backgroundWorker.RunWorkerAsync();
 		}
@@ -1285,6 +1292,7 @@ namespace CentralInstalacaoTI
 					processStartInfo.UseShellExecute = true;
 					Process.Start(processStartInfo);
 					LogUi("Página oficial aberta para detectar o hardware e baixar a versão compatível.");
+					manualInstalls++;
 					return;
 				}
 				int num;
@@ -1305,15 +1313,18 @@ namespace CentralInstalacaoTI
 						processStartInfo2.UseShellExecute = true;
 						Process.Start(processStartInfo2);
 						LogUi((app.LocalKind == InstallKind.Manual) ? "Aberto para instalação assistida." : "Aplicativo portátil aberto.");
+						manualInstalls++;
 						return;
 					}
 					num = ((app.LocalKind != InstallKind.MsiSilent) ? RunProcess(text3, app.Arguments ?? string.Empty, Path.GetDirectoryName(text3), false) : RunProcess("msiexec.exe", string.Format("/i \"{0}\" /qn /norestart", text3), Path.GetDirectoryName(text3), false));
 				}
 				LogUi((num == 0) ? "Concluído sem erro." : ("Finalizado com código de saída " + num + "."));
+				if(num!=0&&num!=3010)failedInstalls++;
 			}
 			catch (Exception ex)
 			{
 				LogUi("FALHA: " + ex.Message);
+				failedInstalls++;
 			}
 		}
 

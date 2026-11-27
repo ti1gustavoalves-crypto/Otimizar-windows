@@ -12,8 +12,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Frankenstein TI")]
 [assembly: AssemblyProduct("Frankenstein TI")]
 [assembly: AssemblyDescription("Bancada integrada de suporte técnico")]
-[assembly: AssemblyVersion("0.3.3.0")]
-[assembly: AssemblyFileVersion("0.3.3.0")]
+[assembly: AssemblyVersion("0.4.0.0")]
+[assembly: AssemblyFileVersion("0.4.0.0")]
 namespace FrankensteinTI
 {
     internal static class Program
@@ -29,7 +29,7 @@ namespace FrankensteinTI
             {
                 if(!owns && Array.IndexOf(args,"--wait-for-instance")>=0) { try { owns=mutex.WaitOne(15000); } catch(AbandonedMutexException) { owns=true; } }
                 if(!owns) { if(Array.IndexOf(args,"--maintenance")<0)MessageBox.Show("O Frankenstein já está aberto.","Frankenstein TI"); return; }
-                try { MigrateData(); if(Array.IndexOf(args,"--maintenance")>=0)CodexPerformanceOptimizer.V2Engine.RunMaintenance();else Application.Run(new MainWindow()); }
+                try { MigrateData(); if(Array.IndexOf(args,"--maintenance")>=0){Session.Begin("Manutenção agendada",false);try{Protection.EnsureCheckpoint();CodexPerformanceOptimizer.V2Engine.RunMaintenance();Session.End("Encerrado · conferir relatório","Manutenção agendada");}catch(Exception ex){Session.End("Manutenção bloqueada ou interrompida",ex.Message);LogException(ex);}}else Application.Run(new MainWindow()); }
                 catch(Exception e) { LogException(e); MessageBox.Show("Não foi possível iniciar o Frankenstein. Confira o acesso à pasta de dados.\r\n\r\n"+e.Message,"Frankenstein TI",MessageBoxButtons.OK,MessageBoxIcon.Error); }
                 finally { mutex.ReleaseMutex(); }
             }

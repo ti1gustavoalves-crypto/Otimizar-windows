@@ -1,4 +1,4 @@
-﻿FRANKENSTEIN TI 0.3.3
+﻿FRANKENSTEIN TI 0.4.0
 
 Um aplicativo, uma janela: desempenho, manutenção, programas, navegadores,
 diagnóstico de apps, NX e LabX. Os antigos executáveis não são distribuídos.
@@ -16,6 +16,26 @@ Dados, relatórios, backups e tema ficam em:
 O Windows solicita permissão de administrador ao abrir o app e o instalador. Salve seu trabalho
 antes de reparos. Consulte o resultado e teste os programas após o procedimento.
 O instalador não possui assinatura digital. A desinstalação preserva os dados.
+
+0.4.0: o primeiro cartão da página inicial abre o diagnóstico geral. Em Histórico,
+encontre a fila de tarefas, relatórios, exportação PDF e a central de recuperação.
+O diagnóstico não aplica correções automaticamente. Temperaturas e SMART dependem
+dos sensores/controladores; dados indisponíveis são informados como tal.
+
+Alterações críticas exigem novo ponto de restauração confirmado. Se o Windows
+bloquear a criação (inclusive pelo limite usual de 24 horas), o reparo não inicia.
+Pontos de restauração não substituem backup de arquivos pessoais.
+
+Proxy exige seleção e revisão explícitas. WinHTTP e servidores DNS são preservados.
+O desfazer específico do proxy fica na Recuperação; alterações posteriores impedem
+a reversão automática. Outras ferramentas oferecem backups próprios ou orientação
+manual. Não existe desfazer universal para limpeza definitiva ou software externo.
+
+Versão portátil: extraia o ZIP em uma pasta gravável. Dados ficam na pasta Dados
+ao lado do EXE. A atualização abre a versão no GitHub: baixe o ZIP, feche o app,
+extraia em uma nova pasta e copie Dados para preservar seu histórico e tema.
+
+Os testes desta versão não executaram reparos destrutivos em uma VM Windows.
 
 Atualização 0.3.2: o instalador fecha automaticamente a cópia instalada antes da troca. Na versão 0.3.1 e seguintes, operações em andamento terminam antes do fechamento, e novos trabalhos ficam bloqueados. Versões anteriores recebem o pedido normal de fechar e podem solicitar que você conclua a operação. Após 60 segundos sem liberação, a atualização é cancelada sem substituir arquivos; conclua o trabalho e tente novamente. O instalador não força o encerramento e não fecha outras cópias ou sessões. O instalador também exige administrador desde a abertura.
 

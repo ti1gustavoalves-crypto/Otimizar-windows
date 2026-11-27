@@ -39,7 +39,7 @@ if($LASTEXITCODE){throw 'Falha ao compilar o instalador.'}
 Invoke-FrankensteinSigning -Path $installer -Configuration $SigningConfiguration
 $version=[Reflection.AssemblyName]::GetAssemblyName($installer).Version.ToString()
 $hash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
-$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='Corrigido erro de referência nula no download de atualizações. Progresso visível e registro detalhado de falhas.'}
+$update=[ordered]@{Product='FrankensteinTI';Version=$version;InstallerUrl=('https://github.com/ti1gustavoalves-crypto/Otimizar-windows/releases/download/frankenstein-v'+([Version]$version).ToString(3)+'/InstalarFrankensteinTI.exe');Sha256=$hash;Size=(Get-Item -LiteralPath $installer).Length;Notes='Diagnóstico geral, fila de tarefas, recuperação e PDF. Reparos exigem ponto de restauração confirmado. Proxy por seleção manual, com backup específico. Downloads com tentativas limitadas e validação de redirecionamentos. Versão portátil disponível no GitHub.'}
 $update | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Destination 'update-manifest.json') -Encoding UTF8
 ($hash+'  InstalarFrankensteinTI.exe') | Set-Content -LiteralPath (Join-Path $Destination 'SHA256SUMS.txt') -Encoding ASCII
 Write-Output ('Instalador '+$version+' criado: '+$installer)

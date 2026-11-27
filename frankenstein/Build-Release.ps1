@@ -19,4 +19,5 @@ $app=Join-Path $build 'App'
 Invoke-FrankensteinSigning -Path (Join-Path $app 'FrankensteinTI.exe') -Configuration $signing
 & (Join-Path $PSScriptRoot 'Build-Installer.ps1') -AppFolder $app -Destination $Destination -Scratch (Join-Path $build 'Installer') -SigningConfiguration $signing
 & (Join-Path $PSScriptRoot 'tests\Test-Manifest.ps1') -Executables @((Join-Path $app 'FrankensteinTI.exe'),(Join-Path $Destination 'InstalarFrankensteinTI.exe'))
+& (Join-Path $PSScriptRoot 'Build-Portable.ps1') -AppFolder $app -Destination $Destination -Scratch $build
 Write-Output ('RELEASE VALIDADA: '+[IO.Path]::GetFullPath($Destination))

@@ -24,15 +24,18 @@ namespace FrankensteinTI
         }
         async System.Threading.Tasks.Task Execute()
         {
-            if(selected==null||Session.Busy)return;var module=selected;var request=new Dictionary<string,object>();bool started=false;
+            if(selected==null||!run.Enabled)return;var module=selected;var request=new Dictionary<string,object>();bool started=false;
             try{
                 if(module.Mode=="NxSet")using(var dialog=new NxDialog()){if(dialog.ShowDialog(this)!=DialogResult.OK)return;request["Server"]=dialog.Server;request["Scope"]=dialog.Scope;module.Admin=dialog.Scope=="Machine";}
                 if(module.Mode=="NxRestore")using(var picker=new OpenFileDialog{Title="Selecione nx-backup.json",Filter="Backup NX|nx-backup.json",InitialDirectory=engine.Data}){if(picker.ShowDialog(this)!=DialogResult.OK)return;request["Backup"]=picker.FileName;var data=new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(picker.FileName));module.Admin=Convert.ToString(data["Scope"])=="Machine";}
                 if(module.Mode=="LabX")using(var picker=new OpenFileDialog{Filter="Instalador LabX|LabXBundle.exe",CheckFileExists=true}){if(picker.ShowDialog(this)!=DialogResult.OK)return;request["Installer"]=picker.FileName;request["InstallerHash"]=Engine.Hash(picker.FileName);}
                 if(module.Changes&&MessageBox.Show(this,module.Details+"\n\nDeseja executar?","Revisar operação",MessageBoxButtons.OKCancel)!=DialogResult.OK)return;
-                if(!Session.Begin(module.Name,true,false))return;started=true;run.Enabled=false;choices.Enabled=false;
-                var result=await engine.Execute(module,request,s=>detail.Text=s);detail.Text=result.Status+"\r\n\r\n"+result.Detail+"\r\n\r\nRelatórios: "+result.Folder;
+                run.Enabled=false;choices.Enabled=false;detail.Text="Aguardando a fila de tarefas...";
+                if(!await Session.AcquireAsync(module.Name,false))return;started=true;
+                if(module.Changes)await System.Threading.Tasks.Task.Run(()=>Protection.EnsureCheckpoint());
+                var result=await engine.Execute(module,request,s=>{detail.Text=s;Session.Report(s);});detail.Text=result.Status+"\r\n\r\n"+result.Detail+"\r\n\r\nRelatórios: "+result.Folder;
                 Session.End(result.Status,result.Folder);
+                started=false;
             }catch(Exception e){detail.Text="Falha: "+e.Message;if(started)Session.End("Falha",e.Message);}
             finally{run.Enabled=true;choices.Enabled=true;}
         }

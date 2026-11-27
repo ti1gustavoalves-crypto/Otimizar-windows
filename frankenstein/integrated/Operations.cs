@@ -1,0 +1,69 @@
+using System;
+using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace CodexPerformanceOptimizer
+{
+    internal sealed partial class MainFormV2
+    {
+        private async Task<string> RunWork(string initialStatus, Func<CancellationToken, IProgress<string>, string> worker, bool saveReport = true)
+        {
+            if (_cts != null) return "Outra operação está em andamento. Aguarde a conclusão ou cancele a operação atual.";
+            _cts = new CancellationTokenSource();
+            bool acquired=false;string outcome="Cancelado antes de iniciar",report="";
+            if (_operationBar != null) _operationBar.Visible = true;
+            _progress.Visible = true;
+            _status.Location = new Point(194, 12);
+            _progress.Style = ProgressBarStyle.Marquee;
+            _cancel.Enabled = true;
+            _status.Text = initialStatus;
+            var operationToken=_cts;
+            var progress = new Progress<string>(delegate(string message) { if(object.ReferenceEquals(_cts,operationToken)){_status.Text = message;FrankensteinTI.Session.Report(message);} });
+            try
+            {
+                _status.Text="Aguardando a fila: "+initialStatus;
+                acquired=await FrankensteinTI.Session.AcquireAsync(initialStatus);
+                if(!acquired)return outcome;
+                bool changes=FrankensteinTI.Protection.RequiresCheckpoint(initialStatus);
+                // Interrupting a Windows repair process can leave servicing unfinished.
+                _cancel.Enabled=!changes;
+                if(!changes)FrankensteinTI.Session.SetCancellation(()=>_cts.Cancel());
+                if(changes)await Task.Run(()=>FrankensteinTI.Protection.EnsureCheckpoint());
+                string result = await Task.Run(delegate { return worker(_cts.Token, progress); }, _cts.Token);
+                _status.Text = "Concluído em " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+                outcome="Encerrado · conferir relatório";report=result;
+                if (saveReport) V2Engine.SaveReport(result);
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                _status.Text = "Operação cancelada";
+                outcome="Cancelado";
+                return "Operação cancelada pelo usuário.";
+            }
+            catch (Exception ex)
+            {
+                string result = "Falha: " + ex.Message + Environment.NewLine + ex;
+                _status.Text = "Falha";
+                outcome="Falha";report=result;
+                if (saveReport) V2Engine.SaveReport(result);
+                return result;
+            }
+            finally
+            {
+                _cts.Dispose();
+                _cts = null;
+                _progress.Style = ProgressBarStyle.Continuous;
+                _progress.Value = 0;
+                _progress.Visible = false;
+                _status.Location = new Point(20, 12);
+                _cancel.Enabled = false;
+                if (_operationBar != null && !_applicationUpdateInProgress) _operationBar.Visible = false;
+                UpdateStorageSelection();
+                if(acquired)FrankensteinTI.Session.End(outcome,report);
+            }
+        }
+    }
+}

@@ -486,7 +486,7 @@ namespace NavegadorSOS
 			flowLayoutPanel.WrapContents = false;
 			flowLayoutPanel.AutoScroll = true;
 			FlowLayoutPanel flowLayoutPanel2 = flowLayoutPanel;
-			SetupCheck(fixNetwork, "Rede, proxy e cache DNS", "Redefine configurações que impedem conexões", true);
+			SetupCheck(fixNetwork, "Proxy do usuário e cache DNS", "Seleção manual; revise com a TI da empresa", false);
 			SetupCheck(fixInterference, "Interferências de inicialização", "Remove redirecionamentos e compatibilidade indevida", true);
 			SetupCheck(fixCaches, "Caches gráficos e de inicialização", "Move apenas caches para backup reversível", true);
 			SetupCheck(fixGpu, "Aceleração gráfica dos navegadores", "Desativa GPU se o teste seguro indicar falha de driver", false);
@@ -547,7 +547,7 @@ namespace NavegadorSOS
 			{
 				return;
 			}
-			if (!FrankensteinTI.Session.Begin("Diagnóstico de navegadores")) return;
+			if (!await AcquireWorkspace("Diagnóstico de navegadores")) return;
 			SetBusy(true, "Análise completa em andamento", "Verificando sistema, políticas, eventos e executáveis...");
 			findings.Clear();
 			criticals = (warnings = (oks = 0));
@@ -569,6 +569,7 @@ namespace NavegadorSOS
 				SetBusy(false, "Análise concluída com erro", ex.Message);
 				SaveReport("ERRO");
 			}
+			finally { FrankensteinTI.Session.End(headline.Text, reportFile); }
 		}
 
 		private void RunDiagnostics()
@@ -1063,7 +1064,8 @@ namespace NavegadorSOS
 				return;
 			}
 			if (MessageBox.Show(this, "Aplicar as correções marcadas? Salve o trabalho e feche os navegadores. As opções de rede e Windows podem exigir reinicialização.", "Revisar reparos", MessageBoxButtons.OKCancel) != DialogResult.OK) return;
-			if (!FrankensteinTI.Session.Begin("Reparo de navegadores")) return;
+			if ((fixNetwork.Checked || fixWinsock.Checked) && MessageBox.Show(this, "A alteração pode interromper o acesso a serviços da empresa. Confirme que revisou as configurações com a TI responsável. O proxy WinHTTP e os servidores DNS não serão alterados. Continuar?", "Revisão de rede", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+			if (!await AcquireWorkspace("Reparo de navegadores")) return;
 			SetBusy(true, "Aplicando correções selecionadas", "As alterações são registradas em backup antes da execução.");
 			repairPercent = 0;
 			UI(delegate
@@ -1077,7 +1079,7 @@ namespace NavegadorSOS
 			});
 			try
 			{
-				await Task.Run((Action)RunRepairs);
+				await Task.Run(delegate { FrankensteinTI.Protection.EnsureCheckpoint(); RunRepairs(); });
 				SetBusy(false, "Correções concluídas", "Reinicie o Windows e execute uma nova análise.");
 				SaveReport("REPARO");
 			}
@@ -1093,6 +1095,7 @@ namespace NavegadorSOS
 				});
 				SaveReport("ERRO NO REPARO");
 			}
+			finally { FrankensteinTI.Session.End(headline.Text, reportFile); }
 		}
 
 		private void RunRepairs()
@@ -1111,11 +1114,13 @@ namespace NavegadorSOS
 			Directory.CreateDirectory(text);
 			List<string> list = new List<string>();
 			ExportRegistryBackups(text);
+			try {
 			UpdateRepairProgress(++num, total, "Backup preparado");
 			if (flag)
 			{
 				UpdateRepairProgress(num, total, "Redefinindo proxy e limpando DNS");
 				Log("Redefinindo proxy e cache de rede...");
+				string proxyBackup=FrankensteinTI.ProxyRecovery.Capture();
 				using (RegistryKey registryKey = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"))
 				{
 					list.Add("ProxyEnable=" + Val(registryKey, "ProxyEnable") + "; ProxyServer=" + Val(registryKey, "ProxyServer") + "; AutoConfigURL=" + Val(registryKey, "AutoConfigURL"));
@@ -1124,8 +1129,9 @@ namespace NavegadorSOS
 					registryKey.DeleteValue("ProxyOverride", false);
 					registryKey.DeleteValue("AutoConfigURL", false);
 				}
-				Log(Exec("netsh", "winhttp reset proxy", 20000));
-				Log(Exec("ipconfig", "/flushdns", 20000));
+				FrankensteinTI.ProxyRecovery.Applied(proxyBackup);
+				Log("Proxy WinHTTP preservado. Servidores DNS preservados. Backup: "+proxyBackup);
+				Log(ExecRepair("ipconfig", "/flushdns", 20000));
 				UpdateRepairProgress(++num, total, "Rede, proxy e DNS concluídos");
 			}
 			if (flag2)
@@ -1159,7 +1165,7 @@ namespace NavegadorSOS
 			if (flag6)
 			{
 				UpdateRepairProgress(num, total, "Redefinindo catálogo Winsock");
-				Log(Exec("netsh", "winsock reset", 30000));
+				Log(ExecRepair("netsh", "winsock reset", 30000));
 				Log("Winsock redefinido; reinicialização necessária.");
 				UpdateRepairProgress(++num, total, "Winsock redefinido");
 			}
@@ -1167,22 +1173,23 @@ namespace NavegadorSOS
 			{
 				UpdateRepairProgress(num, total, "Executando DISM — esta etapa pode demorar");
 				Log("Executando DISM; esta etapa pode demorar...");
-				Log(Exec("dism.exe", "/Online /Cleanup-Image /RestoreHealth", 2700000));
+				Log(ExecRepair("dism.exe", "/Online /Cleanup-Image /RestoreHealth", 2700000));
 				UpdateRepairProgress(++num, total, "DISM concluído; iniciando SFC");
 				Log("Executando SFC...");
-				Log(Exec("sfc.exe", "/scannow", 2700000));
+				Log(ExecRepair("sfc.exe", "/scannow", 2700000));
 				UpdateRepairProgress(++num, total, "Verificação SFC concluída");
 			}
 			UpdateRepairProgress(num, total, "Gravando registro das alterações");
-			File.WriteAllLines(Path.Combine(text, "alteracoes.txt"), list, Encoding.UTF8);
 			Log("Backup: " + text);
 			UpdateRepairProgress(++num, total, "Reparos concluídos");
+			} finally { File.WriteAllLines(Path.Combine(text,"alteracoes.txt"),list,Encoding.UTF8); }
 		}
 
 		private void UpdateRepairProgress(int current, int total, string text)
 		{
 			int percent = ((total > 0) ? Math.Max(0, Math.Min(100, (int)Math.Round((double)current * 100.0 / (double)total))) : 0);
 			repairPercent = percent;
+			FrankensteinTI.Session.Report(text,percent);
 			UI(delegate
 			{
 				progress.Style = ProgressBarStyle.Continuous;
@@ -1577,7 +1584,7 @@ namespace NavegadorSOS
 			bool securityBlock = findings.Any((Finding f) => f.Level == Level.Critical && (f.Check == "Bloqueio de segurança" || f.Check == "Política RestrictRun"));
 			UI(delegate
 			{
-				fixNetwork.Checked = network;
+				fixNetwork.Checked = false;
 				fixInterference.Checked = interference;
 				fixCaches.Checked = !testsFail && browsers.Count > 0;
 				fixGpu.Checked = gpu;
@@ -1622,7 +1629,7 @@ namespace NavegadorSOS
 		private void SetBusy(bool value, string title, string subtitle)
 		{
 			busy = value;
-			if (!value) FrankensteinTI.Session.End(title, reportFile);
+			foreach(var option in new[]{fixNetwork,fixInterference,fixCaches,fixGpu,fixExtensions,fixWinsock,fixWindows}) option.Enabled=!value;
 			UI(delegate
 			{
 				headline.Text = title;
@@ -1634,6 +1641,14 @@ namespace NavegadorSOS
 				progress.Value = ((!value) ? 100 : 0);
 				progressText.Text = (value ? "Análise em andamento..." : ("100% — " + title));
 			});
+		}
+
+		private async Task<bool> AcquireWorkspace(string name)
+		{
+			SetBusy(true,"Na fila de tarefas",name);
+			try { if(await FrankensteinTI.Session.AcquireAsync(name)) return true; }
+			catch(Exception ex) { MessageBox.Show(this,ex.Message,"Não foi possível iniciar"); }
+			SetBusy(false,"Operação não iniciada","Cancelada na fila ou indisponível.");return false;
 		}
 
 		private string SummaryText()
@@ -1909,6 +1924,10 @@ namespace NavegadorSOS
 			return execData2;
 		}
 
+		private static string ExecRepair(string f,string a,int t)
+		{
+			var result=ExecResult(f,a,t);if(result.ExitCode!=0&&result.ExitCode!=3010)throw new IOException(f+" retornou código "+result.ExitCode+". "+result.Output);return result.Output;
+		}
 		private static string Exec(string f, string a, int t)
 		{
 			try

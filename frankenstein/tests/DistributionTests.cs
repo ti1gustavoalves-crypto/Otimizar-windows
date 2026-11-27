@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -88,8 +88,9 @@ internal static class DistributionTests
             Assert(form.FormBorderStyle==FormBorderStyle.None,"janela sem barra padrão do Windows");
             foreach(var p in Style.Themes)form.PreviewTheme(p,Path.Combine(root,"tema-"+p.Name+".png"),new Size(1440,900));
             form.PreviewTheme(Style.Themes[1],Path.Combine(root,"tema-minimo.png"),new Size(1120,760));
-            foreach(string section in new[]{"Programas","Navegadores","Desempenho","Manutenção","Sistema","Atualizações do PC","Recuperação","Windows e apps","Ferramentas técnicas","Histórico","Aparência"}){
+            foreach(string section in new[]{"Programas","Navegadores","Desempenho","Manutenção","Sistema","Atualizações do PC","Recuperação","Windows e apps","Ferramentas técnicas","Histórico","Diagnóstico geral","Aparência"}){
                 form.Navigate(section);form.PreviewTheme(Style.Themes[0],Path.Combine(root,"workspace-"+section+".png"),new Size(1440,900));
+                if(section=="Diagnóstico geral"){var care=Application.OpenForms.OfType<CareCenter>().First();care.ShowFindings(new List<Finding>{new Finding{Level="Atenção",Title="Espaço C:",Evidence="12% livre - exemplo de diagnóstico",Advice="Revise arquivos e simule a limpeza antes de remover dados.",Route="Manutenção"},new Finding{Level="Indisponível",Title="Temperatura do processador",Evidence="Nenhum sensor compatível ativo.",Advice="Confira um provedor de sensores compatível.",Route="Sistema"}},"Exemplo de validação");}
                 Assert(Application.OpenForms.Cast<Form>().Count(f=>f.TopLevel)==1,"mesma janela: "+section);
                 form.PreviewTheme(Style.Themes[4],Path.Combine(root,"claro-minimo-"+section+".png"),new Size(1120,760));
                 form.PreviewTheme(Style.Themes[1],Path.Combine(root,"minecraft-minimo-"+section+".png"),new Size(1120,760));
@@ -100,6 +101,30 @@ internal static class DistributionTests
         Assert(Catalog.All().All(m=>m.Native&&!m.File.EndsWith(".exe")),"catálogo sem executáveis legados");
         Assert(Session.Begin("Teste isolado",false)&&!Session.Begin("Concorrente",false),"operações concorrentes bloqueadas entre áreas");
         Session.End("Teste concluído",root);Assert(!Session.Busy,"bancada liberada após a operação");
+        Assert(Session.AcquireAsync("Primeira",false).Result,"fila inicia a primeira operação");
+        var queued=Session.AcquireAsync("Segunda",false);var removed=Session.AcquireAsync("Remover",false);
+        Assert(!queued.IsCompleted&&!removed.IsCompleted&&Session.PendingCount==2,"fila aguarda conclusão sem sobrepor operações");
+        var pending=Session.Snapshot().First(r=>r.Name=="Remover");Assert(Session.Cancel(pending.Id)&&!removed.Result,"cancelar pendente impede execução");
+        Assert(!Session.Snapshot().First(r=>r.Id==pending.Id).CanCancel,"registro concluído não oferece cancelamento");
+        Session.End("Concluído","primeira");Assert(queued.Result&&Session.Busy&&Session.PendingCount==0,"fim promove exatamente a próxima tarefa");
+        bool cancelled=false;Session.SetCancellation(()=>cancelled=true);Assert(Session.Cancel(Session.Snapshot()[0].Id)&&cancelled&&Session.Busy,"cancelamento ativo é cooperativo e mantém exclusão até finalizar");
+        Session.End("Cancelado","");
+        Session.Begin("Atualização pendente",false,false);var abandoned=Session.AcquireAsync("Não executar",false);Session.ClosingForUpdate=true;
+        Assert(!abandoned.Result&&!Session.AcquireAsync("Bloqueado",false).Result,"atualização cancela fila e recusa novos trabalhos");Session.End("Concluído","");Session.ClosingForUpdate=false;
+        Assert(Protection.RequiresCheckpoint("Executando correções...")&&Protection.RequiresCheckpoint("Restaurando drivers...")&&!Protection.RequiresCheckpoint("Atualizando duplicados...")&&!Protection.RequiresCheckpoint("Lendo hardware..."),"proteção distingue consulta de alteração");
+        Assert(Reject(()=>Protection.EnsureCheckpoint(s=>new CodexPerformanceOptimizer.CommandExecution{ExitCode=0,Output="Nenhum ponto criado"})),"reparo bloqueado mesmo com exit zero sem ponto confirmado");
+        Assert(Reject(()=>Protection.EnsureCheckpoint(s=>new CodexPerformanceOptimizer.CommandExecution{ExitCode=1,Output="RESTORE_POINT_OK:1"})),"erro do Windows bloqueia operação apesar de marcador");
+        int queries=0;var diagnosticRows=Diagnostics.Scan(System.Threading.CancellationToken.None,(script,timeout,token)=>{queries++;if(queries==2)return new CodexPerformanceOptimizer.CommandExecution{ExitCode=-1,TimedOut=true};if(queries==3)return new CodexPerformanceOptimizer.CommandExecution{ExitCode=0,Output="invalid"};return new CodexPerformanceOptimizer.CommandExecution{ExitCode=0,Output="FRANKENSTEIN_RESULT:"+Convert.ToBase64String(Encoding.UTF8.GetBytes("[{\"Level\":\"Informação\",\"Title\":\"Consulta\",\"Evidence\":\"Dado de teste\",\"Advice\":\"Revisar\",\"Route\":\"Sistema\"}]"))};});
+        Assert(queries==7&&diagnosticRows.Count==7&&diagnosticRows.Count(f=>f.Level=="Indisponível")==2,"timeout ou resposta inválida de um provedor não interrompe as demais consultas");
+        using(var stop=new System.Threading.CancellationTokenSource()){stop.Cancel();int calls=0;Assert(Reject(()=>Diagnostics.Scan(stop.Token,(s,t,c)=>{calls++;return null;}))&&calls==0,"diagnóstico cancelado não inicia consultas");}
+        Assert(!Distribution.AllowedEndpoint(new Uri("https://github.com.evil.test/a"))&&!Distribution.AllowedEndpoint(new Uri("http://github.com/a"))&&!Distribution.AllowedEndpoint(new Uri("https://user@github.com/a"))&&Distribution.AllowedEndpoint(new Uri("https://release-assets.githubusercontent.com/a?token=x")),"redirecionamentos aceitam somente hosts HTTPS autorizados");
+        int attempts=0;Distribution.RetryTransfer(()=>{attempts++;if(attempts==1)throw new System.Net.WebException("interrompido",System.Net.WebExceptionStatus.ReceiveFailure);},System.Threading.CancellationToken.None,null);Assert(attempts==2,"falha transitória repete transferência");
+        attempts=0;Assert(Reject(()=>Distribution.RetryTransfer(()=>{attempts++;throw new InvalidDataException("checksum inválido");},System.Threading.CancellationToken.None,null))&&attempts==1,"erro de integridade não é repetido como falha de rede");
+        using(var cancelledToken=new System.Threading.CancellationTokenSource()){cancelledToken.Cancel();attempts=0;Assert(Reject(()=>Distribution.RetryTransfer(()=>attempts++,cancelledToken.Token,null))&&attempts==0,"download cancelado não inicia transferência");}
+        using(var cancelTransfer=new System.Threading.CancellationTokenSource()){bool recognized=false;try{Distribution.RetryTransfer(()=>{cancelTransfer.Cancel();throw new IOException("stream fechado");},cancelTransfer.Token,null);}catch(OperationCanceledException){recognized=true;}Assert(recognized,"fechamento de stream pelo cancelamento é reconhecido como cancelamento");}
+        var proxy=new ProxyBackup{Values=new List<ProxyValue>{new ProxyValue{Name="ProxyEnable",Kind="DWord",Value="1"},new ProxyValue{Name="ProxyServer",Kind="String",Value="proxy.example:8080"},new ProxyValue{Name="ProxyOverride",Kind="String",Value="<local>"},new ProxyValue{Name="AutoConfigURL",Kind="String",Value=""}}};ProxyRecovery.Validate(proxy);Assert(true,"backup de proxy validado sem alterar Registro");proxy.Values[0].Name="UnexpectedValue";Assert(Reject(()=>ProxyRecovery.Validate(proxy)),"backup de proxy não pode escrever valores arbitrários");
+        string pdf=Path.Combine(root,"relatorio-teste.pdf");PdfReport.Save(pdf,"Atendimento técnico",string.Join("\r\n",Enumerable.Range(1,110).Select(i=>"Verificação "+i+": ação, conexão, recuperação; conteúdo longo (teste) \\ acentos: ç ã é ó. "+new string('x',95))));
+        Assert(File.ReadAllText(pdf).StartsWith("%PDF-1.4")&&int.Parse(System.Text.RegularExpressions.Regex.Match(File.ReadAllText(pdf),@"/Count (\d+)").Groups[1].Value)>1,"relatório PDF com acentos e múltiplas páginas gerado");
         Assert(AppShutdown.Matches(Path.Combine(root,"App","FrankensteinTI.exe"),Path.Combine(root,"App","FrankensteinTI.exe"),1,1),"fechamento seleciona caminho e sessão exatos");
         Assert(!AppShutdown.Matches(Path.Combine(root,"OutraCopia","FrankensteinTI.exe"),Path.Combine(root,"App","FrankensteinTI.exe"),1,1),"outra cópia do aplicativo não é encerrada");
         Assert(!AppShutdown.Matches(Path.Combine(root,"App","FrankensteinTI.exe"),Path.Combine(root,"App","FrankensteinTI.exe"),2,1),"outra sessão do Windows não é encerrada");
